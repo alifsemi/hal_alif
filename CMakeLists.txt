@@ -9,6 +9,16 @@
 zephyr_library()
 zephyr_library_sources_ifdef(CONFIG_DT_HAS_ALIF_MRAM_FLASH_CONTROLLER_ENABLED common/src/mram_rw.c)
 
+if(CONFIG_USE_ALIF_HAL_OSPI)
+  zephyr_include_directories(
+    drivers/ospi/include
+    )
+
+  zephyr_library_sources(drivers/ospi/src/ospi.c)
+  zephyr_library_sources(drivers/ospi/src/ospi_hal.c)
+
+endif()
+
 if(CONFIG_HAS_ALIF_SE_SERVICES)
   zephyr_include_directories(
     se_services/include
