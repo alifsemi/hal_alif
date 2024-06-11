@@ -29,3 +29,5 @@ endif()
 zephyr_include_directories(
   common/include
 )
+
+add_subdirectory_ifdef(CONFIG_PM drivers/pm)
