@@ -76,7 +76,7 @@ enum SERVICE_ID_t {
    * Power Services
    */
 	SERVICE_POWER_START        = 300,                                   /**< SERVICE_POWER_START                        */
-	SERVICE_POWER_STOP_MODE_REQ_ID,                                     /**< SERVICE_POWER_STOP_MODE_REQ_ID             */
+	SERVICE_POWER_STOP_MODE_REQ_ID = SERVICE_POWER_START,               /**< SERVICE_POWER_STOP_MODE_REQ_ID             */
 	SERVICE_POWER_EWIC_CONFIG_REQ_ID,                                   /**< SERVICE_POWER_EWIC_CONFIG_REQ_ID           */
 	SERVICE_POWER_VBAT_WAKEUP_CONFIG_REQ_ID,                            /**< SERVICE_POWER_VBAT_WAKEUP_CONFIG_REQ_ID    */
 	SERVICE_POWER_MEM_RETENTION_CONFIG_REQ_ID,                          /**< SERVICE_POWER_MEM_RETENTION_CONFIG_REQ_ID  */
@@ -90,6 +90,8 @@ enum SERVICE_ID_t {
 	SERVICE_POWER_SET_RUN_REQ_ID,                                       /**< SERVICE_POWER_SET_RUN_REQ_ID               */
 	SERVICE_POWER_GET_OFF_REQ_ID,                                       /**< SERVICE_POWER_GET_OFF_REQ_ID               */
 	SERVICE_POWER_SET_OFF_REQ_ID,                                       /**< SERVICE_POWER_SET_OFF_REQ_ID               */
+	SERVICE_POWER_SETTING_CONFIG_REQ_ID,                                /**< SERVICE_POWER_SETTING_CONFIG_REQ_ID        */
+	SERVICE_POWER_SETTING_GET_REQ_ID,                                   /**< SERVICE_POWER_SETTING_GET_REQ_ID           */
 	SERVICE_POWER_END          = 399,                                   /**< SERVICE_POWER_END                          */
 
   /**
@@ -134,6 +136,7 @@ enum SERVICE_ID_t {
    * Update Services
    */
 	SERVICE_UPDATE_START       = 600,                                   /**< SERVICE_UPDATE_START                       */
+	SERVICE_UPDATE_STOC        = SERVICE_UPDATE_START,                  /**< SERVICE_UPDATE_STOC                        */
 	SERVICE_UPDATE_END         = 699,                                   /**< SERVICE_UPDATE_END                         */
 
   /**
@@ -156,7 +159,7 @@ enum SERVICE_ID_t {
 	SERVICE_PLL_CLKPLL_START,
 	SERVICE_PLL_CLKPLL_STOP,
 	SERVICE_PLL_CLKPLL_IS_LOCKED,
-  SERVICE_CLOCK_GET_CLOCKS,
+	SERVICE_CLOCK_GET_CLOCKS,
 	SERVICE_CLOCK_END = 799,                                             /**< SERVICE_CLOCK_END                       */
 
   /**

@@ -63,6 +63,10 @@ typedef union {
 	get_device_part_svc_t get_device_part_svc_d;
 	otp_data_t read_otp_svc_d;
 	get_device_revision_data_t get_device_revision_data_d;
+	aipm_get_run_profile_svc_t get_run_d;
+	aipm_set_run_profile_svc_t set_run_d;
+	aipm_set_off_profile_svc_t set_off_d;
+	aipm_get_off_profile_svc_t get_off_d;
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -95,8 +99,8 @@ static uart_write_svc_t uart_write_svc_d;
 static ospi_write_key_svc_t ospi_write_key_svc_d;
 static dmpu_svc_t dmpu_svc_d;
 static get_toc_version_svc_t get_toc_version_svc_d;
-static get_toc_via_name_svc_t get_toc_via_name_svc_d;
-static get_toc_via_cpu_id_svc_t get_toc_via_cpu_id_svc_d;
+static get_toc_via_name_t get_toc_via_name_d;
+static get_toc_via_cpuid_t get_toc_via_cpuid_d;
 static get_toc_entry_t get_toc_entry;
 static get_toc_data_t get_toc_data;
 static get_otp_data_t get_otp_data;
@@ -757,6 +761,172 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
 	}
 
 	return ret;
+}
+
+int se_service_get_run_cfg(run_profile_t *pp)
+{
+	int err, resp_err = -1;
+
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		return errno;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.get_run_d.header.hdr_service_id = SERVICE_POWER_GET_RUN_REQ_ID;
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.get_run_d,
+			     sizeof(se_service_all_svc_d.get_run_d), SERVICE_TIMEOUT);
+	resp_err = se_service_all_svc_d.get_run_d.resp_error_code;
+
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		k_mutex_unlock(&svc_mutex);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		k_mutex_unlock(&svc_mutex);
+		return resp_err;
+	}
+
+	pp->aon_clk_src = se_service_all_svc_d.get_run_d.resp_aon_clk_src;
+	pp->run_clk_src = se_service_all_svc_d.get_run_d.resp_run_clk_src;
+	pp->cpu_clk_freq = se_service_all_svc_d.get_run_d.resp_cpu_clk_freq;
+	pp->scaled_clk_freq = se_service_all_svc_d.get_run_d.resp_scaled_clk_freq;
+	pp->dcdc_mode = se_service_all_svc_d.get_run_d.resp_dcdc_mode;
+	pp->dcdc_voltage = se_service_all_svc_d.get_run_d.resp_dcdc_voltage;
+	pp->memory_blocks = se_service_all_svc_d.get_run_d.resp_memory_blocks;
+	pp->ip_clock_gating = se_service_all_svc_d.get_run_d.resp_ip_clock_gating;
+	pp->phy_pwr_gating = se_service_all_svc_d.get_run_d.resp_phy_pwr_gating;
+	pp->power_domains = se_service_all_svc_d.get_run_d.resp_power_domains;
+	pp->vdd_ioflex_3V3 = se_service_all_svc_d.get_run_d.resp_vdd_ioflex_3V3;
+	k_mutex_unlock(&svc_mutex);
+
+	return 0;
+}
+
+int se_service_set_run_cfg(run_profile_t *pp)
+{
+	int err, resp_err = -1;
+
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		return errno;
+	}
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+
+	se_service_all_svc_d.set_run_d.header.hdr_service_id = SERVICE_POWER_SET_RUN_REQ_ID;
+	se_service_all_svc_d.set_run_d.send_aon_clk_src = pp->aon_clk_src;
+	se_service_all_svc_d.set_run_d.send_run_clk_src = pp->run_clk_src;
+	se_service_all_svc_d.set_run_d.send_cpu_clk_freq = pp->cpu_clk_freq;
+	se_service_all_svc_d.set_run_d.send_scaled_clk_freq = pp->scaled_clk_freq;
+	se_service_all_svc_d.set_run_d.send_dcdc_mode = pp->dcdc_mode;
+	se_service_all_svc_d.set_run_d.send_dcdc_voltage = pp->dcdc_voltage;
+	se_service_all_svc_d.set_run_d.send_memory_blocks = pp->memory_blocks;
+	se_service_all_svc_d.set_run_d.send_ip_clock_gating = pp->ip_clock_gating;
+	se_service_all_svc_d.set_run_d.send_phy_pwr_gating = pp->phy_pwr_gating;
+	se_service_all_svc_d.set_run_d.send_power_domains = pp->power_domains;
+	se_service_all_svc_d.set_run_d.send_vdd_ioflex_3V3 = pp->vdd_ioflex_3V3;
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.set_run_d,
+			     sizeof(se_service_all_svc_d.set_run_d), SERVICE_TIMEOUT);
+	resp_err = se_service_all_svc_d.set_run_d.resp_error_code;
+
+	k_mutex_unlock(&svc_mutex);
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		return resp_err;
+	}
+	return 0;
+}
+
+int se_service_get_off_cfg(off_profile_t *wp)
+{
+	int err, resp_err = -1;
+
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		return errno;
+	}
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.get_off_d.header.hdr_service_id = SERVICE_POWER_GET_OFF_REQ_ID;
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.get_off_d,
+			     sizeof(se_service_all_svc_d.get_off_d), SERVICE_TIMEOUT);
+	resp_err = se_service_all_svc_d.get_off_d.resp_error_code;
+
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		k_mutex_unlock(&svc_mutex);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		k_mutex_unlock(&svc_mutex);
+		return resp_err;
+	}
+
+	wp->dcdc_voltage = se_service_all_svc_d.get_off_d.resp_dcdc_voltage;
+	wp->memory_blocks = se_service_all_svc_d.get_off_d.resp_memory_blocks;
+	wp->power_domains = se_service_all_svc_d.get_off_d.resp_power_domains;
+	wp->aon_clk_src = se_service_all_svc_d.get_off_d.resp_aon_clk_src;
+	wp->stby_clk_src = se_service_all_svc_d.get_off_d.resp_stby_clk_src;
+	wp->stby_clk_freq = se_service_all_svc_d.get_off_d.resp_stby_clk_freq;
+	wp->ip_clock_gating = se_service_all_svc_d.get_off_d.resp_ip_clock_gating;
+	wp->phy_pwr_gating = se_service_all_svc_d.get_off_d.resp_phy_pwr_gating;
+	wp->vdd_ioflex_3V3 = se_service_all_svc_d.get_off_d.resp_vdd_ioflex_3V3;
+	wp->vtor_address = se_service_all_svc_d.get_off_d.resp_vtor_address;
+	wp->vtor_address_ns = se_service_all_svc_d.get_off_d.resp_vtor_address_ns;
+	wp->wakeup_events = se_service_all_svc_d.get_off_d.resp_wakeup_events;
+	wp->ewic_cfg = se_service_all_svc_d.get_off_d.resp_ewic_cfg;
+	k_mutex_unlock(&svc_mutex);
+	return 0;
+}
+
+int se_service_set_off_cfg(off_profile_t *wp)
+{
+	int err, resp_err = -1;
+
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		return errno;
+	}
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.set_off_d.header.hdr_service_id = SERVICE_POWER_SET_OFF_REQ_ID;
+	se_service_all_svc_d.set_off_d.send_dcdc_voltage =
+		wp->dcdc_voltage;
+	se_service_all_svc_d.set_off_d.send_memory_blocks = wp->memory_blocks;
+	se_service_all_svc_d.set_off_d.send_power_domains = wp->power_domains;
+	se_service_all_svc_d.set_off_d.send_aon_clk_src = wp->aon_clk_src;
+	se_service_all_svc_d.set_off_d.send_stby_clk_src = wp->stby_clk_src;
+	se_service_all_svc_d.set_off_d.send_stby_clk_freq = wp->stby_clk_freq;
+	se_service_all_svc_d.set_off_d.send_ip_clock_gating = wp->ip_clock_gating;
+	se_service_all_svc_d.set_off_d.send_phy_pwr_gating = wp->phy_pwr_gating;
+	se_service_all_svc_d.set_off_d.send_vdd_ioflex_3V3 = wp->vdd_ioflex_3V3;
+	se_service_all_svc_d.set_off_d.send_vtor_address = wp->vtor_address;
+	se_service_all_svc_d.set_off_d.send_vtor_address_ns = wp->vtor_address_ns;
+	se_service_all_svc_d.set_off_d.send_wakeup_events = wp->wakeup_events;
+	se_service_all_svc_d.set_off_d.send_ewic_cfg = wp->ewic_cfg;
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.set_off_d,
+			     sizeof(se_service_all_svc_d.set_off_d), SERVICE_TIMEOUT);
+	resp_err = se_service_all_svc_d.set_off_d.resp_error_code;
+
+	k_mutex_unlock(&svc_mutex);
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		return resp_err;
+	}
+	return 0;
 }
 
 /**
