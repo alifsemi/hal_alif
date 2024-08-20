@@ -80,10 +80,13 @@ struct alif_rx_enable {
 struct alif_rx_frame_received {
 	uint64_t timestamp;
 	uint8_t *p_data;
+	uint32_t ack_frame_cnt;
 	uint16_t ctx;
 	uint8_t len;
+	uint8_t ack_key_idx;
 	int8_t rssi;
 	bool frame_pending;
+	bool ack_sec;
 };
 
 /**
@@ -133,6 +136,18 @@ struct alif_mac154_rx_slot {
 struct alif_mac154_csl_phase {
 	uint64_t timestamp;
 	uint16_t csl_phase;
+};
+
+/**
+ * @brief Security Key description
+ *
+ */
+struct alif_mac154_key_description {
+	uint8_t *key_value;
+	uint8_t *key_id;
+	uint32_t frame_counter;
+	uint8_t key_id_mode;
+	bool frame_counter_per_key;
 };
 
 /**
@@ -404,6 +419,73 @@ alif_mac154_csl_config_set(struct alif_mac154_csl_config *p_csl_config);
  *		ALIF_MAC154_STATUS_COMM_FAILURE	Module not connected
  */
 enum alif_mac154_status_code alif_mac154_rx_slot_set(struct alif_mac154_rx_slot *p_rx_slot_config);
+
+/**
+ * @brief Set expected RX time
+ *
+ * @return	ALIF_MAC154_STATUS_OK		Operation OK
+ *		ALIF_MAC154_STATUS_FAILED	Operation failed
+ *		ALIF_MAC154_STATUS_COMM_FAILURE	Module not connected
+ */
+enum alif_mac154_status_code alif_mac154_expected_rx_time_set(uint32_t expected_rx_time);
+
+/**
+ * @brief Set Security frame counter
+ *
+ * @return	ALIF_MAC154_STATUS_OK		Operation OK
+ *		ALIF_MAC154_STATUS_FAILED	Operation failed
+ *		ALIF_MAC154_STATUS_COMM_FAILURE	Module not connected
+ */
+enum alif_mac154_status_code alif_mac154_security_frame_counter_set(uint32_t frame_counter);
+
+/**
+ * @brief Update Security frame counter if new value is larger
+ *
+ * @return	ALIF_MAC154_STATUS_OK		Operation OK
+ *		ALIF_MAC154_STATUS_FAILED	Operation failed
+ *		ALIF_MAC154_STATUS_COMM_FAILURE	Module not connected
+ */
+enum alif_mac154_status_code
+alif_mac154_security_frame_counter_set_if_larger(uint32_t frame_counter);
+
+/**
+ * @brief Config Security key description list
+ *
+ * @return	ALIF_MAC154_STATUS_OK		Operation OK
+ *		ALIF_MAC154_STATUS_FAILED	Operation failed
+ *		ALIF_MAC154_STATUS_COMM_FAILURE	Module not connected
+ */
+enum alif_mac154_status_code
+alif_mac154_key_value_description_set(struct alif_mac154_key_description *key_desc_list,
+				       int list_size);
+
+/**
+ * @brief Parse mac header information from given packet
+ *
+ * @return	ALIF_MAC154_STATUS_OK		Operation OK
+ *		ALIF_MAC154_STATUS_FAILED	Operation failed
+ */
+enum alif_mac154_status_code
+alif_mac154_tx_packet_parse(struct alif_802154_frame_parser *mac_frame);
+
+/**
+ * @brief CCM endode and authenticate formac packet
+ *
+ * @return	ALIF_MAC154_STATUS_OK		Operation OK
+ *		ALIF_MAC154_STATUS_FAILED	Operation failed
+ *		ALIF_MAC154_STATUS_COMM_FAILURE	Module not connected
+ */
+enum alif_mac154_status_code
+alif_mac154_mac_data_encode_and_authenticate(struct alif_802154_frame_parser *mac_frame,
+
+/**
+ * @brief Discover selected Information header data
+ *
+ * @return	True		IE element header is parsed and available
+ *		False	IE element not exist
+ */					     uint8_t *mac64);
+bool alif_mac154_ie_header_element_get(uint8_t *header_ptr, uint16_t length,
+				       struct mac_header_IE_s *header_ie);
 
 /**
  * @brief get current CSL phase and timestamp when that was calculated.

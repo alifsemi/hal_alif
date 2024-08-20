@@ -10,11 +10,15 @@
 #include <zephyr/kernel.h>
 
 #include "alif_mac154_api.h"
+
 #include "alif_mac154_shared.h"
 
 #include "ahi_msg_lib.h"
 #include "alif_ahi.h"
 #include "es0_power_manager.h"
+#include "alif_mac154_key_storage.h"
+#include "alif_mac154_parser.h"
+#include "alif_mac154_ccm_encode.h"
 
 #define LOG_MODULE_NAME alif_154_api
 
@@ -31,17 +35,17 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
  * Initial Version number definition supported by default
  */
 
-#define VERS_INIT_MAJOR   1
-#define VERS_INIT_MINOR   0
-#define VERS_INIT_PATCH   0
+#define VERS_INIT_MAJOR 1
+#define VERS_INIT_MINOR 0
+#define VERS_INIT_PATCH 0
 
 #define MODULE_VERSION_INITIAL 0x10006
 /*
  * Latest supported Link layer version
  */
-#define VERS_LATEST_MAJOR 1
-#define VERS_LATEST_MINOR 1
-#define VERS_LATEST_PATCH 0
+#define VERS_LATEST_MAJOR      1
+#define VERS_LATEST_MINOR      1
+#define VERS_LATEST_PATCH      0
 
 #define VERSION(major, minor, patch) ((major << 16) | (minor << 8) | (patch))
 
@@ -74,9 +78,20 @@ void ahi_msg_received_callback(struct msg_buf *p_msg)
 		resp_msg_ptr = NULL;
 		k_sem_give(&ahi_receive_sem);
 		LOG_DBG("Excpected msg received");
-	} else if (api_cb.rx_frame_recv_cb &&
+	} else if (api_cb.rx_frame_recv_cb && (ll_sw_version < VERSION(1, 1, 0)) &&
 		   alif_ahi_msg_recv_ind_recv(p_msg, &frame.ctx, &frame.rssi, &frame.frame_pending,
 					      &frame.timestamp, &frame.len, &frame.p_data)) {
+		/* Set default values for Old ROM */
+		frame.ack_frame_cnt = 0xDEADC0DE;
+		frame.ack_key_idx = 0xff;
+		frame.ack_sec = false;
+		api_cb.rx_frame_recv_cb(&frame);
+		LOG_DBG("frame received");
+	} else if (api_cb.rx_frame_recv_cb && (ll_sw_version >= VERSION(1, 1, 0)) &&
+		   alif_ahi_msg_recv_ind_recv_1_1_0(p_msg, &frame.ctx, &frame.rssi,
+						    &frame.frame_pending, &frame.timestamp,
+						    &frame.len, &frame.p_data, &frame.ack_sec,
+						    &frame.ack_frame_cnt, &frame.ack_key_idx)) {
 		api_cb.rx_frame_recv_cb(&frame);
 		LOG_DBG("frame received");
 	} else if (api_cb.rx_status_cb && alif_ahi_msg_error_recv(p_msg, NULL, NULL)) {
@@ -85,6 +100,10 @@ void ahi_msg_received_callback(struct msg_buf *p_msg)
 	} else if (api_cb.rx_status_cb && alif_ahi_msg_reset_recv(p_msg, NULL, NULL)) {
 		api_cb.rx_status_cb(ALIF_MAC154_STATUS_RESET);
 		LOG_DBG("Reset received");
+	} else if (api_cb.rx_status_cb && (ll_sw_version >= VERSION(1, 1, 0)) &&
+		   alif_ahi_msg_rx_start_end_recv_1_1_0(p_msg, NULL, NULL)) {
+		api_cb.rx_status_cb(ALIF_MAC154_STATUS_RX_STOPPED);
+		LOG_DBG("RX start received");
 	} else if (api_cb.rx_status_cb && alif_ahi_msg_rx_start_end_recv(p_msg, NULL, NULL)) {
 		api_cb.rx_status_cb(ALIF_MAC154_STATUS_RX_STOPPED);
 		LOG_DBG("RX start received");
@@ -187,6 +206,10 @@ enum alif_mac154_status_code alif_mac154_version_get(uint8_t *p_major, uint8_t *
 		*p_patch = VERS_LATEST_PATCH;
 		hw_capabilities |= ALIF_IEEE802154_MAC_RX_OPT;
 		hw_capabilities |= ALIF_IEEE802154_MAC_TXTIME;
+		hw_capabilities |= ALIF_IEEE802154_MAC_RXTIME;
+		if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+			hw_capabilities |= ALIF_IEEE802154_MAC_TX_SEC;
+		}
 	} else {
 		/*Backward compatibility to 1.0.2 */
 		*p_major = VERS_INIT_MAJOR;
@@ -332,7 +355,12 @@ enum alif_mac154_status_code alif_mac154_short_address_set(uint16_t short_addres
 
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
-	alif_ahi_msg_short_id_set(&ahi_msg, 0, short_address);
+	if (ll_sw_version >= VERSION(1, 1, 0)) {
+		alif_ahi_msg_short_id_set_1_1_0(&ahi_msg, 0, short_address);
+	} else {
+		alif_ahi_msg_short_id_set(&ahi_msg, 0, short_address);
+	}
+
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_status(&ahi_msg, NULL);
@@ -356,8 +384,12 @@ enum alif_mac154_status_code alif_mac154_extended_address_set(uint8_t *p_extende
 		p_extended_address[0]);
 
 	k_mutex_lock(&api_mutex, K_FOREVER);
+	if (ll_sw_version >= VERSION(1, 1, 0)) {
+		alif_ahi_msg_long_id_set_1_1_0(&ahi_msg, 0, p_extended_address);
+	} else {
+		alif_ahi_msg_long_id_set(&ahi_msg, 0, p_extended_address);
+	}
 
-	alif_ahi_msg_long_id_set(&ahi_msg, 0, p_extended_address);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_status(&ahi_msg, NULL);
@@ -378,8 +410,12 @@ enum alif_mac154_status_code alif_mac154_pan_id_set(uint16_t pan_id)
 	LOG_DBG("0x%x", pan_id);
 
 	k_mutex_lock(&api_mutex, K_FOREVER);
+	if (ll_sw_version >= VERSION(1, 1, 0)) {
+		alif_ahi_msg_pan_id_set1_1_0(&ahi_msg, 0, pan_id);
+	} else {
+		alif_ahi_msg_pan_id_set(&ahi_msg, 0, pan_id);
+	}
 
-	alif_ahi_msg_pan_id_set(&ahi_msg, 0, pan_id);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_status(&ahi_msg, NULL);
@@ -400,8 +436,12 @@ enum alif_mac154_status_code alif_mac154_pendings_short_address_insert(uint16_t 
 	LOG_DBG("0x%x", short_address);
 
 	k_mutex_lock(&api_mutex, K_FOREVER);
+	if (ll_sw_version >= VERSION(1, 1, 0)) {
+		alif_ahi_msg_pending_short_id_configure_1_1_0(&ahi_msg, 0, short_address, true);
+	} else {
+		alif_ahi_msg_pending_short_id_insert(&ahi_msg, 0, short_address);
+	}
 
-	alif_ahi_msg_pending_short_id_insert(&ahi_msg, 0, short_address);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_status(&ahi_msg, NULL);
@@ -423,7 +463,12 @@ enum alif_mac154_status_code alif_mac154_pendings_short_address_remove(uint16_t 
 
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
-	alif_ahi_msg_pending_short_id_remove(&ahi_msg, 0, short_address);
+	if (ll_sw_version >= VERSION(1, 1, 0)) {
+		alif_ahi_msg_pending_short_id_configure_1_1_0(&ahi_msg, 0, short_address, false);
+	} else {
+		alif_ahi_msg_pending_short_id_remove(&ahi_msg, 0, short_address);
+	}
+
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_status(&ahi_msg, NULL);
@@ -451,8 +496,12 @@ enum alif_mac154_status_code alif_mac154_pendings_long_address_insert(uint8_t *p
 		p_extended_address[0]);
 
 	k_mutex_lock(&api_mutex, K_FOREVER);
+	if (ll_sw_version >= VERSION(1, 1, 0)) {
+		alif_ahi_msg_pending_long_id_configure_1_1_0(&ahi_msg, 0, p_extended_address, true);
+	} else {
+		alif_ahi_msg_pending_long_id_insert(&ahi_msg, 0, p_extended_address);
+	}
 
-	alif_ahi_msg_pending_long_id_insert(&ahi_msg, 0, p_extended_address);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_status(&ahi_msg, NULL);
@@ -480,8 +529,13 @@ enum alif_mac154_status_code alif_mac154_pendings_long_address_remove(uint8_t *p
 		p_extended_address[0]);
 
 	k_mutex_lock(&api_mutex, K_FOREVER);
+	if (ll_sw_version >= VERSION(1, 1, 0)) {
+		alif_ahi_msg_pending_long_id_configure_1_1_0(&ahi_msg, 0, p_extended_address,
+							     false);
+	} else {
+		alif_ahi_msg_pending_long_id_remove(&ahi_msg, 0, p_extended_address);
+	}
 
-	alif_ahi_msg_pending_long_id_remove(&ahi_msg, 0, p_extended_address);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_status(&ahi_msg, NULL);
@@ -652,6 +706,147 @@ enum alif_mac154_status_code alif_mac154_rx_slot_set(struct alif_mac154_rx_slot 
 	return ret;
 }
 
+enum alif_mac154_status_code alif_mac154_expected_rx_time_set(uint32_t expected_rx_time)
+{
+	enum alif_mac154_status_code ret;
+
+	k_mutex_lock(&api_mutex, K_FOREVER);
+
+	alif_ahi_msg_config_expected_rx_time(&ahi_msg, 0, expected_rx_time);
+	alif_ahi_msg_send(&ahi_msg, NULL, 0);
+	alif_hal_msg_wait(&ahi_msg);
+	ret = alif_ahi_msg_set_expected_rx_time_resp(&ahi_msg, NULL);
+
+	k_mutex_unlock(&api_mutex);
+	if (ret != ALIF_MAC154_STATUS_OK) {
+		LOG_WRN("Expected RX time set failed %x", ret);
+	}
+
+	return ret;
+}
+
+enum alif_mac154_status_code
+alif_mac154_key_value_description_set(struct alif_mac154_key_description *key_desc_list,
+				       int list_size)
+{
+	enum alif_mac154_status_code ret = ALIF_MAC154_STATUS_OK;
+
+	/* TODO should clear keys when they are available */
+
+	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		if (alif_mac154_key_storage_key_description_set(key_desc_list, list_size)) {
+			return ALIF_MAC154_STATUS_FAILED;
+		}
+
+		k_mutex_lock(&api_mutex, K_FOREVER);
+		while (list_size) {
+			alif_ahi_msg_config_sec_key(
+				&ahi_msg, 0, key_desc_list->key_value, key_desc_list->key_id,
+				key_desc_list->key_id_mode, key_desc_list->frame_counter,
+				key_desc_list->frame_counter_per_key);
+
+			alif_ahi_msg_send(&ahi_msg, NULL, 0);
+			alif_hal_msg_wait(&ahi_msg);
+			ret = alif_ahi_msg_set_key_desc_resp(&ahi_msg, NULL);
+			if (ret != ALIF_MAC154_STATUS_OK) {
+				LOG_WRN("Key descriotion set failed %x", ret);
+				break;
+			}
+			key_desc_list++;
+			list_size--;
+		}
+
+		k_mutex_unlock(&api_mutex);
+	}
+
+	return ret;
+}
+
+enum alif_mac154_status_code alif_mac154_tx_packet_parse(struct alif_802154_frame_parser *mac_frame)
+{
+	enum alif_mac154_status_code ret = ALIF_MAC154_STATUS_FAILED;
+
+	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		if (alif_mac154_mac_frame_parse(mac_frame)) {
+			ret = ALIF_MAC154_STATUS_OK;
+		}
+	}
+
+	return ret;
+}
+
+enum alif_mac154_status_code
+alif_mac154_mac_data_encode_and_authenticate(struct alif_802154_frame_parser *mac_frame,
+					     uint8_t *mac64)
+{
+	enum alif_mac154_status_code ret = ALIF_MAC154_STATUS_FAILED;
+
+	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		if (alif_mac154_ccm_encode_packet(mac_frame, mac64) == 0) {
+			return ALIF_MAC154_STATUS_OK;
+		}
+	}
+
+	return ret;
+}
+
+bool alif_mac154_ie_header_element_get(uint8_t *header_ptr, uint16_t length,
+				       struct mac_header_IE_s *header_ie)
+{
+	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		return alif_mac154_ie_header_discover(header_ptr, length, header_ie);
+	}
+
+	return false;
+}
+
+enum alif_mac154_status_code alif_mac154_security_frame_counter_set(uint32_t frame_counter)
+{
+	enum alif_mac154_status_code ret;
+
+	k_mutex_lock(&api_mutex, K_FOREVER);
+	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		alif_mac154_sec_frame_counter_set(frame_counter);
+	}
+
+	alif_ahi_msg_config_frame_counter(&ahi_msg, 0, frame_counter, false);
+
+	alif_ahi_msg_send(&ahi_msg, NULL, 0);
+	alif_hal_msg_wait(&ahi_msg);
+	ret = alif_ahi_msg_set_frame_counter_resp(&ahi_msg, NULL, false);
+
+	k_mutex_unlock(&api_mutex);
+	if (ret != ALIF_MAC154_STATUS_OK) {
+		LOG_WRN("Key descriotion set failed %x", ret);
+	}
+
+	return ret;
+}
+
+enum alif_mac154_status_code
+alif_mac154_security_frame_counter_set_if_larger(uint32_t frame_counter)
+{
+	enum alif_mac154_status_code ret;
+
+	k_mutex_lock(&api_mutex, K_FOREVER);
+	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		alif_mac154_sec_frame_counter_set(frame_counter);
+	}
+
+	alif_ahi_msg_config_frame_counter(&ahi_msg, 0, frame_counter, true);
+
+	alif_ahi_msg_send(&ahi_msg, NULL, 0);
+	alif_hal_msg_wait(&ahi_msg);
+	ret = alif_ahi_msg_set_frame_counter_resp(&ahi_msg, NULL, true);
+
+	k_mutex_unlock(&api_mutex);
+	if (ret != ALIF_MAC154_STATUS_OK) {
+		LOG_WRN("Key descriotion set failed %x", ret);
+	}
+
+	return ret;
+}
+
 enum alif_mac154_status_code
 alif_mac154_csl_phase_get(struct alif_mac154_csl_phase *p_csl_phase_resp)
 {
@@ -664,8 +859,8 @@ alif_mac154_csl_phase_get(struct alif_mac154_csl_phase *p_csl_phase_resp)
 	alif_ahi_msg_csl_phase_get(&ahi_msg, 0);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_csl_phase_resp(&ahi_msg, NULL, &p_csl_phase_resp->timestamp,
-					  &p_csl_phase_resp->csl_phase);
+	ret = alif_ahi_msg_csl_phase_get_resp(&ahi_msg, NULL, &p_csl_phase_resp->timestamp,
+					      &p_csl_phase_resp->csl_phase);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -676,12 +871,80 @@ alif_mac154_csl_phase_get(struct alif_mac154_csl_phase *p_csl_phase_resp)
 	return ret;
 }
 
-static enum alif_mac154_status_code
-alif_mac154_csl_long_id_insert(const uint8_t *p_extended_address)
+static bool alif_mac154_ie_header_info_set(struct mac_ahi_header_ie *ie_info,
+					   const struct ieee802154_header_ie *p_header_ie)
 {
+
+	/* Copy IE Elements */
+	ie_info->content_type =
+		ieee802154_header_ie_get_element_id((struct ieee802154_header_ie *)p_header_ie);
+	ie_info->length = p_header_ie->length;
+	ie_info->element_id_low = p_header_ie->element_id_low;
+	ie_info->element_id_high = p_header_ie->element_id_high;
+	ie_info->type = p_header_ie->type;
+
+	switch (ie_info->content_type) {
+	case IEEE802154_HEADER_IE_ELEMENT_ID_VENDOR_SPECIFIC_IE:
+		memcpy(ie_info->content.vendor_specific.vendor_oui,
+		       p_header_ie->content.vendor_specific.vendor_oui,
+		       IEEE802154_VENDOR_SPECIFIC_IE_OUI_LEN);
+		ie_info->content.vendor_specific.vendor_specific_info =
+			p_header_ie->content.vendor_specific.vendor_specific_info;
+		break;
+
+	case IEEE802154_HEADER_IE_ELEMENT_ID_CSL_IE:
+		if (p_header_ie->length == sizeof(struct ieee802154_header_ie_csl_reduced)) {
+			ie_info->content.csl.csl_period =
+				p_header_ie->content.csl.reduced.csl_period;
+			ie_info->content.csl.csl_phase = p_header_ie->content.csl.reduced.csl_phase;
+			ie_info->content.csl.full_info = false;
+		} else if (p_header_ie->length == sizeof(struct ieee802154_header_ie_csl_full)) {
+			ie_info->content.csl.csl_period = p_header_ie->content.csl.full.csl_period;
+			ie_info->content.csl.csl_phase = p_header_ie->content.csl.full.csl_phase;
+			ie_info->content.csl.csl_rendezvous_time =
+				p_header_ie->content.csl.full.csl_rendezvous_time;
+			ie_info->content.csl.full_info = true;
+		} else {
+			return false;
+		}
+		break;
+	case IEEE802154_HEADER_IE_ELEMENT_ID_RENDEZVOUS_TIME_IE:
+		if (p_header_ie->length == 4) {
+			ie_info->content.rendezvous_time.rendezvous_time =
+				p_header_ie->content.rendezvous_time.full.rendezvous_time;
+			ie_info->content.rendezvous_time.wakeup_interval =
+				p_header_ie->content.rendezvous_time.full.wakeup_interval;
+			ie_info->content.rendezvous_time.full_info = true;
+		} else if (p_header_ie->length == 2) {
+			ie_info->content.rendezvous_time.rendezvous_time =
+				p_header_ie->content.rendezvous_time.reduced.rendezvous_time;
+			ie_info->content.rendezvous_time.full_info = false;
+		} else {
+			return false;
+		}
+
+		break;
+	default:
+		return false;
+	}
+
+	return true;
+}
+
+static enum alif_mac154_status_code
+alif_mac154_ie_long_id_insert(const uint8_t *p_extended_address,
+			      const struct ieee802154_header_ie *p_header_ie)
+{
+	struct mac_ahi_header_ie ie_info;
+
 	LOG_HEXDUMP_DBG(p_extended_address, 8, "long_id_insert addr:");
 
-	alif_ahi_msg_csl_long_id_insert(&ahi_msg, 0, (uint8_t *)p_extended_address);
+	if (!alif_mac154_ie_header_info_set(&ie_info, p_header_ie)) {
+		return ALIF_MAC154_STATUS_INVALID_MESSAGE;
+	}
+
+	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, 0, p_extended_address, &ie_info);
+
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 
@@ -689,45 +952,51 @@ alif_mac154_csl_long_id_insert(const uint8_t *p_extended_address)
 }
 
 static enum alif_mac154_status_code
-alif_mac154_csl_long_id_remove(const uint8_t *p_extended_address)
+alif_mac154_ie_short_id_insert(uint16_t short_address,
+			       const struct ieee802154_header_ie *p_header_ie)
+{
+	struct mac_ahi_header_ie ie_info;
+
+	LOG_DBG("0x%x", short_address);
+
+	if (!alif_mac154_ie_header_info_set(&ie_info, p_header_ie)) {
+		return ALIF_MAC154_STATUS_INVALID_MESSAGE;
+	}
+
+	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, short_address, NULL, &ie_info);
+	alif_ahi_msg_send(&ahi_msg, NULL, 0);
+	alif_hal_msg_wait(&ahi_msg);
+
+	return alif_ahi_msg_status(&ahi_msg, NULL);
+}
+
+static enum alif_mac154_status_code alif_mac154_ie_long_id_remove(const uint8_t *p_extended_address)
 {
 	LOG_HEXDUMP_DBG(p_extended_address, 8, "long_id_remove addr:");
+	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, 0, p_extended_address, NULL);
 
-	alif_ahi_msg_csl_long_id_remove(&ahi_msg, 0, (uint8_t *)p_extended_address);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 
 	return alif_ahi_msg_status(&ahi_msg, NULL);
 }
 
-static enum alif_mac154_status_code alif_mac154_csl_short_id_insert(uint16_t short_address)
+static enum alif_mac154_status_code alif_mac154_ie_short_id_remove(uint16_t short_address)
 {
 	LOG_DBG("0x%x", short_address);
 
-	alif_ahi_msg_csl_short_id_insert(&ahi_msg, 0, short_address);
+	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, short_address, NULL, NULL);
+
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 
 	return alif_ahi_msg_status(&ahi_msg, NULL);
 }
 
-static enum alif_mac154_status_code alif_mac154_csl_short_id_remove(uint16_t short_address)
+static enum alif_mac154_status_code alif_mac154_purge_all_ie(void)
 {
-	LOG_DBG("0x%x", short_address);
 
-	alif_ahi_msg_csl_short_id_remove(&ahi_msg, 0, short_address);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-
-	return alif_ahi_msg_status(&ahi_msg, NULL);
-}
-
-static enum alif_mac154_status_code alif_mac154_csl_header_ie_csl_reduced(uint16_t csl_period,
-									  uint16_t csl_phase)
-{
-	LOG_DBG("period:%d, phase: %d", csl_period, csl_phase);
-
-	alif_ahi_msg_config_header_ie_csl_reduced(&ahi_msg, 0, csl_period, csl_phase);
+	alif_ahi_msg_ie_purge_all(&ahi_msg, 0);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
 	alif_hal_msg_wait(&ahi_msg);
 
@@ -745,34 +1014,22 @@ alif_mac154_ack_header_ie_set(uint16_t short_address, const uint8_t *p_extended_
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	if (delete_all_ie) {
-		/*Delete all CSL configurations*/
-		uint8_t ext_addr_all[8] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-
-		alif_mac154_csl_short_id_insert(0xffff);
-		alif_mac154_csl_long_id_insert(ext_addr_all);
+		alif_mac154_purge_all_ie();
 		ret = ALIF_MAC154_STATUS_OK;
 		goto end;
 	}
 
-	if (!p_header_ie) {
+	if (!p_header_ie || p_header_ie->length == 0) {
 		/*Delete IE headers for this device*/
-		alif_mac154_csl_short_id_remove(short_address);
-		alif_mac154_csl_long_id_remove(p_extended_address);
+		alif_mac154_ie_short_id_remove(short_address);
+		alif_mac154_ie_long_id_remove(p_extended_address);
 		ret = ALIF_MAC154_STATUS_OK;
 		goto end;
 	}
 
-	if (ieee802154_header_ie_get_element_id((struct ieee802154_header_ie *)p_header_ie) !=
-	    IEEE802154_HEADER_IE_ELEMENT_ID_CSL_IE) {
-		ret = ALIF_MAC154_STATUS_INVALID_MESSAGE;
-		goto end;
-	}
 	/*Set the addresses*/
-	alif_mac154_csl_short_id_insert(short_address);
-	alif_mac154_csl_long_id_insert(p_extended_address);
-
-	ret = alif_mac154_csl_header_ie_csl_reduced(p_header_ie->content.csl.reduced.csl_period,
-						    p_header_ie->content.csl.reduced.csl_phase);
+	alif_mac154_ie_short_id_insert(short_address, p_header_ie);
+	alif_mac154_ie_long_id_insert(p_extended_address, p_header_ie);
 
 end:
 	k_mutex_unlock(&api_mutex);

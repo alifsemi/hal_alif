@@ -6,3 +6,15 @@ config IEEE802154_ALIF_SUPPORT
 	depends on HAS_ALIF_BLE_802154_LINK_LAYER
 	help
 	  This option enables Alif Semiconductor's 802.15.4 HW adaptation.
+
+if IEEE802154_ALIF_SUPPORT
+
+config IEEE802154_ALIF_TX_ENCRYPT
+	bool "IEEE 802.15.4 TX packet handler and encryption"
+	depends on MBEDTLS
+	default y if OPENTHREAD_THREAD_VERSION_1_2
+	default y if OPENTHREAD_THREAD_VERSION_1_3
+	help
+	  This option is enables Alif Semiconductor's 802.15.4 Tx packet handler for encryption.
+
+endif
