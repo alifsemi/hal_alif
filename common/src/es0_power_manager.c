@@ -4,11 +4,17 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 #include <string.h>
+#include <zephyr/kernel.h>
+#include <zephyr/device.h>
+#include <zephyr/drivers/uart.h>
+
 #include "es0_power_manager.h"
 #include "se_service.h"
 #include "alif_protocol_const.h"
 
 static volatile uint8_t es0_user_counter;
+static uint32_t wakeup_count;
+
 #define LL_BOOT_PARAMS_MAX_SIZE (512)
 
 #define LL_CLK_SEL_CTRL_REG_ADDR   0x1A60201C
@@ -215,3 +221,14 @@ int8_t stop_using_es0(void)
 
 	return 0;
 }
+
+void wake_es0(const struct device *uart_dev)
+{
+	if (wakeup_count == 0) {
+		uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 0);
+		k_usleep(100);
+		uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 1);
+		wakeup_count++;
+	}
+}
+

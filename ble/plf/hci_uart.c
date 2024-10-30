@@ -14,6 +14,8 @@
 #include <zephyr/drivers/uart.h>
 #include <zephyr/sys/__assert.h>
 
+#include "es0_power_manager.h"
+
 /* change this to any other UART peripheral if desired */
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_hci_uart)
 static const struct device *uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
@@ -46,16 +48,16 @@ struct uart_env_tag {
 };
 
 /* receive buffer used in UART ISR callback */
-static uint8_t *rx_buf_ptr;
-static uint32_t rx_buf_size;
-static uint32_t rx_buf_len;
+static uint8_t *rx_buf_ptr  __attribute__ ((noinit));
+static uint32_t rx_buf_size  __attribute__ ((noinit));
+static uint32_t rx_buf_len  __attribute__ ((noinit));
 
 /*
  * GLOBAL VARIABLE DEFINITIONS
  ****************************************************************************************
  */
 /* uart environment structure */
-static struct uart_env_tag uart_env;
+static struct uart_env_tag uart_env   __attribute__ ((noinit));
 
 void hci_uart_callback(const struct device *dev, void *user_data)
 {
@@ -98,10 +100,13 @@ int32_t hci_uart_init(void)
 		return -1;
 	}
 
+	uart_irq_rx_enable(uart_dev);
 	uart_irq_callback_user_data_set(uart_dev, hci_uart_callback, NULL);
 
-	/* Initialize RX and TX transfer callbacks */
-	uart_env.rx.callback = NULL;
+	/* We cannot initialize RX transfer callback here
+	 * as that might be kept in retention and also when
+	 * read operation is started a (new) callback is always set.
+	 */
 	uart_env.tx.callback = NULL;
 	return 0;
 }
@@ -119,6 +124,9 @@ void hci_uart_read(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint
 	rx_buf_size = size;
 	rx_buf_len = 0;
 
+	/* Deassert&assert rts_n, falling edge triggers wake up the RF core */
+	wake_es0(uart_dev);
+
 	uart_irq_rx_enable(uart_dev);
 }
 
@@ -127,6 +135,9 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 	__ASSERT(bufptr != NULL, "Invalid buffer pointer");
 	__ASSERT(size != 0, "Invalid size");
 	__ASSERT(callback != NULL, "Invalid callback");
+
+	/* Deassert&assert rts_n, falling edge triggers wake up the RF core */
+	wake_es0(uart_dev);
 
 	uart_env.tx.callback = callback;
 	uart_env.tx.dummy = dummy;

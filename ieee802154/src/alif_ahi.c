@@ -84,6 +84,9 @@ int alif_ahi_msg_send(struct msg_buf *p_msg, const uint8_t *p_data, uint16_t dat
 		return -1;
 	}
 
+	/* Deassert&assert rts_n, falling edge triggers wake up the RF core */
+ 	wake_es0(uart_dev);
+
 	for (int i = 0; i < p_msg->msg_len; i++) {
 		uart_poll_out(uart_dev, p_msg->msg[i]);
 	}

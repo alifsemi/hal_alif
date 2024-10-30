@@ -22,11 +22,14 @@
 LOG_MODULE_REGISTER(alif_ble);
 
 /* Heap memory blocks for Alif BLE host stack */
-uint32_t ble_heap_env[RWIP_CALC_HEAP_LEN(RWIP_HEAP_ENV_SIZE)];
-uint32_t ble_heap_profile[RWIP_CALC_HEAP_LEN(RWIP_HEAP_PROFILE_SIZE) +
-			  RWIP_CALC_HEAP_LEN(CONFIG_ALIF_BLE_HOST_ADDL_PRF_HEAPSIZE)];
-uint32_t ble_heap_msg[RWIP_CALC_HEAP_LEN(RWIP_HEAP_MSG_SIZE)];
-uint32_t ble_heap_non_ret[RWIP_CALC_HEAP_LEN(1000)];
+static uint32_t ble_heap_env[RWIP_CALC_HEAP_LEN(RWIP_HEAP_ENV_SIZE)]  __attribute__ ((noinit));
+static uint32_t ble_heap_profile[RWIP_CALC_HEAP_LEN(RWIP_HEAP_PROFILE_SIZE) +
+			  RWIP_CALC_HEAP_LEN(CONFIG_ALIF_BLE_HOST_ADDL_PRF_HEAPSIZE)]  __attribute__ ((noinit));
+static uint32_t ble_heap_msg[RWIP_CALC_HEAP_LEN(RWIP_HEAP_MSG_SIZE)]  __attribute__ ((noinit));
+static uint32_t ble_heap_non_ret[RWIP_CALC_HEAP_LEN(1000)]  __attribute__ ((noinit));
+
+static uint32_t initialised  __attribute__ ((noinit));
+#define INITIALISED_MAGIC 0x45454545
 
 #ifdef CONFIG_ALIF_BLE_HOST_PATCHING
 extern uint32_t __ble_patch_info_start;
@@ -147,22 +150,34 @@ void alif_ble_mutex_unlock(void)
 
 static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 {
-	int ret = hci_uart_init();
+	int ret = 0;
 
+	ret = hci_uart_init();
 	__ASSERT(0 == ret, "Failed to initialise HCI UART");
 
-	ret = sync_timer_init();
-	__ASSERT(0 == ret, "Failed to initialise sync timer");
+	if (initialised != INITIALISED_MAGIC) {
+		LOG_DBG("Cold start");
 
-	if (0 != take_es0_into_use()) {
-		__ASSERT(0, "Failed to boot ESO");
+		ret = sync_timer_init();
+		__ASSERT(0 == ret, "Failed to initialise sync timer");
+
+		/* hci_open calls this so should not be called here */
+		if (0 != take_es0_into_use()) {
+			__ASSERT(0, "Failed to boot ESO");
+		}
+
+		bool ble_success = ble_stack_init(&app_hooks, &rom_config);
+
+		__ASSERT_NO_MSG(ble_success);
+
+		rwip_init(RWIP_INIT_NO_ERROR);
+		initialised = INITIALISED_MAGIC;
+	} else {
+		/* Everything is already initialised as we are in warm restart case */
+		LOG_DBG("Already initialised");
+		app_hooks.p_app_init();
+		k_sem_give(&rwip_schedule_sem);
 	}
-
-	bool ble_success = ble_stack_init(&app_hooks, &rom_config);
-
-	__ASSERT_NO_MSG(ble_success);
-
-	rwip_init(RWIP_INIT_NO_ERROR);
 
 	LOG_DBG("task starting event loop");
 
@@ -182,6 +197,8 @@ int alif_ble_enable(void (*cb)(void))
 	 * stack is initialised.Otherwise pass in our own callback which will post a semaphore,
 	 * and block this function until the semaphore is posted to.
 	 */
+	int ret = (initialised == INITIALISED_MAGIC) ? -EALREADY : 0;
+
 	if (cb != NULL) {
 		app_hooks.p_app_init = cb;
 	} else {
@@ -200,5 +217,5 @@ int alif_ble_enable(void (*cb)(void))
 		k_sem_take(&rwip_init_sem, K_FOREVER);
 	}
 
-	return 0;
+	return ret;
 }

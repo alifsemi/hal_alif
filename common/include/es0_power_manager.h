@@ -37,4 +37,16 @@ int8_t take_es0_into_use(void);
  */
 int8_t stop_using_es0(void);
 
+/**
+ * @brief wakeup ES0 using uart
+ * 
+ * ES0 needs to be woken once per boot and should then remain active
+ * until ES1 is powered off.
+ * 
+ * This function can be called as many times during the boot.
+ * 
+ * @return 
+ */
+void wake_es0(const struct device *uart_dev);
+
 #endif /* __ES0_POWER_MANAGER_H__ */
