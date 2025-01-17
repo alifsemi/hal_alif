@@ -19,6 +19,7 @@ config ALIF_BLE_HOST_PATCH_FILE
 	string
 	depends on ALIF_BLE_HOST_PATCHING
 	  default "${ZEPHYR_ALIF_MODULE_DIR}/ble/v1_0/rom_ble_stack.patch.elf" if ALIF_BLE_ROM_VERSION_1_0
+	  default "${ZEPHYR_ALIF_MODULE_DIR}/ble/v1_2/rom_ble_stack.patch.elf" if ALIF_BLE_ROM_VERSION_1_2
 endif
 
 config ALIF_BLE_HOST_THREAD_PRIORITY

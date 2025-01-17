@@ -20,5 +20,6 @@ config ALIF_LC3_CODEC_PATCH_FILE
 	string
 	depends on ALIF_LC3_CODEC_PATCHING
 	default "${ZEPHYR_ALIF_MODULE_DIR}/lc3/v1_0/rom_codec.patch.elf" if CONFIG_ALIF_BLE_ROM_VERSION_1_0
+	default "${ZEPHYR_ALIF_MODULE_DIR}/lc3/v1_2/rom_codec.patch.elf" if CONFIG_ALIF_BLE_ROM_VERSION_1_2
 
 endif # ALIF_ROM_LC3_CODEC

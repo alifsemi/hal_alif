@@ -16,6 +16,9 @@
 #if defined(CONFIG_ALIF_BLE_ROM_IMAGE_V1_0) && CONFIG_ALIF_BLE_ROM_IMAGE_V1_0
 #include "lc3/v1_0/rom_symbols_lc3.lds"
 #include "ble/v1_0/rom_symbols_ble.lds"
+#elif defined(CONFIG_ALIF_BLE_ROM_IMAGE_V1_2) && CONFIG_ALIF_BLE_ROM_IMAGE_V1_2
+#include "lc3/v1_2/rom_symbols_lc3.lds"
+#include "ble/v1_2/rom_symbols_ble.lds"
 #else
-#error "v1.0 is the only supported ROM version"
+#error "wrong ROM version"
 #endif
