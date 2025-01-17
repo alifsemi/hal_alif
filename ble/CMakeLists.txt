@@ -1,5 +1,4 @@
 zephyr_include_directories(
-  include
   plf
 )
 
@@ -10,7 +9,7 @@ zephyr_sources(
   plf/sync_timer.c
 )
 
-zephyr_link_libraries_ifdef(CONFIG_ALIF_BLE_HOST_PATCHING ${CONFIG_ALIF_BLE_HOST_PATCH_FILE})
-
 zephyr_linker_sources_ifdef(CONFIG_ALIF_BLE_HOST_PATCHING SECTIONS ble_patch_info.ld)
 zephyr_linker_sources_ifdef(CONFIG_ALIF_BLE_HOST_PATCHING RAM_SECTIONS ble_patch_ramable.ld)
+
+add_subdirectory_ifdef(CONFIG_ALIF_BLE_ROM_IMAGE_V1_0 v1_0)

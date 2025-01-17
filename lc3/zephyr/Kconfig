@@ -3,9 +3,8 @@
 
 menuconfig ALIF_ROM_LC3_CODEC
 	bool "Enable usage of the LC3 codec in ROM"
-	select ALIF_ROM_INCLUDED
+	depends on HAS_ALIF_BLE_ROM_IMAGE
 	select FPU
-	default n
 	help
 	  Allow the LC3 codec in ROM to be used.
 
@@ -13,7 +12,6 @@ if ALIF_ROM_LC3_CODEC
 
 config ALIF_LC3_CODEC_PATCHING
 	bool "Apply a patch to the Alif ROM LC3 codec"
-	default n
 	help
 	  Apply a patch to the LC3 codec in ROM. This enables ROM functions to be overridden
 	  using a patched version.
@@ -21,6 +19,6 @@ config ALIF_LC3_CODEC_PATCHING
 config ALIF_LC3_CODEC_PATCH_FILE
 	string
 	depends on ALIF_LC3_CODEC_PATCHING
-	default "${ZEPHYR_ALIF_MODULE_DIR}/lc3/rom_codec.patch.elf"
+	default "${ZEPHYR_ALIF_MODULE_DIR}/lc3/v1_0/rom_codec.patch.elf" if CONFIG_ALIF_BLE_ROM_VERSION_1_0
 
-endif
+endif # ALIF_ROM_LC3_CODEC

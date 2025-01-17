@@ -3,6 +3,6 @@
 
 config IEEE802154_ALIF_SUPPORT
 	bool "include 802.15.4 support"
-	depends on HAVE_BLE_802154_LINK_LAYER
+	depends on HAS_ALIF_BLE_802154_LINK_LAYER
 	help
 	  This option enables Alif Semiconductor's 802.15.4 HW adaptation.
