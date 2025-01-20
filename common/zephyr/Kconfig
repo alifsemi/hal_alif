@@ -1,79 +1,63 @@
-config ALIF_PM_LE_CODED_PHY_500
-	int "LE Coded PHY 500 Kbps selection"
+menuconfig ALIF_PM_LINK_LAYER
+	bool "Alif link layer configuration"
+	depends on HAS_ALIF_BLE_802154_LINK_LAYER
 	depends on HAS_ALIF_POWER_MANAGER
 	depends on HAS_ALIF_SE_SERVICES
+
+if ALIF_PM_LINK_LAYER
+
+config ALIF_PM_LE_CODED_PHY_500
+	int "LE Coded PHY 500 Kbps selection"
 	default 0
 
 config ALIF_PM_DFT_SLAVE_MD
 	int "Default MD bit used by slave when sending a data packet on a BLE connection"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default 0
 
 config ALIF_PM_CH_CLASS_REP_INTV
 	int "Channel classification reporting interval (in ms) (0 if not used)"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default 0
 
 # config ALIF_PM_BD_ADDRESS
 # 	string "Local Bd Address"
-# 	depends on HAS_ALIF_POWER_MANAGER
-# 	depends on HAS_ALIF_SE_SERVICES
 # 	default {0x01, 0x23, 0x45, 0x67, 0x89, 0xAB}
 
 config ALIF_PM_ACTIVITY_MOVE_CONFIG
 	int "Activity Move Configuration (enables/disables activity move for BLE connections and BT (e)SCO links)"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default 1
 
 config ALIF_PM_SCAN_EXT_ADV
 	int "Enable/disable scanning for extended advertising PDUs"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default 1
 
 config ALIF_PM_RSSI_HIGH_THR
 	int "RSSI high threshold"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default -40
 
 config ALIF_PM_RSSI_LOW_THR
 	int "RSSI low threshold"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default -60
 
 config ALIF_PM_SLEEP_ENABLE
 	int "Enable sleep mode"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default 1
 
 config ALIF_PM_EXT_WAKEUP_ENABLE
 	int "Enable External Wakeup"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default 1
 
 config ALIF_PM_ENABLE_CH_ASSESSMENT
 	int "Enable/disable channel assessment for BLE"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default 1
 
 config ALIF_PM_RSSI_INTERF_THR
 	int "RSSI interference threshold"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	default -70
 
 # TODO: change default to 3000000 in final product
 config ALIF_PM_LL_UART_BAUDRATE
 	int "UART baudrate between cores. Must match with application's baudrate"
-	depends on HAS_ALIF_POWER_MANAGER
-	depends on HAS_ALIF_SE_SERVICES
 	range 115200 3000000
 	default 1000000
+
+endif # ALIF_PM_LINK_LAYER

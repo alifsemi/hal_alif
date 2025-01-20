@@ -4,7 +4,7 @@
 
 if ALIF_BLE_HOST
 
-menu "Alif BLE stack"
+menu "Alif BLE host stack"
 
 config ALIF_BLE_HOST_PATCHING
 	bool "Apply a patch to the Alif BLE host stack"

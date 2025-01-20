@@ -9,6 +9,7 @@ choice BT_STACK_SELECTION
 
 	config BT_HCI
 		bool "HCI-based"
+		select ALIF_PM_LINK_LAYER
 		help
 		  HCI-based stack with optional host & controller parts and an
 		  HCI driver in between.
@@ -16,6 +17,7 @@ choice BT_STACK_SELECTION
 	config BT_CUSTOM
 		bool "Alif's BLE Host stack"
 		select ALIF_BLE_HOST
+		select ALIF_PM_LINK_LAYER
 		help
 		  Alif Semiconductor BLE boards have host stack on ROM and by selecting
 		  this option it becomes available as a build option.
