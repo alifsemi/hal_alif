@@ -215,6 +215,8 @@ enum alif_mac154_status_code alif_ahi_msg_set_expected_rx_time_resp(struct msg_b
 								    uint8_t *p_ctx);
 enum alif_mac154_status_code alif_ahi_msg_set_key_desc_resp(struct msg_buf *p_msg, uint8_t *p_ctx);
 
+enum alif_mac154_status_code alif_ahi_msg_clear_key_desc_resp(struct msg_buf *p_msg, uint8_t *p_ctx);
+
 enum alif_mac154_status_code alif_ahi_msg_set_frame_counter_resp(struct msg_buf *p_msg,
 								 uint8_t *p_ctx, bool if_larger);
 

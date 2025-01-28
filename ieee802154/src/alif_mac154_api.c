@@ -731,9 +731,16 @@ alif_mac154_key_value_description_set(struct alif_mac154_key_description *key_de
 {
 	enum alif_mac154_status_code ret = ALIF_MAC154_STATUS_OK;
 
-	/* TODO should clear keys when they are available */
 
 	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		alif_ahi_msg_clear_sec_keys(&ahi_msg, 0);
+		alif_ahi_msg_send(&ahi_msg, NULL, 0);
+		alif_hal_msg_wait(&ahi_msg);
+		ret = alif_ahi_msg_clear_key_desc_resp(&ahi_msg, NULL);
+		if (ret != ALIF_MAC154_STATUS_OK) {
+			LOG_WRN("Key descriotion clear failed %x", ret);
+		}
+
 		if (alif_mac154_key_storage_key_description_set(key_desc_list, list_size)) {
 			return ALIF_MAC154_STATUS_FAILED;
 		}
