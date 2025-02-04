@@ -1347,16 +1347,6 @@ enum KE_TASK_TYPE
 /*@TRACE*/
 enum KE_MEM_HEAP
 {
-    /* For SPARK_EXTSYS0 platform, re-order the heap memory identifiers. The non-retention heap is
-       not protected by the firewall, so should only be used for data intended to be shared.
-       Stack's heap allocation algorithm will allocate memory in a heap with a higher index if the
-       desired heap is full, so placing the non-retention heap at index 0 prevents any "overflow"
-       of data from the other heaps into this heap. */
-    #if defined(CFG_SPARK_EXTSYS0)
-    /// Non Retention memory block
-    KE_MEM_NON_RETENTION,
-    #endif
-
     /// Memory allocated for environment variables
     KE_MEM_ENV,
 
@@ -1367,10 +1357,6 @@ enum KE_MEM_HEAP
 
     /// Memory allocated for kernel messages
     KE_MEM_KE_MSG,
-
-    #if !defined(CFG_SPARK_EXTSYS0)
-    KE_MEM_NON_RETENTION,
-    #endif
 
     KE_MEM_BLOCK_MAX,
 };
@@ -1430,22 +1416,11 @@ enum KE_MEM_HEAP
                                       HOST_HEAP_MSG_SZ      )
 
 /// Size of Environment heap
-#if defined(CFG_SPARK_EXTSYS0)
-// For SPARK_EXTSYS0 platform, ECC memory should be allocated in ENV heap
-#define RWIP_HEAP_ENV_SIZE         ( BT_HEAP_ENV_SZ       + \
-                                     BLE_HEAP_ENV_SZ      + \
-                                     MAC154_HEAP_ENV_SZ   + \
-                                     HOST_HEAP_ENV_SZ     + \
-                                     ECC_HEAP_NON_RET_SIZE_ + \
-                                     TWS_HEAP_ENV_SIZE_        )
-#else
 #define RWIP_HEAP_ENV_SIZE         ( BT_HEAP_ENV_SZ       + \
                                      BLE_HEAP_ENV_SZ      + \
                                      MAC154_HEAP_ENV_SZ   + \
                                      HOST_HEAP_ENV_SZ     + \
                                      TWS_HEAP_ENV_SIZE_        )
-#endif
-
 
 /// Size of Attribute database heap
 #define RWIP_HEAP_PROFILE_SIZE     (  HOST_HEAP_PROFILE_SZ  )
@@ -1571,6 +1546,8 @@ enum PARAM_ID
 
     /// Alif
     PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME   = 0xD0,
+    /// 32 bits of configurations for balletto platform.
+    PARAM_ID_CONFIGURATION              = 0xD1,
 };
 
 /// List of parameters lengths
@@ -1667,6 +1644,7 @@ enum PARAM_LEN
 
     /// Alif
     PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME   = 2,
+    PARAM_LEN_CONFIGURATION              = 4,
 };
 
 /******************************************************************************************/
