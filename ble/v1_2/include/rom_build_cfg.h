@@ -164,4 +164,4 @@
 #define CFG_ALIFMAC154
 #define CFG_PATCHING
 
-#endif /* ROM_BUILD_CFG_H_ */
+#endif // ROM_BUILD_CFG_H_

@@ -1571,6 +1571,8 @@ enum PARAM_ID
 
     /// Alif
     PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME   = 0xD0,
+    /// 32 bits of configurations for SPARK platform.
+    PARAM_ID_CONFIGURATION              = 0xD1,
 };
 
 /// List of parameters lengths
@@ -1667,6 +1669,7 @@ enum PARAM_LEN
 
     /// Alif
     PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME   = 2,
+    PARAM_LEN_CONFIGURATION              = 4,
 };
 
 /******************************************************************************************/
@@ -2085,6 +2088,15 @@ enum rwip_incr_dft
 #else
     #define RESET_SPLIT  (0)
     #define UART_SPLIT   (0)
+#endif
+
+#if (defined(PLF_SPARK_EXTSYS0) && PLF_SPARK_EXTSYS0)
+/// @brief  Configuration bits for spark board. This configuration is received from NVDS
+
+extern uint32_t spark_configuration;
+
+/// bit0        HPA/LPA if bit is set the HPA is used
+#define SPARK_CONFIG_HPA_ENABLED ((spark_configuration & 1) == 1)
 #endif
 
 #endif //RWIP_CONFIG_H_
