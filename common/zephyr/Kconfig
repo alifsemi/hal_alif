@@ -1,6 +1,6 @@
 menuconfig ALIF_PM_LINK_LAYER
 	bool "Alif link layer configuration"
-	depends on HAS_ALIF_BLE_802154_LINK_LAYER
+	default y if HAS_ALIF_BLE_802154_LINK_LAYER
 	depends on HAS_ALIF_POWER_MANAGER
 	depends on HAS_ALIF_SE_SERVICES
 

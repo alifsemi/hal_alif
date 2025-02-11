@@ -1,15 +1,16 @@
 # BLE host stack related configurations
 
+if BT
+
 choice BT_STACK_SELECTION
 	prompt "Bluetooth Stack Selection"
 	default BT_HCI
-	depends on HAS_ALIF_BLE_802154_LINK_LAYER
+
 	help
 	  Select the Bluetooth stack to compile.
 
 	config BT_HCI
 		bool "HCI-based"
-		select ALIF_PM_LINK_LAYER
 		help
 		  HCI-based stack with optional host & controller parts and an
 		  HCI driver in between.
@@ -17,7 +18,6 @@ choice BT_STACK_SELECTION
 	config BT_CUSTOM
 		bool "Alif's BLE Host stack"
 		select ALIF_BLE_HOST
-		select ALIF_PM_LINK_LAYER
 		help
 		  Alif Semiconductor BLE boards have host stack on ROM and by selecting
 		  this option it becomes available as a build option.
@@ -36,6 +36,8 @@ config CUSTOM_LINKER_SCRIPT
 	string
 	default "${ZEPHYR_ALIF_MODULE_DIR}/linker_add_rom_symbols.ld"
 endif # ALIF_BLE_HOST
+
+endif # BT
 
 source "$(ZEPHYR_ALIF_MODULE_DIR)/se_services/zephyr/Kconfig"
 source "$(ZEPHYR_ALIF_MODULE_DIR)/common/zephyr/Kconfig"
