@@ -60,4 +60,20 @@ config ALIF_PM_LL_UART_BAUDRATE
 	range 115200 3000000
 	default 1000000
 
+config ALIF_EXT_WAKEUP_TIME
+	int "External wakeup time needed (us)"
+	default 25000
+
+config ALIF_OSC_WAKEUP_TIME
+	int "Oscilator enable wakeup time needed (us)"
+	default 25000
+
+config ALIF_RM_WAKEUP_TIME
+	int "Radio wakeup time needed (us)"
+	default 625
+
+config ALIF_EXT_WARMBOOT_WAKEUP_TIME
+	int "Warmboot wakeup time. Time limit between light / deep sleep (us)"
+	default 32000
+
 endif # ALIF_PM_LINK_LAYER

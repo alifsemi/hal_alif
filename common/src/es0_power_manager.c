@@ -41,6 +41,10 @@ static uint32_t wakeup_count;
 #define BOOT_PARAM_ID_UART_BAUDRATE             0x10
 #define BOOT_PARAM_ID_UART_INPUT_CLK_FREQ       0xC0
 #define BOOT_PARAM_ID_NO_PARAM                  0xFF
+#define BOOT_PARAM_ID_EXT_WAKEUP_TIME           0x0D
+#define BOOT_PARAM_ID_OSC_WAKEUP_TIME           0x0E
+#define BOOT_PARAM_ID_RM_WAKEUP_TIME            0x0F
+#define BOOT_PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME  0xD0
 
 #define BOOT_PARAM_LEN_LE_CODED_PHY_500          1
 #define BOOT_PARAM_LEN_DFT_SLAVE_MD              1
@@ -54,6 +58,10 @@ static uint32_t wakeup_count;
 #define BOOT_PARAM_LEN_ENABLE_CHANNEL_ASSESSMENT 1
 #define BOOT_PARAM_LEN_UART_BAUDRATE             4
 #define BOOT_PARAM_LEN_UART_INPUT_CLK_FREQ       4
+#define BOOT_PARAM_LEN_EXT_WAKEUP_TIME           2
+#define BOOT_PARAM_LEN_OSC_WAKEUP_TIME           2
+#define BOOT_PARAM_LEN_RM_WAKEUP_TIME            2
+#define BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME  2
 
 static uint8_t *write_tlv_int(uint8_t *target, uint8_t tag, uint32_t value, uint8_t len)
 {
@@ -130,11 +138,14 @@ int8_t take_es0_into_use(void)
 				BOOT_PARAM_LEN_RSSI_THR + BOOT_PARAM_LEN_RSSI_THR +
 				BOOT_PARAM_LEN_SLEEP_ENABLE + BOOT_PARAM_LEN_EXT_WAKEUP_ENABLE +
 				BOOT_PARAM_LEN_ENABLE_CHANNEL_ASSESSMENT + BOOT_PARAM_LEN_RSSI_THR +
-				BOOT_PARAM_LEN_UART_BAUDRATE + BOOT_PARAM_LEN_UART_INPUT_CLK_FREQ;
+				BOOT_PARAM_LEN_UART_BAUDRATE + BOOT_PARAM_LEN_UART_INPUT_CLK_FREQ +
+				BOOT_PARAM_LEN_EXT_WAKEUP_TIME + BOOT_PARAM_LEN_OSC_WAKEUP_TIME +
+				BOOT_PARAM_LEN_RM_WAKEUP_TIME +
+				BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME;
 
 	total_length += 4; /* N,V,D,S */
 
-	total_length += (14 * 3); /* Each write_tlv_x call writes additional 3 bytes */
+	total_length += (18 * 3); /* Each write_tlv_x call writes additional 3 bytes */
 
 	if (total_length > LL_BOOT_PARAMS_MAX_SIZE) {
 		return -2;
@@ -171,6 +182,15 @@ int8_t take_es0_into_use(void)
 			    BOOT_PARAM_LEN_RSSI_THR);
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_UART_BAUDRATE, CONFIG_ALIF_PM_LL_UART_BAUDRATE,
 			    BOOT_PARAM_LEN_UART_BAUDRATE);
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_EXT_WAKEUP_TIME, CONFIG_ALIF_EXT_WAKEUP_TIME,
+			    BOOT_PARAM_LEN_EXT_WAKEUP_TIME);
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_OSC_WAKEUP_TIME, CONFIG_ALIF_OSC_WAKEUP_TIME,
+			    BOOT_PARAM_LEN_OSC_WAKEUP_TIME);
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_RM_WAKEUP_TIME, CONFIG_ALIF_RM_WAKEUP_TIME,
+			    BOOT_PARAM_LEN_RM_WAKEUP_TIME);
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME,
+			    CONFIG_ALIF_EXT_WARMBOOT_WAKEUP_TIME,
+			    BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME);
 
 	uint32_t min_uart_clk_freq = CONFIG_ALIF_PM_LL_UART_BAUDRATE * 16;
 	uint32_t reg_uart_clk_cfg = LL_UART_CLK_SEL_CTRL_16MHZ;
