@@ -17,7 +17,8 @@
 #include "soc_memory_map.h"
 #include "alif_ble.h"
 
-#define RWIP_INIT_NO_ERROR 0
+#define RWIP_INIT_NO_ERROR   0
+#define RESET_MEM_ALLOC_FAIL 0xF2F2F2F2
 
 LOG_MODULE_REGISTER(alif_ble);
 
@@ -71,9 +72,17 @@ static void global_int_stop(void)
 	irq_key = irq_lock();
 }
 
-void platform_reset_request(uint32_t error)
+void platform_reset_request(uint32_t const error)
 {
-	__ASSERT(0, "Platform  reset requested by BLE host stack, err %d", error);
+	if (RESET_MEM_ALLOC_FAIL == error) {
+		__ASSERT(0,
+			 "Running out of heap. Please, increase it. Current %u "
+			 "(ALIF_BLE_HOST_ADDL_PRF_HEAPSIZE)",
+			 CONFIG_ALIF_BLE_HOST_ADDL_PRF_HEAPSIZE);
+		return;
+	}
+
+	__ASSERT(0, "Platform  reset requested by BLE host stack, err %u", error);
 }
 
 static void rtos_evt_post(void)
