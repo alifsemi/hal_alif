@@ -4,7 +4,7 @@
  */
 #include <zephyr/kernel.h>
 #include <zephyr/cache.h>
-#include <zephyr/drivers/mhuv2_ipm.h>
+#include <zephyr/drivers/ipm.h>
 #include <se_service.h>
 #include <soc_memory_map.h>
 #include <zephyr/logging/log.h>
@@ -89,13 +89,18 @@ static uint32_t se_service_recv_data;
  * received otherwise considered as failure to receive data.
  *
  * parameters,
- * @dev - Driver instance.
- * @ptr - pointer to received data.
+ * @dev   - Driver instance.
+ * @ptr   - pointer to received data.
+ * @id    - channel number
+ * @data  - data (unused)
  */
-static void callback_for_receive_msg(const struct device *dev, uint32_t *ptr)
+static void callback_for_receive_msg(const struct device *dev, void *ptr,
+					uint32_t id, volatile void *data)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(ptr);
+	ARG_UNUSED(id);
+	ARG_UNUSED(data);
 	k_sem_give(&svc_recv_sem);
 }
 /**
@@ -108,13 +113,18 @@ static void callback_for_receive_msg(const struct device *dev, uint32_t *ptr)
  * otherwise data sent is considered as failure.
  *
  * parameters,
- * @dev - Driver instance
- * @ptr - pointer to sent data.
+ * @dev   - Driver instance
+ * @ptr   - pointer to sent data.
+ * @id    - channel number
+ * @data  - data (unused)
  */
-static void callback_for_send_msg(const struct device *dev, uint32_t *ptr)
+static void callback_for_send_msg(const struct device *dev, void *ptr,
+					uint32_t id, volatile void *data)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(ptr);
+	ARG_UNUSED(id);
+	ARG_UNUSED(data);
 	k_sem_give(&svc_send_sem);
 }
 
@@ -138,13 +148,14 @@ static void callback_for_send_msg(const struct device *dev, uint32_t *ptr)
 static int send_msg_to_se(uint32_t *ptr, uint32_t dcache_size, uint32_t timeout)
 {
 	int err;
+	int wait = 0;
 	int service_id = ((service_header_t *)ptr)->hdr_service_id;
 
 	global_address = local_to_global(ptr);
 	__asm__ volatile("dmb 0xF" ::: "memory");
 	sys_cache_data_flush_range(ptr, dcache_size);
 
-	err = mhuv2_ipm_send(send_dev, CH_ID, &global_address);
+	err = ipm_send(send_dev, wait, CH_ID, &global_address, (int)dcache_size);
 	if (err) {
 		LOG_ERR("failed to send request for MSG(error: %d)\n", err);
 		return err;
@@ -1154,8 +1165,12 @@ static int se_service_mhuv2_nodes_init(void)
 		printk("MHU devices not ready\n");
 		return -ENODEV;
 	}
-	mhuv2_ipm_rb(recv_dev, callback_for_receive_msg, &se_service_recv_data);
-	mhuv2_ipm_rb(send_dev, callback_for_send_msg, NULL);
+	ipm_register_callback(recv_dev, callback_for_receive_msg, &se_service_recv_data);
+	ipm_register_callback(send_dev, callback_for_send_msg, NULL);
+
+	ipm_set_enabled(recv_dev, true);
+	ipm_set_enabled(send_dev, true);
+
 	return 0;
 }
 
