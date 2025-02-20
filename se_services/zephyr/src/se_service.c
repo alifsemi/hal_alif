@@ -26,6 +26,7 @@ static K_MUTEX_DEFINE(svc_mutex);
 
 const struct device *send_dev;
 const struct device *recv_dev;
+static uint32_t se_toc_version;
 
 /* Manufacturing data for older Ensemble Family revision <= REV_B2 */
 typedef struct {
@@ -359,6 +360,11 @@ int se_service_get_toc_version(uint32_t *pversion)
 		LOG_ERR("Invalid argument\n");
 		return -EINVAL;
 	}
+	/* Check is TOC version readed */
+	if (se_toc_version) {
+		*pversion = se_toc_version;
+		return 0;
+	}
 
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 	if (err) {
@@ -383,6 +389,9 @@ int se_service_get_toc_version(uint32_t *pversion)
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
+	/* Save Toc Version */
+	se_toc_version = se_service_all_svc_d.get_toc_version_svc_d.resp_version;
+	LOG_DBG("toc version: %x", se_toc_version);
 	return 0;
 }
 /**
@@ -758,7 +767,6 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size)
 	if (err) {
 		return err;
 	}
-	LOG_DBG("toc version: %x", version);
 
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 	if (err) {

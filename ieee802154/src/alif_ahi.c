@@ -12,6 +12,7 @@
 #include <zephyr/kernel.h>
 
 #include "alif_ahi.h"
+#include "es0_power_manager.h"
 
 #define LOG_MODULE_NAME alif_ahi
 

@@ -119,8 +119,20 @@ int8_t take_es0_into_use(void)
 	}
 
 	if (es0_user_counter == 0) {
-		/* Shuttdown is needed if riscv was already active */
-		se_service_shutdown_es0();
+		int err;
+		uint32_t version;
+
+		/* Synch at boot allways */
+		se_service_sync();
+		err = se_service_get_toc_version(&version);
+		if (err) {
+			return err;
+		}
+		/* v1.103. not need shuttdown */
+		if (version < 0x01670000) {
+			/* Shuttdown is needed if riscv was already active */
+			se_service_shutdown_es0();
+		}
 	}
 
 	static uint8_t ll_boot_params_buffer[LL_BOOT_PARAMS_MAX_SIZE];
