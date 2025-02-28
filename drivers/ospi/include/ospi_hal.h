@@ -76,6 +76,13 @@ struct ospi_init {
 
 	void      *user_data;                   /* User data*/
 	hal_event_notify_cb *event_cb;          /* Event Callback*/
+
+	uint16_t  xip_wrap_cmd;			/* WRAP OpCode*/
+	uint16_t  xip_incr_cmd;			/* INCR mode OpCode*/
+	uint16_t  xip_cnt_time_out;		/* Timeout value*/
+	uint16_t  xip_aes_rxds_dly;		/* AES RxDS Delay*/
+	uint16_t  xip_wait_cycles;		/* XiP Wait Cycle*/
+	uint16_t  xip_rxds_vl_en;		/* XiP RxDS variable latency*/
 };
 
 /*---- OSPI Event ---------------------*/
@@ -89,6 +96,7 @@ struct ospi_trans_config {
 	uint8_t  ddr_enable;            /* Enable DDR Mode */
 	uint8_t  rx_ds_enable;          /* Read Data Strobe Enable */
 };
+
 
 /**
  * \fn          alif_hal_ospi_initialize
@@ -160,6 +168,24 @@ int32_t alif_hal_ospi_receive(HAL_OSPI_Handle_T handle,
  * \return      0 on Success, else error code.
  */
 int32_t alif_hal_ospi_irq_handler(HAL_OSPI_Handle_T handle);
+
+
+/**
+ * \fn          alif_hal_ospi_xip_enable
+ * \brief       Enable XiP.
+ * \param[in]   handle  Instance handlerd
+ * \return      0 on Success, else error code.
+ */
+int32_t alif_hal_ospi_xip_enable(HAL_OSPI_Handle_T handle);
+
+/**
+ * \fn          alif_hal_ospi_xip_enable
+ * \brief       Disable XiP.
+ * \param[in]   handle  Instance handlerd
+ * \return      0 on Success, else error code.
+ */
+int32_t alif_hal_ospi_xip_disable(HAL_OSPI_Handle_T handle);
+
 
 /**
  * \fn          alif_hal_ospi_deinit
