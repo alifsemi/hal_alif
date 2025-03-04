@@ -132,13 +132,13 @@ static void callback_for_send_msg(const struct device *dev, void *ptr,
 /**
  * @brief Send data to SE through MHUv2.
 
- * The semphores svc_recv_sem and svc_send_sem are used with timeout
+ * The semaphores svc_recv_sem and svc_send_sem are used with timeout
  * to make sure data is received or sent.
  *
  * parameters,
  * @ptr     - placeholder for data to be sent.
  * @size    - size of data.
- * @timeout - Timout.
+ * @timeout - Timeout in milliseconds.
  *
  * returns,
  * 0      - success.
@@ -148,33 +148,60 @@ static void callback_for_send_msg(const struct device *dev, void *ptr,
 static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 {
 	int err;
-	int wait = 0;
 	int service_id = ((service_header_t *)ptr)->hdr_service_id;
 
 	global_address = local_to_global(ptr);
 	__asm__ volatile("dmb 0xF" ::: "memory");
 	sys_cache_data_flush_range(ptr, size);
 
-	err = ipm_send(send_dev, wait, CH_ID, &global_address, (int)size);
-	if (err) {
-		LOG_ERR("failed to send request for MSG(error: %d)\n", err);
-		return err;
-	}
+	if (k_can_yield()) {
+		int wait = 0;
 
-	if (k_sem_take(&svc_send_sem, K_MSEC(timeout)) != 0) {
-		LOG_ERR("service %d send is timed out!\n", service_id);
-		k_sem_reset(&svc_send_sem);
-		return -ETIME;
-	}
-	if (k_sem_take(&svc_recv_sem, K_MSEC(timeout)) != 0) {
-		LOG_ERR("service %d response is timed out!\n", service_id);
-		k_sem_reset(&svc_recv_sem);
-		return -ETIME;
+		/* Perform transaction in interrupt mode */
+		err = ipm_send(send_dev, wait, CH_ID, &global_address, (int)size);
+		if (err) {
+			LOG_ERR("failed to send request for MSG(error: %d)\n", err);
+			return err;
+		}
+
+		if (k_sem_take(&svc_send_sem, K_MSEC(timeout)) != 0) {
+			LOG_ERR("service %d send is timed out!\n", service_id);
+			k_sem_reset(&svc_send_sem);
+			return -ETIME;
+		}
+		if (k_sem_take(&svc_recv_sem, K_MSEC(timeout)) != 0) {
+			LOG_ERR("service %d response is timed out!\n", service_id);
+			k_sem_reset(&svc_recv_sem);
+			return -ETIME;
+		}
+	} else {
+		uint32_t rx_data = 0;
+
+		/* Perform transaction in polling mode */
+		/* Disable Rx MHU interrupts */
+		ipm_set_enabled(recv_dev, false);
+
+		err = ipm_poll_out(send_dev, CH_ID, &global_address,
+					(int)size, K_MSEC(timeout));
+		if (err) {
+			LOG_ERR("failed to send service %d\n", service_id);
+			return err;
+		}
+
+		err = ipm_poll_in(recv_dev, CH_ID, &rx_data,
+				(int)size, K_MSEC(timeout));
+		if (err) {
+			LOG_ERR("failed to rcv resp for service %d\n", service_id);
+			return err;
+		}
+		/* Enable Rx MHU interrupts */
+		ipm_set_enabled(recv_dev, true);
 	}
 
 	sys_cache_data_invd_range(ptr, size);
 	return 0;
 }
+
 /**
  * @brief Synchronize with SE or wait until SE wakes up by sending
  * multiple SE heartbeat service requests.
@@ -1172,6 +1199,7 @@ static int se_service_mhuv2_nodes_init(void)
 		printk("MHU devices not ready\n");
 		return -ENODEV;
 	}
+
 	ipm_register_callback(recv_dev, callback_for_receive_msg, &se_service_recv_data);
 	ipm_register_callback(send_dev, callback_for_send_msg, NULL);
 
@@ -1180,4 +1208,4 @@ static int se_service_mhuv2_nodes_init(void)
 	return 0;
 }
 
-SYS_INIT(se_service_mhuv2_nodes_init, POST_KERNEL, CONFIG_SE_SERVICE_INIT_PRIORITY);
+SYS_INIT(se_service_mhuv2_nodes_init, PRE_KERNEL_1, CONFIG_SE_SERVICE_INIT_PRIORITY);
