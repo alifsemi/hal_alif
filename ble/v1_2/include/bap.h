@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Header file
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -699,9 +699,10 @@ typedef struct bap_bc_adv_param
     /// Advertising SID
     /// From 0x00 to 0x0F
     uint8_t adv_sid;
-    /// Maximum power level at which the advertising packets have to be transmitted
-    /// (between -127 and 126 dBm)
-    int8_t max_tx_pwr;
+    /// Required TX Power level in dBm (from -127 to 20 dBm)\n
+    /// ADV_TX_PWR_NO_PREF (0x7F) means no preference\n
+    /// TX Power level value chosen by controller reported in created callback function
+    int8_t tx_pwr;
     /// Own address type (see #gapm_le_own_addr enumeration)
     uint8_t own_addr_type;
     /// Maximum advertising events the Controller can skip before sending the AUX_ADV_IND packets on the

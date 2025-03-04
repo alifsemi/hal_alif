@@ -5,8 +5,8 @@
  *
  * @brief Header file - Immediate Alert Service Client - Native API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,14 @@
  ****************************************************************************************
  * @defgroup IASC_API Immediate Alert Service Client
  * @ingroup IAS_API
- * @brief Description of API for Immediate Alert Service Client
+ * @brief Description of API for Immediate Alert Service Client\n See \ref ias_msc
+ ****************************************************************************************
+ */
+
+/**
+ ****************************************************************************************
+ * @defgroup IASC_API_COMMON Common
+ * @ingroup IASC_API
  ****************************************************************************************
  */
 
@@ -38,54 +45,130 @@
  */
 
 #include "ias.h"
-#include "findl.h"
+#include "co_buf.h"
 
-/// @addtogroup IASC_API_NATIVE
+/// @addtogroup IASC_API_COMMON
 /// @{
+
+/*
+ * ENUMERATIONS
+ ****************************************************************************************
+ */
+
+/// Command code
+enum iasc_cmd_code
+{
+    /// Discover
+    IASC_CMD_DISCOVER = 0u,
+    /// Set level
+    IASC_CMD_SET_LEVEL,
+};
 
 /*
  * TYPES DEFINITION
  ****************************************************************************************
  */
 
-/// Set of callback functions for backward communication with an upper layer
-typedef struct findl_cb iasc_cb_t;
+/// Structure containing description of IAS discovered in peer device's database
+typedef struct
+{
+    /// Alert Level characteristic value handle
+    uint16_t val_hdl;
+    /// Properties
+    uint8_t prop;
+} iasc_content_t;
+
+/// @} IASC_API_COMMON
+
+/// @addtogroup IASC_API_NATIVE
+/// @{
 
 /*
- * API FUNCTIONS
+ * NATIVE API CALLBACKS
  ****************************************************************************************
  */
 
-/**
- ****************************************************************************************
- * @brief Enable by doing a discovery or restoring bond data
- *
- * @param[in] conidx        Connection index
- * @param[in] con_type      Connection type (see enum #prf_con_type)
- * @param[in] p_ias         Pointer to bond data information (valid if con_type == PRF_CON_NORMAL)
- *
- * @return Function execution status (see enum #hl_err)
+/// Set of callback function for backward communication with upper layer
+typedef struct
+{
+    /**
+     ****************************************************************************************
+     * @brief Command completed event
+     *
+     * @param[in] conidx            Connection index
+     * @param[in] status            Status (see #hl_err enumeration)
+     * @param[in] cmd_code          Command code (see #iasc_cmd_code enumeration)
+     ****************************************************************************************
+     */
+    void (*cb_cmp_evt)(uint8_t conidx, uint16_t status, uint8_t cmd_code);
+
+    /**
+     ****************************************************************************************
+     * @brief Inform about an update of bond data to be stored
+     *
+     * @param[in] conidx            Connection index
+     * @param[in] p_bond_data       Pointer to bond data
+     ****************************************************************************************
+     */
+    void (*cb_bond_data)(uint8_t conidx, const iasc_content_t* p_bond_data);
+} iasc_cbs_t;
+
+/*
+ * NATIVE API FUNCTIONS
  ****************************************************************************************
  */
-__STATIC_FORCEINLINE uint16_t iasc_enable(uint8_t conidx, uint8_t con_type, const ias_content_t* p_ias)
-{
-    return (findl_enable(conidx, con_type, p_ias));
-}
+
+#if (!HOST_MSG_API)
+/**
+ ****************************************************************************************
+ * @brief Add support of Immediate Alert Service as Client
+ *
+ * @param[in] p_cbs             Pointer to set of callback functions for backward communication\n
+ *                              Shall not be NULL. All callback functions shall be set.
+ *
+ * @return An error status (see #hl_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t iasc_add(const iasc_cbs_t* p_cbs);
+#endif // (!HOST_MSG_API)
 
 /**
  ****************************************************************************************
- * @brief Update peer device alert level
+ * @brief Discover Immediate Alert Service instances in a peer device's database
  *
- * @param[in] conidx        Connection index
- * @param[in] alert_lvl     Alert level (see enum findl_alert_lvl)
+ * @param[in] conidx            Connection index
  *
- * @return Function execution status (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-__STATIC_FORCEINLINE uint16_t iasc_alert_upd(uint8_t conidx, uint8_t alert_lvl)
-{
-    return (findl_alert_upd(conidx, alert_lvl));
-}
+uint16_t iasc_discover(uint8_t conidx);
+
+#if (HL_BONDABLE)
+/**
+ ****************************************************************************************
+ * @brief Restore bond data
+ *
+ * @param[in] conidx            Connection index
+ * @param[in] p_bond_data       Pointer to bond data\n
+ *                              Shall not be NULL
+ *
+ * @return An error status (see #hl_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t iasc_restore_bond_data(uint8_t conidx, const iasc_content_t* p_bond_data);
+#endif // (HL_BONDABLE)
+
+/**
+ ****************************************************************************************
+ * @brief Set Alert Level characteristic value
+ *
+ * @param[in] conidx            Connection index
+ * @param[in] p_buf             Pointer to buffer
+ *
+ * @return An error status (see #hl_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t iasc_set_level(uint8_t conidx, co_buf_t* p_buf);
 
 /// @} IASC_API_NATIVE
 

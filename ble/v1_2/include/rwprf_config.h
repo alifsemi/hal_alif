@@ -5,8 +5,8 @@
  *
  * @brief Header file - Profile Configuration
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -378,18 +378,18 @@
 #endif // defined(CFG_PRF_PLXC)
 
 /// Continuous Glucose Monitoring Profile Server Role
-#if defined(CFG_PRF_CGMS)
-#define BLE_CGM_SERVER          1
+#if (defined(CFG_PRF_CGMSS) || defined(CFG_PRF_CGMS))
+#define BLE_CGMS_SERVER         1
 #else
-#define BLE_CGM_SERVER          0
-#endif // defined(CFG_PRF_CGMS)
+#define BLE_CGMS_SERVER         0
+#endif // (defined(CFG_PRF_CGMSS) || defined(CFG_PRF_CGMS))
 
 /// Continuous Glucose Monitoring Profile Client Role
-#if defined(CFG_PRF_CGMC)
-#define BLE_CGM_CLIENT          1
+#if (defined(CFG_PRF_CGMSC) || defined(CFG_PRF_CGMC))
+#define BLE_CGMS_CLIENT         1
 #else
-#define BLE_CGM_CLIENT          0
-#endif // defined(CFG_PRF_CGMC)
+#define BLE_CGMS_CLIENT         0
+#endif // (defined(CFG_PRF_CGMSC) || defined(CFG_PRF_CGMC))
 
 /// Coordinated Set Identification Profile Set Member Role
 #if defined(CFG_PRF_CSISM)
@@ -483,6 +483,48 @@
 #define BLE_RAS_CLIENT          0
 #endif // defined(CFG_PRF_RASS) && (0)
 
+/// Immediate Alert Service Server role
+#if defined(CFG_PRF_IASS)
+#define BLE_IAS_SERVER (1)
+#else // defined(CFG_PRF_IASS)
+#define BLE_IAS_SERVER (0)
+#endif // defined(CFG_PRF_IASS)
+
+/// Immediate Alert Service Client role
+#if defined(CFG_PRF_IASC)
+#define BLE_IAS_CLIENT (1)
+#else // defined(CFG_PRF_IASC)
+#define BLE_IAS_CLIENT (0)
+#endif // defined(CFG_PRF_IASC)
+
+/// Link Loss Service Server role
+#if defined(CFG_PRF_LLSS)
+#define BLE_LLS_SERVER (1)
+#else // defined(CFG_PRF_LLSS)
+#define BLE_LLS_SERVER (0)
+#endif // defined(CFG_PRF_LLSS)
+
+/// Link Loss Service Client role
+#if defined(CFG_PRF_LLSC)
+#define BLE_LLS_CLIENT (1)
+#else // defined(CFG_PRF_LLSC)
+#define BLE_LLS_CLIENT (0)
+#endif // defined(CFG_PRF_LLSC)
+
+/// Tx Power Service Server role
+#if defined(CFG_PRF_TPSS)
+#define BLE_TPS_SERVER (1)
+#else // defined(CFG_PRF_TPSS)
+#define BLE_TPS_SERVER (0)
+#endif // defined(CFG_PRF_TPSS)
+
+/// Tx Power Service Client role
+#if defined(CFG_PRF_TPSC)
+#define BLE_TPS_CLIENT (1)
+#else // defined(CFG_PRF_TPSC)
+#define BLE_TPS_CLIENT (0)
+#endif // defined(CFG_PRF_TPSC)
+
 /// BLE_CLIENT_PRF indicates if at least one client profile is present
 #if (BLE_PROX_MONITOR || BLE_FINDME_LOCATOR || BLE_HT_COLLECTOR || BLE_BP_COLLECTOR \
         || BLE_HR_COLLECTOR || BLE_DIS_CLIENT || BLE_TIP_CLIENT || BLE_SP_CLIENT \
@@ -490,8 +532,8 @@
         || BLE_RSC_COLLECTOR || BLE_CSC_COLLECTOR || BLE_CP_COLLECTOR || BLE_LN_COLLECTOR || BLE_AN_CLIENT \
         || BLE_PAS_CLIENT || BLE_IPS_CLIENT || BLE_ENV_CLIENT || BLE_WSC_CLIENT \
         || BLE_UDS_CLIENT || BLE_BCS_CLIENT || BLE_WPT_CLIENT || BLE_PLX_CLIENT \
-        || BLE_CGM_CLIENT || BLE_CSIS_COORD || BLE_OT_CLIENT || BLE_DBG_THPP || BLE_MESH || BLE_GAF_PRESENT \
-        || BLE_BMS_CLIENT || BLE_ESL_AP || BLE_RAS_CLIENT)
+        || BLE_CGMS_CLIENT || BLE_CSIS_COORD || BLE_OT_CLIENT || BLE_DBG_THPP || BLE_MESH || BLE_GAF_PRESENT \
+        || BLE_BMS_CLIENT || BLE_ESL_AP || BLE_RAS_CLIENT || BLE_IAS_CLIENT || BLE_LLS_CLIENT || BLE_TPS_CLIENT)
 #define BLE_CLIENT_PRF          1
 #else
 #define BLE_CLIENT_PRF          0
@@ -504,8 +546,9 @@
         || BLE_CSC_SENSOR || BLE_CP_SENSOR || BLE_LN_SENSOR || BLE_AN_SERVER \
         || BLE_PAS_SERVER || BLE_IPS_SERVER || BLE_ENV_SERVER || BLE_WSC_SERVER \
         || BLE_UDS_SERVER || BLE_BCS_SERVER || BLE_WPT_SERVER || BLE_PLX_SERVER \
-        || BLE_CGM_SERVER || BLE_CSIS_MEMBER || BLE_OT_SERVER || BLE_DBG_THPP || BLE_MESH || BLE_GAF_PRESENT \
-        || GFP_PROVIDER || (0) || BLE_BMS_SERVER || BLE_ESL_TAG || BLE_RAS_SERVER)
+        || BLE_CGMS_SERVER || BLE_CSIS_MEMBER || BLE_OT_SERVER || BLE_DBG_THPP || BLE_MESH || BLE_GAF_PRESENT \
+        || GFP_PROVIDER || (0) || BLE_BMS_SERVER || BLE_ESL_TAG || BLE_RAS_SERVER \
+        || BLE_IAS_SERVER || BLE_LLS_SERVER || BLE_TPS_SERVER)
 #define BLE_SERVER_PRF          1
 #else
 #define BLE_SERVER_PRF          0
@@ -529,142 +572,82 @@
 #endif //(BLE_SERVER_PRF)
 
 #else
-/// Proximity Profile Monitor Role
 #define BLE_PROX_MONITOR        0
-/// Proximity Profile Reporter Role
 #define BLE_PROX_REPORTER       0
-///Find Me Profile Locator role
 #define BLE_FINDME_LOCATOR      0
-///Find Me Profile Target role
 #define BLE_FINDME_TARGET       0
-///Health Thermometer Profile Collector Role
 #define BLE_HT_COLLECTOR        0
-///Health Thermometer Profile Thermometer Role
 #define BLE_HT_THERMOM          0
-///Device Information Service Client Role
 #define BLE_DIS_CLIENT          0
-///Device Information Service Server Role
 #define BLE_DIS_SERVER          0
-///Blood Pressure Profile Collector Role
 #define BLE_BP_COLLECTOR        0
-///Blood Pressure Profile Sensor Role
 #define BLE_BP_SENSOR           0
-///Time Profile Client Role
 #define BLE_TIP_CLIENT          0
-///Time Profile Server Role
 #define BLE_TIP_SERVER          0
-///Heart Rate Profile Collector Role
 #define BLE_HR_COLLECTOR        0
-///Heart Rate Profile Sensor Role
 #define BLE_HR_SENSOR           0
-///Scan Parameter Profile Client Role
 #define BLE_SP_CLIENT           0
-///Scan Parameter Profile Server Role
 #define BLE_SP_SERVER           0
-///Battery Service Client Role
 #define BLE_BATT_CLIENT         0
-///Battery Service Server Role
 #define BLE_BATT_SERVER         0
-///HID Device Role
 #define BLE_HID_DEVICE          0
-///HID Boot Host Role
 #define BLE_HID_BOOT_HOST       0
-///HID Report Host Role
 #define BLE_HID_REPORT_HOST     0
-/// Glucose Profile Collector Role
 #define BLE_GL_COLLECTOR        0
-/// Glucose Profile Sensor Role
 #define BLE_GL_SENSOR           0
-/// Running Speed and Cadence Profile Collector Role
 #define BLE_RSC_COLLECTOR       0
-/// Running Speed and Cadence Profile Server Role
 #define BLE_RSC_SENSOR          0
-/// Cycling Speed and Cadence Profile Collector Role
 #define BLE_CSC_COLLECTOR       0
-/// Cycling Speed and Cadence Profile Server Role
 #define BLE_CSC_SENSOR          0
-/// Cycling Power Profile Collector Role
 #define BLE_CP_COLLECTOR        0
-/// Cycling Power Profile Server Role
 #define BLE_CP_SENSOR            0
-/// Location and Navigation Profile Collector Role
 #define BLE_LN_COLLECTOR        0
-/// Location and Navigation Profile Server Role
 #define BLE_LN_SENSOR            0
-/// Alert Notification Profile Client Role
 #define BLE_AN_CLIENT           0
-/// Alert Notification Profile Server Role
 #define BLE_AN_SERVER           0
-/// Phone Alert Status Profile Client Role
 #define BLE_PAS_CLIENT          0
-/// Phone Alert Status Profile Server Role
 #define BLE_PAS_SERVER          0
-/// Internet Protocol Support Profile Server Role
 #define BLE_IPS_SERVER          0
-/// Internet Protocol Support Profile Client Role
 #define BLE_IPS_CLIENT          0
-/// Environmental Sensing Profile Server Role
 #define BLE_ENV_SERVER          0
-/// Environmental Sensing Profile Client Role
 #define BLE_ENV_CLIENT          0
-/// Weight Scale Profile Server Role
 #define BLE_WSC_SERVER          0
-/// Weight Scale Profile Client Role
 #define BLE_WSC_CLIENT          0
-/// Body Composition Server Role
 #define BLE_BCS_SERVER          0
-/// Body Composition Client Role
 #define BLE_BCS_CLIENT          0
-/// User Data Service Server Role
 #define BLE_UDS_SERVER          0
-/// User Data Service Client Role
 #define BLE_UDS_CLIENT          0
-/// Wireless Power Transfer Profile Server Role
 #define BLE_WPT_SERVER          0
-/// Wireless Power Transfer Profile Client Role
 #define BLE_WPT_CLIENT          0
-/// Pulse Oximeter Profile Server Role
 #define BLE_PLX_SERVER          0
-/// Pulse Oximete Profile Client Role
 #define BLE_PLX_CLIENT          0
-/// Continuous Glucose Monitoring Profile Server Role
-#define BLE_CGM_SERVER          0
-/// Continuous Glucose Monitoring Profile Client Role
-#define BLE_CGM_CLIENT          0
-/// Coordinated Set Identification Profile Set Member Role
+#define BLE_CGMS_SERVER         0
+#define BLE_CGMS_CLIENT         0
 #define BLE_CSIS_MEMBER         0
 #define BLE_CSISM_MSG_API       0
 #define BLE_CSIS_COORD          0
 #define BLE_CSISC_MSG_API       0
-/// Object Transfer Profile Server Role
 #define BLE_OT_SERVER           0
 #define BLE_OTS_MSG_API         0
-/// Object Transfer Profile Client Role
 #define BLE_OT_CLIENT           0
 #define BLE_OTC_MSG_API         0
-/// Bond Management Service Server Role
 #define BLE_BMS_SERVER          0
-/// Bond Management Service Client Role
 #define BLE_BMS_CLIENT          0
-/// Throughput tester profile for debug usage
 #define BLE_DBG_THPP            0
-/// Support of proprietary services
 #define BLE_PRF_PROPRIETARY_SVC_SUPPORT 0
-//Force ATT parts to 0
-/// External database management
 #define BLE_EXT_ATTS_DB         0
-/// Profile Server
 #define BLE_SERVER_PRF          0
-/// Profile Client
 #define BLE_CLIENT_PRF          0
-/// Electronic Shelf Label Access Point role
 #define BLE_ESL_AP              0
-/// Electronic Shelf Label Tag role
 #define BLE_ESL_TAG             0
-/// Ranging Service Server role
 #define BLE_RAS_SERVER          0
-/// Ranging Service Client role
 #define BLE_RAS_CLIENT          0
+#define BLE_IAS_SERVER (0)
+#define BLE_IAS_CLIENT (0)
+#define BLE_LLS_SERVER (0)
+#define BLE_LLS_CLIENT (0)
+#define BLE_TPS_SERVER (0)
+#define BLE_TPS_CLIENT (0)
 #endif //(HL_LE_CENTRAL || HL_LE_PERIPHERAL)
 
 // ----------------------------  BT Classic Profiles -------------------------------
@@ -723,12 +706,10 @@ enum rwprf_id
 
     #if (BLE_FINDME_LOCATOR)
     PRF_ID_FINDL,
-    PRF_ID_IASC = PRF_ID_FINDL,
     #endif // (BLE_FINDME_LOCATOR)
 
     #if (BLE_FINDME_TARGET)
     PRF_ID_FINDT,
-    PRF_ID_IASS = PRF_ID_FINDT,
     #endif // (BLE_FINDME_TARGET)
 
     #if (BLE_PROX_MONITOR)
@@ -880,13 +861,15 @@ enum rwprf_id
     PRF_ID_PLXC,
     #endif //(BLE_PLX_CLIENT)
 
-    #if (BLE_CGM_SERVER)
-    PRF_ID_CGMS,
-    #endif //(BLE_CGM_SERVER)
+    #if (BLE_CGMS_SERVER)
+    PRF_ID_CGMSS,
+    PRF_ID_CGMS = PRF_ID_CGMSS, // Line deprecated
+    #endif //(BLE_CGMS_SERVER)
 
-    #if (BLE_CGM_CLIENT)
-    PRF_ID_CGMC,
-    #endif //(BLE_CGM_CLIENT)
+    #if (BLE_CGMS_CLIENT)
+    PRF_ID_CGMSC,
+    PRF_ID_CGMC = PRF_ID_CGMSC, // Line deprecated
+    #endif //(BLE_CGMS_CLIENT)
 
     #if (BLE_DBG_THPP)
     PRF_ID_THPP,
@@ -972,6 +955,30 @@ enum rwprf_id
     #if (BLE_RAS_CLIENT)
     PRF_ID_RASC,
     #endif //(BLE_RAS_CLIENT)
+
+    #if (BLE_IAS_SERVER)
+    PRF_ID_IASS,
+    #endif //(BLE_IAS_SERVER)
+
+    #if (BLE_IAS_CLIENT)
+    PRF_ID_IASC,
+    #endif //(BLE_IAS_CLIENT)
+
+    #if (BLE_LLS_SERVER)
+    PRF_ID_LLSS,
+    #endif //(BLE_LLS_SERVER)
+
+    #if (BLE_LLS_CLIENT)
+    PRF_ID_LLSC,
+    #endif //(BLE_LLS_CLIENT)
+
+    #if (BLE_TPS_SERVER)
+    PRF_ID_TPSS,
+    #endif //(BLE_TPS_SERVER)
+
+    #if (BLE_TPS_CLIENT)
+    PRF_ID_TPSC,
+    #endif //(BLE_TPS_CLIENT)
 
     PRF_ID_MAX,
 

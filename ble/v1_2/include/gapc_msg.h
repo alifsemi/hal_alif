@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Controller  Message API.
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -257,18 +257,26 @@ enum gapc_msg_id
 
 
     /* Constant Tone Extension */
+    #if (BLE_CON_CTE_RSP)
     /// Constant Tone Extension Transmission configuration command
     GAPC_LE_CONFIGURE_CTE_TX_CMD = MSG_ID(GAPC, 0x70u),
+    #endif // (BLE_CON_CTE_RSP)
+    #if (BLE_CON_CTE_REQ)
     /// Constant Tone Extension Reception configuration command
     GAPC_LE_CONFIGURE_CTE_RX_CMD = MSG_ID(GAPC, 0x71u),
     /// Constant Tone Extension request control command (enable / disable)
     GAPC_LE_CONTROL_CTE_REQUEST_CMD = MSG_ID(GAPC, 0x72u),
+    #endif // (BLE_CON_CTE_REQ)
+    #if (BLE_CON_CTE_RSP)
     /// Constant Tone Extension Response control command (enable / disable)
     GAPC_LE_CONTROL_CTE_RESPONSE_CMD = MSG_ID(GAPC, 0x73u),
+    #endif // (BLE_CON_CTE_RSP)
+    #if (BLE_CON_CTE_REQ)
     /// Indicate reception of a IQ Report event over a ble connection
     GAPC_LE_CTE_IQ_REPORT_IND = MSG_ID(GAPC, 0x74u),
     /// Indicate that an IQ Request has been rejected or CTE data not present in LMP response
     GAPC_LE_CTE_REQUEST_FAILED_IND = MSG_ID(GAPC, 0x75u),
+    #endif // (BLE_CON_CTE_REQ)
 
     /* LE Power Control */
     /// Local TX power indication
@@ -285,6 +293,7 @@ enum gapc_msg_id
     GAPC_LE_CONTROL_PASS_LOSS_CMD = MSG_ID(GAPC, 0x85u),
     /// Path Loss Threshold Event Indication
     GAPC_LE_PATH_LOSS_THRESHOLD_IND = MSG_ID(GAPC, 0x86u),
+
 
 };
 /// @} GAPC_MSG_ID_API
@@ -416,14 +425,20 @@ enum gapc_operation
     #endif // (!(0))
 
     /* Constant Tone Extension */
+    #if (BLE_CON_CTE_RSP)
     /// Constant Tone Extension Transmission configuration
     GAPC_LE_CONFIGURE_CTE_TX = 0x70u,
+    #endif // (BLE_CON_CTE_RSP)
+    #if (BLE_CON_CTE_REQ)
     /// Constant Tone Extension Reception configuration
     GAPC_LE_CONFIGURE_CTE_RX = 0x71u,
     /// Constant Tone Extension request control (enable / disable)
     GAPC_LE_CONTROL_CTE_REQUEST = 0x72u,
+    #endif // (BLE_CON_CTE_REQ)
+    #if (BLE_CON_CTE_RSP)
     /// Constant Tone Extension Response control (enable / disable)
     GAPC_LE_CONTROL_CTE_RESPONSE = 0x73u,
+    #endif // (BLE_CON_CTE_RSP)
 
     /* LE Power Control */
     /// Enable or disable the reporting to the local Host of transmit power level
@@ -431,6 +446,8 @@ enum gapc_operation
     GAPC_LE_CONTROL_TX_POWER_REPORT = 0x80u,
     /// Command is used to enable/disable path loss reporting for the connection
     GAPC_LE_CONTROL_PATH_LOSS = 0x81u,
+
+
 
 
 };

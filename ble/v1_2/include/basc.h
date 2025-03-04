@@ -5,8 +5,8 @@
  *
  * @brief Header file - Battery Service Client - Native API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,7 @@
  ****************************************************************************************
  * @defgroup BASC_API Battery Service Client
  * @ingroup BAS_API
- * @brief Description of API for Battery Service Client
+ * @brief Description of API for Battery Service Client\n See \ref bas_msc
  ****************************************************************************************
  */
 
@@ -45,6 +45,7 @@
  */
 
 #include "bas.h"
+#include "basc_cfg.h"
 
 /// @addtogroup BASC_API_COMMON
 /// @{
@@ -54,24 +55,72 @@
  ****************************************************************************************
  */
 
-/// Battery Service Characteristics
-enum basc_char_type
+/// Command code
+enum basc_cmd_code
 {
-    /// Battery Level
-    BAS_CHAR_BATT_LEVEL = 0,
+    /// Discover
+    BASC_CMD_DISCOVER = 0u,
+    /// Get
+    BASC_CMD_GET,
+    /// Set CCCD
+    BASC_CMD_SET_CCCD,
+    /// Get Characteristic Presentation Format for Battery Level characteristic
+    BASC_CMD_GET_PRESENTATION_FORMAT,
 
-    BAS_CHAR_MAX,
+    BASC_CMD_MAX,
 };
 
-/// Battery Service Descriptors
-enum basc_desc_type
+/// Characteristic type
+enum basc_char_type
 {
-    /// Battery Level Characteristic Presentation Format
-    BAS_DESC_BATT_LEVEL_PRES_FORMAT = 0,
-    /// Battery Level Client Characteristic Configuration
-    BAS_DESC_BATT_LEVEL_CFG,
+    /// Battery Level characteristic
+    BASC_CHAR_TYPE_LEVEL = 0u,
+    #if (HOST_MSG_API || BASC_LEVEL_STATUS)
+    /// Battery Level Status characteristic
+    BASC_CHAR_TYPE_LEVEL_STATUS,
+    #endif // (HOST_MSG_API || BASC_LEVEL_STATUS)
+    #if (HOST_MSG_API || BASC_CRITICAL_STATUS)
+    /// Battery Critical Status characteristic
+    BASC_CHAR_TYPE_CRITICAL_STATUS,
+    #endif // (HOST_MSG_API || BASC_CRITICAL_STATUS)
+    #if (HOST_MSG_API || BASC_ENERGY_STATUS)
+    /// Battery Energy Status characteristic
+    BASC_CHAR_TYPE_ENERGY_STATUS,
+    #endif // (HOST_MSG_API || BASC_ENERGY_STATUS)
+    #if (HOST_MSG_API || BASC_TIME_STATUS)
+    /// Battery Time Status characteristic
+    BASC_CHAR_TYPE_TIME_STATUS,
+    #endif // (HOST_MSG_API || BASC_TIME_STATUS)
+    #if (HOST_MSG_API || BASC_ESTIMATED_SERVICE_DATE)
+    /// Estimated Service Date characteristic
+    BASC_CHAR_TYPE_ESTIMATED_SERVICE_DATE,
+    #endif // (HOST_MSG_API || BASC_ESTIMATED_SERVICE_DATE)
+    #if (HOST_MSG_API || BASC_HEALTH_STATUS)
+    /// Battery Health Status characteristic
+    BASC_CHAR_TYPE_HEALTH_STATUS,
+    #endif // (HOST_MSG_API || BASC_HEALTH_STATUS)
+    #if (HOST_MSG_API || BASC_HEALTH_INFORMATION)
+    /// Battery Health Information characteristic
+    BASC_CHAR_TYPE_HEALTH_INFO,
+    #endif // (HOST_MSG_API || BASC_HEALTH_INFORMATION)
+    #if (HOST_MSG_API || BASC_INFORMATION)
+    /// Battery Information characteristic
+    BASC_CHAR_TYPE_INFO,
+    #endif // (HOST_MSG_API || BASC_INFORMATION)
+    #if (HOST_MSG_API || BASC_MANUFACTURER_NAME)
+    /// Manufacturer Name String characteristic
+    BASC_CHAR_TYPE_MANUFACTURER_NAME,
+    #endif // (HOST_MSG_API || BASC_MANUFACTURER_NAME)
+    #if (HOST_MSG_API || BASC_MODEL_NUMBER)
+    /// Model Number String characteristic
+    BASC_CHAR_TYPE_MODEL_NUMBER,
+    #endif // (HOST_MSG_API || BASC_MODEL_NUMBER)
+    #if (HOST_MSG_API || BASC_SERIAL_NUMBER)
+    /// Serial Number String characteristic
+    BASC_CHAR_TYPE_SERIAL_NUMBER,
+    #endif // (HOST_MSG_API || BASC_SERIAL_NUMBER)
 
-    BAS_DESC_MAX,
+    BASC_CHAR_TYPE_MAX,
 };
 
 /*
@@ -79,19 +128,20 @@ enum basc_desc_type
  ****************************************************************************************
  */
 
-/// Structure containing the characteristics handles, value handles and descriptors
-typedef struct bas_content
+/// Structure containing description of BAS discovered in peer device's database
+typedef struct
 {
-    /// Service info
+    /// Service information
     prf_svc_t svc;
-    /// Characteristic Info:\n
-    ///     - Battery Level
-    prf_char_t chars[BAS_CHAR_MAX];
-    /// Descriptor handles:\n
-    ///     - Battery Level Client Characteristic Configuration\n
-    ///     - Battery Level Characteristic Presentation Format
-    prf_desc_t descs[BAS_DESC_MAX];
-} bas_content_t;
+    /// Characteristic information
+    prf_char_t chars[BASC_CHAR_TYPE_MAX];
+    /// Client Characteristic Configuration descriptor information
+    prf_desc_t cccd[BASC_CHAR_TYPE_MAX];
+    #if (HOST_MSG_API || BASC_PRESENTATION_FORMAT)
+    /// Characteristic presentation format descriptor information
+    prf_desc_t desc_presentation_format;
+    #endif // (HOST_MSG_API || BASC_PRESENTATION_FORMAT)
+} basc_content_t;
 
 /// @} BASC_API_COMMON
 
@@ -103,158 +153,165 @@ typedef struct bas_content
  ****************************************************************************************
  */
 
-/// Battery Service client callback set
-typedef struct basc_cb
+/// Set of callback function for backward communication with upper layer
+typedef struct
 {
     /**
      ****************************************************************************************
-     * @brief Completion of Enable procedure
+     * @brief Command completed event
      *
-     * @param[in] conidx        Connection index
-     * @param[in] status        Status of the procedure execution (see enum #hl_err)
-     * @param[in] bas_nb        Number of BAS that have been found
-     * @param[in] p_bas         Pointer to peer database description bond data
+     * @param[in] conidx            Connection index
+     * @param[in] status            Status (see #hl_err enumeration)
+     * @param[in] cmd_code          Command code (see #basc_cmd_code enumeration)
+     * @param[in] instance_idx      Instance index
+     * @param[in] char_type         Characteristic type (see #basc_char_type enumeration)
      ****************************************************************************************
      */
-    void (*cb_enable_cmp)(uint8_t conidx, uint16_t status, uint8_t bas_nb, const bas_content_t* p_bas);
+    void (*cb_cmp_evt)(uint8_t conidx, uint16_t status, uint16_t cmd_code, uint8_t instance_idx, uint8_t char_type);
 
     /**
      ****************************************************************************************
-     * @brief Inform that battery level read procedure is over
+     * @brief Inform about an update of bond data to be stored
      *
-     * @param[in] conidx        Connection index
-     * @param[in] status        Status of the procedure execution (see enum #hl_err)
-     * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
-     * @param[in] batt_level    Battery Level
+     * @param[in] conidx            Connection index
+     * @param[in] nb_instances      Number of discovered instances
+     * @param[in] p_bond_data       Pointer to bond data
      ****************************************************************************************
      */
-    void (*cb_read_batt_level_cmp)(uint8_t conidx, uint16_t status, uint8_t bas_instance, uint8_t batt_level);
+    void (*cb_bond_data)(uint8_t conidx, uint8_t nb_instances, const basc_content_t* p_bond_data);
 
     /**
      ****************************************************************************************
-     * @brief Inform that Notification configuration read procedure is over
+     * @brief Inform about received characteristic value
      *
-     * @param[in] conidx        Connection index
-     * @param[in] status        Status of the procedure execution (see enum #hl_err)
-     * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
-     * @param[in] ntf_cfg       Notification Configuration
+     * @param[in] conidx            Connection index
+     * @param[in] instance_idx      Instance index
+     * @param[in] char_type         Characteristic type (see #basc_char_type enumeration)
+     * @param[in] p_buf             Pointer to buffer containing received value
+     * For more details about data composition:
+     *  - Battery Level, see #bas_level_size enumeration
+     *  - Battery Level Status, see #bas_level_status_size enumeration
+     *  - Battery Critical Status, see #bas_critical_status_size enumeration
+     *  - Battery Energy Status, see #bas_energy_status_size enumeration
+     *  - Battery Time Status, see #bas_time_status_size enumeration
+     *  - Battery Health Status, see #bas_health_status_size enumeration
+     *  - Battery Health Information, see #bas_health_info_size enumeration
+     *  - Battery Information, see #bas_info_size enumeration
+     *  - Estimated Service Date, see #bas_service_date_size
      ****************************************************************************************
      */
-    void (*cb_read_ntf_cfg_cmp)(uint8_t conidx, uint16_t status, uint8_t bas_instance, uint16_t ntf_cfg);
+    void (*cb_value)(uint8_t conidx, uint8_t instance_idx, uint8_t char_type, co_buf_t* p_buf);
 
+    #if (BASC_PRESENTATION_FORMAT)
     /**
      ****************************************************************************************
-     * @brief Inform that Presentation Format read procedure is over
+     * @brief Inform about received Characteristic Presentation Format for Battery Level characteristic
      *
-     * @param[in] conidx        Connection index
-     * @param[in] status        Status of the procedure execution (see enum #hl_err)
-     * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
-     * @param[in] p_pres_format Pointer to Characteristic Presentation Format value
+     * @param[in] conidx            Connection index
+     * @param[in] instance_idx      Instance index
+     * @param[in] p_buf             Pointer to buffer containing received value
      ****************************************************************************************
      */
-    void (*cb_read_pres_format_cmp)(uint8_t conidx, uint16_t status, uint8_t bas_instance,
-                                    const prf_char_pres_fmt_t* p_pres_format);
-
-    /**
-     ****************************************************************************************
-     * @brief Inform that Notification configuration write procedure is over
-     *
-     * @param[in] conidx        Connection index
-     * @param[in] status        Status of the procedure execution (see enum #hl_err)
-     * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
-     ****************************************************************************************
-     */
-    void (*cb_write_ntf_cfg_cmp)(uint8_t conidx, uint16_t status, uint8_t bas_instance);
-
-    /**
-     ****************************************************************************************
-     * @brief Inform that battery level update has been received from peer device
-     *
-     * @param[in] conidx        Connection index
-     * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
-     * @param[in] batt_level    Battery Level
-     ****************************************************************************************
-     */
-    void (*cb_batt_level_upd)(uint8_t conidx, uint8_t bas_instance, uint8_t batt_level);
-} basc_cb_t;
+    void (*cb_presentation_format)(uint8_t conidx, uint8_t instance_idx, co_buf_t* p_buf);
+    #endif // (BASC_PRESENTATION_FORMAT)
+} basc_cbs_t;
 
 /*
  * NATIVE API FUNCTIONS
  ****************************************************************************************
  */
 
+#if (!HOST_MSG_API)
 /**
  ****************************************************************************************
- * @brief Restore bond data of a known peer device (at connection establishment)
+ * @brief Add support of Battery Service as Client
  *
- * Wait for #basc_cb_t.cb_enable_cmp execution before starting a new procedure
+ * @param[in] p_cbs         Pointer to set of callback functions for communication with upper layer
  *
- * @param[in] conidx        Connection index
- * @param[in] con_type      Connection type
- * @param[in] nb_bas        Number of BAS that have been found
- * @param[in] p_bas         Pointer to peer database description bond data
- *
- * @return Status of the function execution (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t basc_enable(uint8_t conidx, uint8_t con_type, uint8_t nb_bas, const bas_content_t* p_bas);
+uint16_t basc_add(const basc_cbs_t* p_cbs);
+#endif // (!HOST_MSG_API)
 
 /**
  ****************************************************************************************
- * @brief Perform battery level read procedure.
+ * @brief Discover Battery Service instances in a peer device's database
  *
- * Wait for #basc_cb_t.cb_read_batt_level_cmp execution before starting a new procedure
+ * @param[in] conidx            Connection index
  *
- * @param[in] conidx        Connection index
- * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
- *
- * @return Status of the function execution (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t basc_read_batt_level(uint8_t conidx, uint8_t bas_instance);
+uint16_t basc_discover(uint8_t conidx);
+
+#if (HL_BONDABLE)
+/**
+ ****************************************************************************************
+ * @brief Restore bond data
+ *
+ * @param[in] conidx            Connection index
+ * @param[in] nb_instances      Number of instances
+ * @param[in] p_bond_data       Pointer to bond data
+ *
+ * @return An error status (see #hl_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t basc_restore_bond_data(uint8_t conidx, uint8_t nb_instances, const basc_content_t* p_bond_data);
+#endif // (HL_BONDABLE)
 
 /**
  ****************************************************************************************
- * @brief Perform  Notification configuration read procedure
+ * @brief Get value of a Battery Service characteristic
  *
- * Wait for #basc_cb_t.cb_read_ntf_cfg_cmp execution before starting a new procedure
+ * @param[in] conidx            Connection index
+ * @param[in] instance_idx      Instance index
+ * @param[in] char_type         Characteristic type (see #basc_char_type enumeration)
  *
- * @param[in] conidx        Connection index
- * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
- *
- * @return Status of the function execution (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t basc_read_ntf_cfg(uint8_t conidx, uint8_t bas_instance);
+uint16_t basc_get(uint8_t conidx, uint8_t instance_idx, uint8_t char_type);
+
+#if (BASC_PRESENTATION_FORMAT)
+/**
+ ****************************************************************************************
+ * @brief Get value of Characteristic Presentation Format descriptor for Battery Level characteristic
+ *
+ * @param[in] conidx            Connection index
+ * @param[in] instance_idx      Instance index
+ *
+ * @return An error status (see #hl_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t basc_get_presentation_format(uint8_t conidx, uint8_t instance_idx);
+#endif // (BASC_PRESENTATION_FORMAT)
 
 /**
  ****************************************************************************************
- * @brief Perform Presentation Format read procedure
+ * @brief Enable/disable sending of notifications/indications for a Battery Service characteristic
  *
- * Wait for #basc_cb_t.cb_read_pres_format_cmp execution before starting a new procedure
+ * @param[in] conidx            Connection index
+ * @param[in] instance_idx      Instance index
+ * @param[in] char_type         Characteristic type (see #basc_char_type enumeration)
+ * @param[in] p_buf             Pointer to buffer
  *
- * @param[in] conidx        Connection index
- * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
- *
- * @return Status of the function execution (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t basc_read_pres_format(uint8_t conidx, uint8_t bas_instance);
+uint16_t basc_set_cccd(uint8_t conidx, uint8_t instance_idx, uint8_t char_type, co_buf_t* p_buf);
 
+#if (!HOST_MSG_API)
 /**
  ****************************************************************************************
- * @brief Perform Notification configuration write procedure
+ * @return Pointer to content structure
  *
- * Wait for #basc_cb_t.cb_write_ntf_cfg_cmp execution before starting a new procedure
- *
- * @param[in] conidx        Connection index
- * @param[in] bas_instance  Battery Service Instance - From 0 to BASC_NB_BAS_INSTANCES_MAX-1
- * @param[in] ntf_cfg       Notification Configuration
- *
- * @return Status of the function execution (see enum #hl_err)
+ * @param[in] conidx            Connection index
+ * @param[in] instance_idx      Instance index
  ****************************************************************************************
  */
-uint16_t basc_write_ntf_cfg(uint8_t conidx, uint8_t bas_instance, uint16_t ntf_cfg);
+const basc_content_t* basc_get_content(uint8_t conidx, uint8_t instance_idx);
+#endif // (!HOST_MSG_API)
 
 /// @} BASC_API_NATIVE
 

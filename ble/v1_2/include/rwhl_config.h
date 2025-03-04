@@ -6,8 +6,8 @@
  * @brief Configuration of the BLE protocol stack (max number of supported connections,
  * type of partitioning, etc.)
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  *
  ****************************************************************************************
@@ -44,7 +44,7 @@
 #endif // (BLE_HOST_PRESENT)
 
 /*
- * DEFINES - Mandatory for BLE Host Layers
+ * DEFINES
  ****************************************************************************************
  */
 
@@ -133,6 +133,7 @@
 #define GATT_PREP_WRITE_QUEUE_MEM_LIMIT                    (GATT_MAX_VALUE)
 /// Memory limit of GATT operation (to consider that there insufficient memory to perform procedure)
 #define GATT_MEM_LIMIT                                     (CO_BUF_BIG_POOL_SIZE + (CO_BUF_SMALL_POOL_SIZE >> 1))
+
 
 /******************************************************************************************/
 /* -------------------------   TEST MODE             -------------------------------------*/
@@ -369,6 +370,20 @@
 #define GATT_INDICATE_LEGACY_MTU_CHANGED  (0)
 #endif // (defined(CFG_GATT_INDICATE_LEGACY_MTU_CHANGED))
 
+/// Add support of bond data
+#if (defined(CFG_HL_BONDABLE))
+#define HL_BONDABLE (1)
+#else
+#define HL_BONDABLE (0)
+#endif // (defined(CFG_HL_BONDABLE))
+
+/// Enable checks on API usage
+#if (defined(CFG_HL_API_CHECKS))
+#define HL_API_CHECKS (1)
+#else
+#define HL_API_CHECKS (0)
+#endif // (defined(CFG_HL_API_CHECKS))
+
 /// Add support of functions allowing to retrieve information about codecs supported by controller
 #if (defined(CFG_HL_CODEC_INFO))
 #define HL_CODEC_INFO (1)
@@ -475,7 +490,7 @@
                                                     + BLE_GATT_HEAP_ENV_SIZE       \
                                                     + L2CAP_HEAP_ENV_SIZE )    \
                              + HOST_ACTIVITY_MAX * GAPM_HEAP_ENV_SIZE \
-                             + L2CAP_CHAN_IN_ENV_NB * (BLE_GATT_BEARER_ENV_SIZE + L2CAP_CHANNEL_ENV_SIZE))
+                             + L2CAP_CHAN_IN_ENV_NB * (BLE_GATT_BEARER_ENV_SIZE + L2CAP_CHANNEL_ENV_SIZE) + 2048)
 
 /// @} BLE stack configuration
 /// @} ROOT

@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Unicast Server - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -368,8 +368,11 @@ uint16_t bap_uc_srv_restore_bond_data(uint8_t con_lid, uint8_t cli_cfg_bf, uint1
  * @param[in] ctl_delay_us      Controller delay in microseconds
  * @param[in] dp_cfg_bf         Data Path configuration bit field (Data Path ID, Codec location, ...)\n
  *                              See #bap_dp_cfg_bf for bit field meaning
- * @param[in] p_cfg             Pointer to Codec Configuration structure (allocated by Upper Layer)\n
- *                                  - Can be NULL
+ * @param[in] p_cfg             Pointer to Codec Configuration structure\n
+ *                              Can be NULL\n
+ *                              Structure shall be allocated by Upper Layer and maintained until update of
+ *                              Codec Configuration for the ASE (i.e until a call of #bap_uc_srv_configure_codec or a
+ *                              call of #bap_uc_srv_configure_codec_cfm)
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************
@@ -390,8 +393,11 @@ uint16_t bap_uc_srv_restore_bond_data_codec(uint8_t con_lid, uint8_t ase_lid, ui
  * @param[in] ctl_delay_us      Controller delay in microseconds
  * @param[in] dp_cfg_bf         Data Path configuration bit field (Data Path ID, Codec location, ...)\n
  *                              See #bap_dp_cfg_bf for bit field meaning
- * @param[in] p_cfg             Pointer to Codec Configuration structure (allocated by Upper Layer)\n
- *                                  - Can be NULL
+ * @param[in] p_cfg             Pointer to Codec Configuration structure\n
+ *                              Can be NULL\n
+ *                              Structure shall be allocated by Upper Layer and maintained until update of Codec
+ *                              Configuration for the ASE (i.e a new call of #bap_uc_srv_configure_codec or a call of
+ *                              #bap_uc_srv_configure_codec_cfm)
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************
@@ -405,7 +411,11 @@ uint16_t bap_uc_srv_configure_codec(uint8_t con_lid, uint8_t ase_lid, uint8_t as
  * @brief Update Metadata for an ASE
  *
  * @param[in] ase_lid       ASE local index
- * @param[in] p_metadata    Pointer to Metadata structure (allocated by Upper Layer)
+ * @param[in] p_metadata    Pointer to Metadata structure\n
+ *                          Can be NULL\n
+ *                          Structure shall be allocated by Upper Layer and maintained until update of Metadata for
+ *                          the ASE (i.e a new call of #bap_uc_srv_update_metadata or a call of #bap_uc_srv_enable_cfm
+ *                          or a call of #bap_uc_srv_update_metadata_cfm)
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************
@@ -455,8 +465,11 @@ uint16_t bap_uc_srv_get_quality(uint8_t ase_lid);
  * @param[in] reason            Reason (see #bap_uc_cp_reason enumeration)
  * @param[in] ase_lid           Allocated ASE local index
  * @param[in] p_qos_req         Pointer to QoS Requirements structure
- * @param[in] p_cfg             Pointer to Codec Configuration structure (allocated by Upper Layer)\n
- *                                  - Can be NULL
+ * @param[in] p_cfg             Pointer to Codec Configuration structure\n
+ *                              Can be NULL\n
+ *                              Structure shall be allocated by Upper Layer and maintained until an update of Codec
+ *                              Configuration for the ASE (i.e a call of #bap_uc_srv_configure_codec or a new call
+ *                              of #bap_uc_srv_configure_codec_cfm)
  * @param[in] ctl_delay_us      Controller delay in microseconds
  * @param[in] dp_cfg_bf         Data Path configuration bit field (Data Path ID, Codec location, ...)\n
  *                              See #bap_dp_cfg_bf for bit field meaning
@@ -484,7 +497,11 @@ void bap_uc_srv_configure_qos_cfm(uint8_t ase_lid, uint8_t rsp_code, uint8_t rea
  * @param[in] ase_lid       ASE local index
  * @param[in] rsp_code      Response code (see #bap_uc_cp_rsp_code enumeration)
  * @param[in] reason        Reason (see #bap_uc_cp_reason enumeration)
- * @param[in] p_metadata    Pointer to Metadata structure (allocated by Upper Layer)
+ * @param[in] p_metadata    Pointer to Metadata structure\n
+ *                          Can be NULL\n
+ *                          Structure shall be allocated by Upper Layer and maintained until update of Metadata
+ *                          for the ASE (i.e a call of #bap_uc_srv_update_metadata or a new call of
+ *                          #bap_uc_srv_enable_cfm or a call of #bap_uc_srv_update_metadata_cfm
  ****************************************************************************************
  */
 void bap_uc_srv_enable_cfm(uint8_t ase_lid, uint8_t rsp_code, uint8_t reason, const bap_cfg_metadata_t* p_metadata);
@@ -496,7 +513,11 @@ void bap_uc_srv_enable_cfm(uint8_t ase_lid, uint8_t rsp_code, uint8_t reason, co
  * @param[in] ase_lid       ASE local index
  * @param[in] rsp_code      Response code (see #bap_uc_cp_rsp_code enumeration)
  * @param[in] reason        Reason (see #bap_uc_cp_reason enumeration)
- * @param[in] p_metadata    Pointer to Metadata structure (allocated by Upper Layer)
+ * @param[in] p_metadata    Pointer to Metadata structure\n
+ *                          Can be NULL\n
+ *                          Structure shall be allocated by Upper Layer and maintained until update of Metadata
+ *                          for the ASE (i.e a call of #bap_uc_srv_update_metadata or a call of #bap_uc_srv_enable_cfm
+ *                          or a new call of #bap_uc_srv_update_metadata_cfm)
  ****************************************************************************************
  */
 void bap_uc_srv_update_metadata_cfm(uint8_t ase_lid, uint8_t rsp_code, uint8_t reason,

@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Manager - Low Energy Test Mode Activities
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -125,6 +125,7 @@ typedef struct
      */
     void (*nb_packet_received)(uint32_t metainfo, uint8_t actv_idx, uint16_t nb_packet);
 
+    #if (BLE_CONLESS_CTE_RX)
     /**
      ****************************************************************************************
      * Callback executed when an IQ report is received
@@ -140,6 +141,7 @@ typedef struct
      */
     void (*iq_report_received)(uint32_t metainfo, uint8_t actv_idx, const gapm_le_iq_report_info_t* p_info,
                                uint8_t nb_sample, const gap_le_iq_sample_t* p_samples);
+    #endif // (BLE_CONLESS_CTE_RX)
 } gapm_le_test_rx_cb_actv_t;
 
 /*

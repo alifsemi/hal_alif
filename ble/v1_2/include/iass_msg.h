@@ -5,8 +5,8 @@
  *
  * @brief Header file - Immediate Alert Service Server - Message API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,8 @@
  ****************************************************************************************
  * @defgroup IASS_API_MSG Message API
  * @ingroup IASS_API
- * @brief Description of Message API for Immediate Alert Service Server
+ * @brief Description of Message API for Immediate Alert Service Server\n
+ * Support for service shall be first added using #GAPM_ADD_PROFILE_CMD message
  ****************************************************************************************
  */
 
@@ -30,7 +31,6 @@
  */
 
 #include "iass.h"
-#include "findt_msg.h"
 
 /// @addtogroup IASS_API_MSG
 /// @{
@@ -43,11 +43,24 @@
 /// Message IDs for Immediate Alert Service Server
 enum iass_msg_id
 {
-    /// Alert level indication\n
-    /// See #iass_alert_level_ind_t
-    IASS_ALERT_LEVEL_IND = MSG_ID(IASS, 0x00),
+    /// Updated alert level indication - See #iass_level_ind_t
+    IASS_LEVEL_IND = MSG_ID(IASS, 0x00u),
 };
 
-/// @} IASS_MSG_MSG
+/*
+ * API MESSAGES STRUCTURES
+ ****************************************************************************************
+ */
+
+/// Parameters of the #IASS_LEVEL_IND message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Alert level (see #ias_alert_level enumeration)
+    uint8_t level;
+} iass_level_ind_t;
+
+/// @} IASS_API_MSG
 
 #endif // IASS_MSG_H_

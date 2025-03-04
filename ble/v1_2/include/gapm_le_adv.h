@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Manager - Low Energy Advertising Activities
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -351,9 +351,10 @@ typedef struct
     uint16_t prop;
     /// Discovery mode (see #gapm_le_adv_discovery_mode enumeration)
     uint8_t disc_mode;
-    /// Maximum power level at which the advertising packets have to be transmitted
-    /// (between -127 and 126 dBm)
-    int8_t max_tx_pwr;
+    /// Required TX Power level in dBm (from -127 to 20 dBm)\n
+    /// ADV_TX_PWR_NO_PREF (0x7F) means no preference\n
+    /// TX Power level value chosen by controller reported in created callback function
+    int8_t tx_pwr;
     /// Advertising filtering policy (see #gapm_le_adv_fllter_policy enumeration)
     uint8_t filter_pol;
     /// Peer address configuration (only used in case of directed advertising)

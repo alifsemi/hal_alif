@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Broadcast Sink - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -197,7 +197,6 @@ typedef void (*bap_bc_sink_cb_enable_req)(uint8_t grp_lid, uint8_t src_lid, uint
  *
  * @param[in] grp_lid           Group local index
  * @param[in] con_lid           Connection local index of Broadcast Assistant requiring synchronization
- *
  ****************************************************************************************
  */
 typedef void (*bap_bc_sink_cb_disable_req)(uint8_t grp_lid, uint8_t con_lid);

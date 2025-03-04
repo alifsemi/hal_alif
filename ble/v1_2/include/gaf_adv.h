@@ -5,8 +5,8 @@
  *
  * @brief Generic Audio Framework - Advertiser - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -250,8 +250,9 @@ uint16_t gaf_adv_configure(const gaf_adv_cfg_t* p_cfg, const gaf_adv_cb_t* p_cb)
  * @param[in] phy_second            Indicate on which PHY secondary advertising has to be performed\n
  *                                  LE 1M PHY is used by default
  * @param[in] ch_map                Channel Map
- * @param[in] max_tx_pwr            Maximum number of advertising events the controller can skip before sending the
- *                                  AUX_ADV_IND packets
+ * @param[in] tx_pwr                Required TX Power level in dBm (from -127 to 20 dBm)\n
+                                    ADV_TX_PWR_NO_PREF (0x7F) means no preference\n
+                                    TX Power level value chosen by controller reported in created callback function
  * @param[in] max_skip              Maximum power level at which the advertising packets have to be transmitted
  *                                  (between -127 and 126 dBm)
  *
@@ -259,7 +260,7 @@ uint16_t gaf_adv_configure(const gaf_adv_cfg_t* p_cfg, const gaf_adv_cb_t* p_cb)
  ****************************************************************************************
  */
 uint16_t gaf_adv_set_params(uint8_t set_lid, uint8_t quick_adv_intv_ms, uint8_t adv_intv_ms, uint8_t phy_prim,
-                            uint8_t phy_second, uint8_t ch_map, uint8_t max_tx_pwr, uint8_t max_skip);
+                            uint8_t phy_second, uint8_t ch_map, int8_t tx_pwr, uint8_t max_skip);
 
 /**
  ****************************************************************************************

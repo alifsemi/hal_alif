@@ -5,8 +5,8 @@
  *
  * @brief Header file - Device Information Service Client - Message API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,8 @@
  ****************************************************************************************
  * @defgroup DISC_API_MSG Message API
  * @ingroup DISC_API
- * @brief Description of Message API for Device Information Service Client
+ * @brief Description of Message API for Device Information Service Client\n
+ * Support for service shall be first added using #GAPM_ADD_PROFILE_CMD message
  ****************************************************************************************
  */
 
@@ -30,6 +31,7 @@
  */
 
 #include "disc.h"
+#include "ke_msg.h"
 
 /// @addtogroup DISC_API_MSG
 /// @{
@@ -40,24 +42,18 @@
  */
 
 /// Message IDs for Device Information Service Client
-/*@TRACE*/
 enum disc_msg_id
 {
-    /// Start the find me locator profile - at connection\n
-    /// See #disc_enable_req_t
-    DISC_ENABLE_REQ = MSG_ID(DISC, 0x00),
-    /// Confirm that cfg connection has finished with discovery results, or that normal cnx started\n
-    /// See #disc_enable_rsp_t
-    DISC_ENABLE_RSP = MSG_ID(DISC, 0x01),
-    /// Generic message to read a DIS value\n
-    /// See #disc_rd_val_cmd_t
-    DISC_RD_VAL_CMD = MSG_ID(DISC, 0x02),
-    /// Generic message for read responses for APP\n
-    /// See #disc_rd_val_ind_t
-    DISC_RD_VAL_IND = MSG_ID(DISC, 0x03),
-    /// Complete Event Information\n
-    /// See #disc_cmp_evt_t
-    DISC_CMP_EVT    = MSG_ID(DISC, 0x04),
+    /// Discover DIS in peer device's database - See #disc_discover_cmd_t
+    DISC_DISCOVER_CMD = MSG_ID(DISC, 0x00u),
+    /// Command completed event for #DISC_DISCOVER_CMD - See #disc_discover_cmp_evt_t
+    DISC_DISCOVER_CMP_EVT = MSG_ID(DISC, 0x01u),
+    /// Get characteristic value - See #disc_get_cmd_t
+    DISC_GET_CMD = MSG_ID(DISC, 0x02u),
+    /// Command completed event for #DISC_GET_CMD - See #disc_get_cmp_evt_t
+    DISC_GET_CMP_EVT = MSG_ID(DISC, 0x03u),
+    /// Received value indication - See #disc_value_ind_t
+    DISC_VALUE_IND = MSG_ID(DISC, 0x04u),
 };
 
 /*
@@ -65,60 +61,56 @@ enum disc_msg_id
  ****************************************************************************************
  */
 
-/// Parameters of the #DISC_ENABLE_REQ message
-typedef struct disc_enable_req
+/// Parameters of the #DISC_DISCOVER_CMD message
+typedef struct
 {
-    /// Connection Index
+    /// Connection index
     uint8_t conidx;
-    ///Connection type
-    uint8_t con_type;
-    /// Existing handle values
-    disc_dis_content_t dis;
-} disc_enable_req_t;
+} disc_discover_cmd_t;
 
-/// Parameters of the #DISC_ENABLE_RSP message
-typedef struct disc_enable_rsp
+/// Parameters of the #DISC_DISCOVER_CMP_EVT message
+typedef struct
 {
-    /// Connection Index
+    /// Connection index
     uint8_t conidx;
-    ///status
+    /// Status (see #hl_err enumeration)
     uint16_t status;
-    /// DIS handle values and characteristic properties
-    disc_dis_content_t dis;
-} disc_enable_rsp_t;
+    /// DIS content
+    disc_content_t content;
+} disc_discover_cmp_evt_t;
 
-///Parameters of the #DISC_RD_VAL_CMD message
-typedef struct disc_rd_val_cmd
+/// Parameters of the #DISC_GET_CMD message
+typedef struct
 {
-    /// Connection Index
+    /// Connection index
     uint8_t conidx;
-    /// Value identifier (see #disc_val_id)
-    uint8_t val_id;
-} disc_rd_val_cmd_t;
+    /// Characteristic type (see #disc_char_type enumeration)
+    uint8_t char_type;
+} disc_get_cmd_t;
 
-///Parameters of the #DISC_RD_VAL_IND message
-typedef struct disc_rd_val_ind
+/// Parameters of the #DISC_GET_CMP_EVT message
+typedef struct
 {
-    /// Connection Index
+    /// Connection index
     uint8_t conidx;
-    /// Value identifier (see #disc_val_id)
-    uint8_t val_id;
-    /// Attribute length
-    uint16_t length;
-    /// Attribute value
+    /// Status (see #hl_err enumeration)
+    uint16_t status;
+    /// Characteristic type (see #disc_char_type enumeration)
+    uint8_t char_type;
+} disc_get_cmp_evt_t;
+
+/// Parameters of the #DISC_VALUE_IND message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Characteristic type (see #disc_char_type enumeration)
+    uint8_t char_type;
+    /// Length
+    uint8_t length;
+    /// Value
     uint8_t value[__ARRAY_EMPTY];
-} disc_rd_val_ind_t;
-
-///Parameters of the #DISC_CMP_EVT message
-typedef struct disc_cmp_evt
-{
-    /// Connection Index
-    uint8_t conidx;
-    /// Operation
-    uint8_t operation;
-    /// Status
-    uint16_t status;
-} disc_cmp_evt_t;
+} disc_value_ind_t;
 
 /// @} DISC_API_MSG
 

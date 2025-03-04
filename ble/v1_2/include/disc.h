@@ -5,8 +5,8 @@
  *
  * @brief Header file - Device Information Service Client - Native API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,7 @@
  ****************************************************************************************
  * @defgroup DISC_API Device Information Service Client
  * @ingroup DIS_API
- * @brief Description of API for Device Information Service Client
+ * @brief Description of API for Device Information Service Client\n See \ref dis_msc
  ****************************************************************************************
  */
 
@@ -45,6 +45,7 @@
  */
 
 #include "dis.h"
+#include "disc_cfg.h"
 
 /// @addtogroup DISC_API_COMMON
 /// @{
@@ -54,29 +55,51 @@
  ****************************************************************************************
  */
 
-/// Value identifier
-enum disc_val_id
+/// Characteristic type
+enum disc_char_type
 {
-    /// Manufacturer Name String
-    DISC_VAL_MANUFACTURER_NAME = 0,
-    /// Model Number String
-    DISC_VAL_MODEL_NB_STR,
-    /// Serial Number String
-    DISC_VAL_SERIAL_NB_STR,
-    /// Hardware Revision String
-    DISC_VAL_HARD_REV_STR,
-    /// Firmware Revision String
-    DISC_VAL_FIRM_REV_STR,
-    /// Software Revision String
-    DISC_VAL_SW_REV_STR,
-    /// System ID
-    DISC_VAL_SYSTEM_ID,
-    /// IEEE 11073-20601 Regulatory Certification Data List
-    DISC_VAL_IEEE,
-    /// PnP ID
-    DISC_VAL_PNP_ID,
+    #if (HOST_MSG_API || DISC_MANUFACTURER)
+    /// Manufacturer Name String characteristic
+    DISC_CHAR_TYPE_MANUFACTURER_NAME = 0u,
+    #endif // (HOST_MSG_API || DISC_MANUFACTURER)
+    #if (HOST_MSG_API || DISC_MODEL_NB)
+    /// Model Number String characteristic
+    DISC_CHAR_TYPE_MODEL_NUMBER,
+    #endif // (HOST_MSG_API || DISC_MODEL_NB)
+    #if (HOST_MSG_API || DISC_SERIAL_NB)
+    /// Serial Number String characteristic
+    DISC_CHAR_TYPE_SERIAL_NUMBER,
+    #endif // (HOST_MSG_API || DISC_SERIAL_NB)
+    #if (HOST_MSG_API || DISC_HW_REV)
+    /// Hardware Revision String characteristic
+    DISC_CHAR_TYPE_HW_REVISION,
+    #endif // (HOST_MSG_API || DISC_HW_REV)
+    #if (HOST_MSG_API || DISC_FW_REV)
+    /// Firmware Revision String characteristic
+    DISC_CHAR_TYPE_FW_REVISION,
+    #endif // (HOST_MSG_API || DISC_FW_REV)
+    #if (HOST_MSG_API || DISC_SW_REV)
+    /// Software Revision String characteristic
+    DISC_CHAR_TYPE_SW_REVISION,
+    #endif // (HOST_MSG_API || DISC_SW_REV)
+    #if (HOST_MSG_API || DISC_SYSTEM_ID)
+    /// System ID characteristic
+    DISC_CHAR_TYPE_SYSTEM_ID,
+    #endif // (HOST_MSG_API || DISC_SYSTEM_ID)
+    #if (HOST_MSG_API || DISC_IEEE)
+    /// IEEE 11073-20601 Regulatory Certification Data List characteristic
+    DISC_CHAR_TYPE_IEEE,
+    #endif // (HOST_MSG_API || DISC_IEEE)
+    #if (HOST_MSG_API || DISC_PNP_ID)
+    /// PnP ID characteristic
+    DISC_CHAR_TYPE_PNP_ID,
+    #endif // (HOST_MSG_API || DISC_PNP_ID)
+    #if (HOST_MSG_API || DISC_UDI)
+    /// UDI for Medical Devices characteristic
+    DISC_CHAR_TYPE_UDI,
+    #endif // (HOST_MSG_API || DISC_UDI)
 
-    DISC_VAL_MAX,
+    DISC_CHAR_TYPE_MAX,
 };
 
 /*
@@ -84,15 +107,12 @@ enum disc_val_id
  ****************************************************************************************
  */
 
-/// Structure containing the characteristics handles, value handles and descriptors for the Device Information
-/// Service
-typedef struct disc_dis_content
+/// Structure containing description of BAS discovered in peer device's database
+typedef struct
 {
-    /// Service information
-    prf_svc_t svc;
     /// Characteristic information
-    prf_char_t vals[DISC_VAL_MAX];
-} disc_dis_content_t;
+    uint16_t val_hdl[DISC_CHAR_TYPE_MAX];
+} disc_content_t;
 
 /// @} DISC_API_COMMON
 
@@ -104,66 +124,94 @@ typedef struct disc_dis_content
  ****************************************************************************************
  */
 
-/// Device Information Service client callback set
-typedef struct disc_cb
+/// Set of callback function for backward communication with upper layer
+typedef struct
 {
     /**
      ****************************************************************************************
-     * @brief This function is called when GATT server user has initiated event send to peer
-     *        device or if an error occurs.
+     * @brief Command completed event for #disc_get
      *
-     * @param[in] conidx        Connection index
-     * @param[in] status        Client Enable status (see enum #hl_err)
-     * @param[in] p_dis         Pointer to bond data information that describe peer database
+     * @param[in] conidx            Connection index
+     * @param[in] status            Status (see #hl_err enumeration)
+     * @param[in] char_type         Characteristic type (see #disc_char_type enumeration)
      ****************************************************************************************
      */
-    void (*cb_enable_cmp) (uint8_t conidx, uint16_t status, const disc_dis_content_t* p_dis);
-
+    void (*cb_get_cmp_evt)(uint8_t conidx, uint16_t status, uint8_t char_type);
 
     /**
      ****************************************************************************************
-     * @brief This function is called when GATT server user has initiated event send to peer
-     *        device or if an error occurs.
+     * @brief Command completed event for #disc_discover
      *
-     * @param[in] conidx        Connection index
-     * @param[in] status        Read status (see enum #hl_err)
-     * @param[in] val_id        Value identifer read (see enum #disc_val_id)
-     * @param[in] length        Value data length
-     * @param[in] p_data        Pointer to value data
+     * @param[in] conidx            Connection index
+     * @param[in] status            Status (see #hl_err enumeration)
+     * @param[in] p_content         Pointer to DIS content structure
      ****************************************************************************************
      */
-    void (*cb_read_val_cmp) (uint8_t conidx, uint16_t status, uint8_t val_id, uint16_t length, const uint8_t* p_data);
-} disc_cb_t;
+    void (*cb_discover_cmp_evt)(uint8_t conidx, uint16_t status, const disc_content_t* p_content);
+
+    /**
+     ****************************************************************************************
+     * @brief Inform about received characteristic value
+     *
+     * @param[in] conidx            Connection index
+     * @param[in] char_type         Characteristic type (see #disc_char_type enumeration)
+     * @param[in] p_buf             Pointer to buffer containing received value
+     ****************************************************************************************
+     */
+    void (*cb_value)(uint8_t conidx, uint8_t char_type, co_buf_t* p_buf);
+} disc_cbs_t;
 
 /*
  * NATIVE API FUNCTIONS
  ****************************************************************************************
  */
 
+#if (!HOST_MSG_API)
 /**
  ****************************************************************************************
- * @brief Enable DIS client profile by doing a discovery or restoring bond data
+ * @brief Add support of Device Information Service as Client
  *
- * @param[in] conidx        Connection index
- * @param[in] con_type      Connection type (see enum #prf_con_type)
- * @param[in] p_dis         Pointer to bond data information (valid if con_type == PRF_CON_NORMAL)
+ * @param[in] p_cbs         Pointer to set of callback functions for communication with upper layer
  *
- * @return Function execution status (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t disc_enable(uint8_t conidx, uint8_t con_type, const disc_dis_content_t* p_dis);
+uint16_t disc_add(const disc_cbs_t* p_cbs);
+#endif // (!HOST_MSG_API)
 
 /**
  ****************************************************************************************
- * @brief Read a DIS value in peer database
+ * @brief Discover Device Information Service instances in a peer device's database
  *
- * @param[in] conidx   Connection index
- * @param[in] val_id   Value identifier (see enum #disc_val_id)
+ * @param[in] conidx            Connection index
  *
- * @return Function execution status (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t disc_read_val(uint8_t conidx, uint8_t val_id);
+uint16_t disc_discover(uint8_t conidx);
+
+/**
+ ****************************************************************************************
+ * @brief Get value of a Device Information Service characteristic
+ *
+ * @param[in] conidx            Connection index
+ * @param[in] char_type         Characteristic type (see #disc_char_type enumeration)
+ *
+ * @return An error status (see #hl_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t disc_get(uint8_t conidx, uint8_t char_type);
+
+#if (!HOST_MSG_API)
+/**
+ ****************************************************************************************
+ * @return Pointer to content structure
+ *
+ * @param[in] conidx            Connection index
+ ****************************************************************************************
+ */
+const disc_content_t* disc_get_content(uint8_t conidx);
+#endif // (!HOST_MSG_API)
 
 /// @} DISC_API_NATIVE
 

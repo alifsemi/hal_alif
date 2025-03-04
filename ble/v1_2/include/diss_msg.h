@@ -5,8 +5,8 @@
  *
  * @brief Header file - Device Information Service Server - Message API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,10 @@
  ****************************************************************************************
  * @defgroup DISS_API_MSG Message API
  * @ingroup DISS_API
- * @brief Description of Message API for Device Information Service Server
+ * @brief Description of Message API for Device Information Service Server\n
+ * Support for service shall be first added using #GAPM_ADD_PROFILE_CMD message
+ *     - Configuration parameter is a uint16_t bit field whose each bit indicate support for a characteristic based
+ * on #diss_char_type enumeration
  ****************************************************************************************
  */
 
@@ -39,18 +42,13 @@
  ****************************************************************************************
  */
 
-/// Messages for Device Information Service Server
-/*@TRACE*/
+/// Message IDs for Device Information Service Server
 enum diss_msg_id
 {
-    ///Set the value of an attribute - Request
-    DISS_SET_VALUE_REQ = MSG_ID(DISS, 0x00),
-    ///Set the value of an attribute - Response
-    DISS_SET_VALUE_RSP = MSG_ID(DISS, 0x01),
-    /// Peer device request to get profile attribute value
-    DISS_VALUE_REQ_IND = MSG_ID(DISS, 0x02),
-    /// Peer device confirm value of requested attribute
-    DISS_VALUE_CFM     = MSG_ID(DISS, 0x03),
+    /// Value request indication - See #diss_value_req_ind_t
+    DISS_VALUE_REQ_IND = MSG_ID(DISS, 0x00u),
+    /// Value confirmation - See #diss_value_cfm_t
+    DISS_VALUE_CFM = MSG_ID(DISS, 0x01u),
 };
 
 /*
@@ -58,46 +56,30 @@ enum diss_msg_id
  ****************************************************************************************
  */
 
-/// Parameters of the #DISS_SET_VALUE_REQ message
-typedef struct diss_set_value_req
-{
-    /// Value identifier (see #diss_val_id enumeration)
-    uint8_t val_id;
-    /// Value length
-    uint8_t length;
-    /// Value data
-    uint8_t data[__ARRAY_EMPTY];
-} diss_set_value_req_t;
-
-/// Parameters of the #DISS_SET_VALUE_RSP message
-typedef struct diss_set_value_rsp
-{
-    /// Value identifier (see #diss_val_id enumeration)
-    uint8_t val_id;
-    /// status of the request
-    uint16_t status;
-} diss_set_value_rsp_t;
-
 /// Parameters of the #DISS_VALUE_REQ_IND message
-typedef struct diss_value_req_ind
+typedef struct
 {
-    /// Token value that must be returned in confirmation
-    uint32_t token;
-    /// Value identifier (see #diss_val_id enumeration)
-    uint8_t val_id;
+    /// Connection index
+    uint8_t conidx;
+    /// Characteristic type (see #diss_char_type enumeration)
+    uint8_t char_type;
+    /// Token
+    uint16_t token;
 } diss_value_req_ind_t;
 
 /// Parameters of the #DISS_VALUE_CFM message
-typedef struct diss_value_cfm
+typedef struct
 {
-    /// Token value provided in request
-    uint32_t token;
-    /// Value identifier (see #diss_val_id enumeration)
-    uint8_t val_id;
-    /// Data length
+    /// Connection index
+    uint8_t conidx;
+    /// Characteristic type (see #diss_char_type enumeration)
+    uint8_t char_type;
+    /// Token
+    uint16_t token;
+    /// Length
     uint8_t length;
-    /// Value data
-    uint8_t data[__ARRAY_EMPTY];
+    /// Value
+    uint8_t value[__ARRAY_EMPTY];
 } diss_value_cfm_t;
 
 /// @} DISS_API_MSG

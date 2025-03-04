@@ -5,8 +5,8 @@
  *
  * @brief Header file - Profile Types
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  *
  ****************************************************************************************
@@ -43,17 +43,26 @@
  */
 
 /// Characteristic Presentation Format Descriptor Size
-#define PRF_CHAR_PRES_FMT_SIZE          (7)
+#define PRF_CHAR_PRES_FMT_SIZE (7u)
 /// Client Characteristic Configuration descriptor value length
-#define PRF_CCC_DESC_LEN                (2)
+#define PRF_CCC_DESC_LEN (2u)
 /// Characteristic Extended Properties descriptor value length
-#define PRF_CEP_DESC_LEN                (2)
+#define PRF_CEP_DESC_LEN (2u)
 /// Minimum number of attributes for a characteristic (description + value attributes)
-#define PRF_CHAR_NB_ATT_MIN             (2)
+#define PRF_CHAR_NB_ATT_MIN (2u)
 /// Offset of Characteristic Value attribute in a local characteristic
-#define PRF_ATT_OFFSET_CHAR_VAL         (1)
+#define PRF_ATT_OFFSET_CHAR_VAL (1u)
 /// Offset of first descriptor in a local characteristic
-#define PRF_ATT_OFFSET_FIRST_DESC       (2)
+#define PRF_ATT_OFFSET_FIRST_DESC (2u)
+/// Length of E2E-CRC
+#define PRF_E2E_CRC_LEN (2u)
+
+/// Minimal Time Zone value
+#define PRF_TIME_ZONE_MIN (-48)
+/// Maximal Time Zone value
+#define PRF_TIME_ZONE_MAX (56)
+/// Unknown Time Zone
+#define PRF_TIME_ZONE_UNKNOWN (0xFF)
 
 /*
  * MACROS
@@ -156,6 +165,21 @@ enum prf_svc_type
     PRF_PRIMARY_SERVICE = 0x00,
     /// Secondary service
     PRF_SECONDARY_SERVICE = 0x01
+};
+
+/// DST Offset values
+enum prf_dst_offset
+{
+    /// Standard Time
+    PRF_DST_OFFSET_STANDARD = 0u,
+    /// Half an hour Day light Time (+0.5h)
+    PRF_DST_OFFSET_HALF_HOUR = 2u,
+    /// Daylight Time (+1h)
+    PRF_DST_OFFSET_DAY = 4u,
+    /// Double Day light Time (+2h)
+    PRF_DST_OFFSET_DOUBLE_DAY = 8u,
+    /// DST offset unknown
+    PRF_DST_OFFSET_UNKNOWN = 0xFFu,
 };
 
 /*

@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Manager - List management
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -51,6 +51,8 @@ enum gapm_le_list_type
     GAPM_LE_LIST_TYPE_RAL,
     /// Periodic Advertiser list
     GAPM_LE_LIST_TYPE_PAL,
+    /// Monitored Advertisers list
+    GAPM_LE_LIST_TYPE_MAL,
 };
 
 /// @} GAPM_ENUM_API
@@ -284,8 +286,9 @@ uint16_t gapm_le_list_remove_pal(uint32_t metainfo, const gapm_le_per_adv_bdaddr
                                  gapm_proc_cmp_cb cb_cmp_evt);
 #endif // (BLE_PER_ADV)
 
+
 /**
- ***************************************************************************************
+ **************************************************************************************
  * @brief Clear content of either Filter Accept list or Resolving list or Periodic Advertiser list
  *
  * @param[in] metainfo      Metadata information that will be returned in procedure callback functions (see \glos{METAINFO})

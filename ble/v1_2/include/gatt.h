@@ -5,8 +5,8 @@
  *
  * @brief Header file - GATT Native API.
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  ****************************************************************************************
  */
 
@@ -237,7 +237,7 @@ enum gatt_char
     /// Phone Alert Status Service
     GATT_SVC_PHONE_ALERT_STATUS = GATT_UUID_16_LSB(0x180E), //!< Value: 0x180E
     /// Battery Service
-    GATT_SVC_BATTERY_SERVICE = GATT_UUID_16_LSB(0x180F), //!< Value: 0x180F
+    GATT_SVC_BATTERY = GATT_UUID_16_LSB(0x180F), //!< Value: 0x180F
     /// Blood Pressure Service
     GATT_SVC_BLOOD_PRESSURE = GATT_UUID_16_LSB(0x1810), //!< Value: 0x1810
     /// Alert Notification Service
@@ -626,8 +626,26 @@ enum gatt_char
     GATT_CHAR_TIME_UPDATE_STATE = GATT_UUID_16_LSB(0x2A17), //!< Value: 0x2A17
     /// Glucose Measurement
     GATT_CHAR_GLUCOSE_MEAS = GATT_UUID_16_LSB(0x2A18), //!< Value: 0x2A18
-    /// Battery Level
+
+    /// Battery Service - Battery Level
     GATT_CHAR_BATTERY_LEVEL = GATT_UUID_16_LSB(0x2A19), //!< Value: 0x2A19
+    /// Battery Service - Battery Critical Status
+    GATT_CHAR_BATTERY_CRITICAL_STATUS = GATT_UUID_16_LSB(0x2BE9), //!< Value: 0x2BE9
+    /// Battery Service - Battery Health Status
+    GATT_CHAR_BATTERY_HEALTH_STATUS = GATT_UUID_16_LSB(0x2BEA), //!< Value: 0x2BEA
+    /// Battery Service - Battery Health Information
+    GATT_CHAR_BATTERY_HEALTH_INFO = GATT_UUID_16_LSB(0x2BEB), //!< Value: 0x2BEB
+    /// Battery Service - Battery Information
+    GATT_CHAR_BATTERY_INFORMATION = GATT_UUID_16_LSB(0x2BEC), //!< Value: 0x2BEC
+    /// Battery Service - Battery Level Status
+    GATT_CHAR_BATTERY_LEVEL_STATUS = GATT_UUID_16_LSB(0x2BED), //!< Value: 0x2BED
+    /// Battery Service - Battery Time Status
+    GATT_CHAR_BATTERY_TIME_STATUS = GATT_UUID_16_LSB(0x2BEE), //!< Value: 0x2BEE
+    /// Battery Service - Estimated Service Date
+    GATT_CHAR_ESTIMATED_SERVICE_DATE = GATT_UUID_16_LSB(0x2BEF), //!< Value: 0x2BEF
+    /// Battery Service - Battery Energy Status
+    GATT_CHAR_BATTERY_ENERGY_STATUS = GATT_UUID_16_LSB(0x2BF0), //!< Value: 0x2BF0
+
     /// Temperature Measurement
     GATT_CHAR_TEMPERATURE_MEAS = GATT_UUID_16_LSB(0x2A1C), //!< Value: 0x2A1C
     /// Temperature Type
@@ -1101,6 +1119,9 @@ enum gatt_char
     GATT_CHAR_ESL_LED_INFO = GATT_UUID_16_LSB(0x2BFDu), // !< Value: 0x2BFD
     /// ESL Service - ESL Control Point characteristic
     GATT_CHAR_ESL_CP = GATT_UUID_16_LSB(0x2BFEu), // !< Value: 0x2BFE
+
+    /// UDI for Medical Devices characteristic
+    GATT_CHAR_UDI = GATT_UUID_16_LSB(0x2BFFu), // !< Value: 0x2BFF
 
     /// Ranging Service - RAS Features characteristic
     GATT_CHAR_RAS_FEATURES = GATT_UUID_16_LSB(0xFFF0u), // !< Value: 0xFFF0

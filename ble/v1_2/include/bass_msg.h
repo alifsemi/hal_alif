@@ -5,12 +5,11 @@
  *
  * @brief Header file - Battery Service Server - Message API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
-
 
 #ifndef BASS_MSG_H_
 #define BASS_MSG_H_
@@ -21,7 +20,9 @@
  ****************************************************************************************
  * @defgroup BASS_API_MSG Message API
  * @ingroup BASS_API
- * @brief Description of Message API for Battery Service Server
+ * @brief Description of Message API for Battery Service Server\n
+ * Support for service shall be first added using #GAPM_ADD_PROFILE_CMD message
+ *     - Configuration parameter is a uint16_t bit field whose content is defined in #bass_config_bf enumeration
  ****************************************************************************************
  */
 
@@ -40,25 +41,38 @@
  ****************************************************************************************
  */
 
-/*@TRACE*/
-/// Messages IDs for Battery Service Server
+/// Message IDs for Battery Service Server
 enum bass_msg_id
 {
-    /// Start the Battery Server - at connection used to restore bond data\n
-    /// See #bass_enable_req_t
-    BASS_ENABLE_REQ             = MSG_ID(BASS, 0x00),
-    /// Confirmation of the Battery Server start\n
-    /// See #bass_enable_rsp_t
-    BASS_ENABLE_RSP             = MSG_ID(BASS, 0x01),
-    /// Battery Level Value Update Request\n
-    /// See #bass_batt_level_upd_req_t
-    BASS_BATT_LEVEL_UPD_REQ     = MSG_ID(BASS, 0x02),
-    /// Inform APP if Battery Level value has been notified or not\n
-    /// See #bass_batt_level_upd_rsp_t
-    BASS_BATT_LEVEL_UPD_RSP     = MSG_ID(BASS, 0x03),
-    /// Inform APP that Battery Level Notification Configuration has been changed - use to update bond data\n
-    /// See #bass_batt_level_ntf_cfg_ind_t
-    BASS_BATT_LEVEL_NTF_CFG_IND = MSG_ID(BASS, 0x04),
+    /// Add service instance request - No parameters
+    BASS_ADD_INSTANCE_REQ = MSG_ID(BASS, 0x00u),
+    /// Update value request - See #bass_update_value_req_t
+    BASS_UPDATE_VALUE_REQ = MSG_ID(BASS, 0x01u),
+    /// Response - See #bass_rsp_t
+    BASS_RSP = MSG_ID(BASS, 0x02u),
+    /// Indication or notification sent indication - See #bass_sent_ind_t
+    BASS_SENT_IND = MSG_ID(BASS, 0x03u),
+    /// Value request indication - See #bass_value_req_ind_t
+    BASS_VALUE_REQ_IND = MSG_ID(BASS, 0x04u),
+    /// Get CCCD value request indication - See #bass_get_cccd_req_ind_t
+    BASS_GET_CCCD_REQ_IND = MSG_ID(BASS, 0x05u),
+    /// Presentation format request indication - See #bass_presentation_format_req_ind_t
+    BASS_PRESENTATION_FORMAT_REQ_IND = MSG_ID(BASS, 0x06u),
+    /// Value confirmation - See #bass_value_cfm_t
+    BASS_VALUE_CFM = MSG_ID(BASS, 0x07u),
+    /// Set CCCD value request indication - See #bass_set_cccd_req_ind_t
+    BASS_SET_CCCD_REQ_IND = MSG_ID(BASS, 0x08u),
+    /// Set CCCD value confirmation - See #bass_set_cccd_cfm_t
+    BASS_SET_CCCD_CFM = MSG_ID(BASS, 0x09u),
+};
+
+/// List of request codes
+enum bass_msg_req_code
+{
+    /// Add a service instance
+    BASS_REQ_ADD_INSTANCE = 0u,
+    /// Update value
+    BASS_REQ_UPDATE_VALUE,
 };
 
 /*
@@ -66,50 +80,130 @@ enum bass_msg_id
  ****************************************************************************************
  */
 
-/// Parameters of the #BASS_ENABLE_REQ message
-typedef struct bass_enable_req
+/// Parameters of the #BASS_UPDATE_VALUE_REQ message
+typedef struct
 {
     /// Connection index
     uint8_t conidx;
-    /// Notification Configuration
-    uint8_t ntf_cfg;
-    /// Old Battery Level used to decide if notification should be triggered
-    uint8_t old_batt_lvl[BASS_NB_BAS_INSTANCES_MAX];
-} bass_enable_req_t;
+    /// Instance index
+    uint8_t instance_idx;
+    /// Characteristic type (see #bass_char_type enumeration)\n
+    uint8_t char_type;
+    /// Event type (see #gatt_evt_type enumeration)
+    uint8_t evt_type;
+    /// Length
+    uint8_t length;
+    /// Value\n
+    /// For more details about data composition:
+    ///     - Battery Level, see #bas_level_size enumeration
+    ///     - Battery Level Status, see #bas_level_status_size enumeration
+    ///     - Battery Critical Status, see #bas_critical_status_size enumeration
+    ///     - Battery Energy Status, see #bas_energy_status_size enumeration
+    ///     - Battery Time Status, see #bas_time_status_size enumeration
+    ///     - Battery Health Status, see #bas_health_status_size enumeration
+    ///     - Battery Health Information, see #bas_health_info_size enumeration
+    ///     - Battery Information, see #bas_info_size enumeration
+    ///     - Estimated Service Date, see #bas_service_date_size
+    uint8_t value[__ARRAY_EMPTY];
+} bass_update_value_req_t;
 
-/// Parameters of the #BASS_ENABLE_RSP message
-typedef struct bass_enable_rsp
+/// Parameters of the #BASS_RSP message
+typedef struct
 {
-    /// Connection index
-    uint8_t conidx;
-    /// Status
+    /// Request code (see #bass_msg_req_code enumeration)
+    uint8_t req_code;
+    /// Status (see #hl_err enumeration)
     uint16_t status;
-} bass_enable_rsp_t;
+} bass_rsp_t;
 
-/// Parameters of the #BASS_BATT_LEVEL_UPD_REQ message
-typedef struct bass_batt_level_upd_req
-{
-    /// BAS instance
-    uint8_t bas_instance;
-    /// Battery Level
-    uint8_t batt_level;
-} bass_batt_level_upd_req_t;
-
-/// Parameters of the #BASS_BATT_LEVEL_UPD_RSP message
-typedef struct bass_batt_level_upd_rsp
-{
-    /// Status
-    uint16_t status;
-} bass_batt_level_upd_rsp_t;
-
-/// Parameters of the #BASS_BATT_LEVEL_NTF_CFG_IND message
-typedef struct bass_batt_level_ntf_cfg_ind
+/// Parameters of the #BASS_SENT_IND message
+typedef struct
 {
     /// Connection index
     uint8_t conidx;
-    /// Notification Configuration
-    uint8_t ntf_cfg;
-} bass_batt_level_ntf_cfg_ind_t;
+    /// Instance index
+    uint8_t instance_idx;
+    /// Characteristic type (see #bass_char_type enumeration)
+    uint8_t char_type;
+    /// Status (see #hl_err enumeration)
+    uint16_t status;
+} bass_sent_ind_t;
+
+/// Parameters of the #BASS_VALUE_REQ_IND message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Instance index
+    uint8_t instance_idx;
+    /// Characteristic type (see #bass_char_type enumeration)
+    uint8_t char_type;
+    /// Token
+    uint16_t token;
+} bass_value_req_ind_t;
+
+/// Parameters of the #BASS_GET_CCCD_REQ_IND message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Instance index
+    uint8_t instance_idx;
+    /// Characteristic type (see #bass_char_type enumeration)
+    uint8_t char_type;
+    /// Token
+    uint16_t token;
+} bass_get_cccd_req_ind_t;
+
+/// Parameters of the #BASS_VALUE_CFM message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Token
+    uint16_t token;
+    /// Length
+    uint8_t length;
+    /// Value
+    uint8_t value[__ARRAY_EMPTY];
+} bass_value_cfm_t;
+
+/// Parameters of the #BASS_PRESENTATION_FORMAT_REQ_IND message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Instance index
+    uint8_t instance_idx;
+    /// Token
+    uint16_t token;
+} bass_presentation_format_req_ind_t;
+
+/// Parameters of the #BASS_SET_CCCD_REQ_IND message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Instance index
+    uint8_t instance_idx;
+    /// Characteristic type (see #bass_char_type enumeration)
+    uint8_t char_type;
+    /// Token
+    uint16_t token;
+    /// Value (see #basc_char_type enumeration)
+    uint16_t value;
+} bass_set_cccd_req_ind_t;
+
+/// Parameters of the #BASS_SET_CCCD_CFM message
+typedef struct
+{
+    /// Connection index
+    uint8_t conidx;
+    /// Status (see #hl_err message)
+    uint16_t status;
+    /// Token
+    uint16_t token;
+} bass_set_cccd_cfm_t;
 
 /// @} BASS_API_MSG
 

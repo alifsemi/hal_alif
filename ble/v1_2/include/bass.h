@@ -5,8 +5,8 @@
  *
  * @brief Header file - Battery Service Server - Native API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,14 +20,7 @@
  ****************************************************************************************
  * @defgroup BASS_API Battery Service Server
  * @ingroup BAS_API
- * @brief Description of API for Battery Service Server
- ****************************************************************************************
- */
-
-/**
- ****************************************************************************************
- * @defgroup BASS_API_COMMON Common
- * @ingroup BASS_API
+ * @brief Description of API for Battery Service Server\n See \ref bas_msc
  ****************************************************************************************
  */
 
@@ -45,8 +38,9 @@
  */
 
 #include "bas.h"
+#include "bass_cfg.h"
 
-/// @addtogroup BASS_API_COMMON
+/// @addtogroup BASS_API_NATIVE
 /// @{
 
 /*
@@ -54,114 +48,232 @@
  ****************************************************************************************
  */
 
-/// Features Flag Masks
-enum bass_features
+/// Characteristic type
+enum bass_char_type
 {
-    /// Battery Level Characteristic doesn't support notifications
-    BAS_BATT_LVL_NTF_NOT_SUP = 0,
-    /// Battery Level Characteristic support notifications
-    BAS_BATT_LVL_NTF_SUP,
+    /// Battery Level characteristic
+    BASS_CHAR_TYPE_LEVEL = 0u,
+    #if (HOST_MSG_API || BASS_LEVEL_STATUS)
+    /// Battery Level Status characteristic
+    BASS_CHAR_TYPE_LEVEL_STATUS,
+    #endif // (HOST_MSG_API || BASS_LEVEL_STATUS)
+    #if (HOST_MSG_API || BASS_CRITICAL_STATUS)
+    /// Battery Critical Status characteristic
+    BASS_CHAR_TYPE_CRITICAL_STATUS,
+    #endif // (HOST_MSG_API || BASS_CRITICAL_STATUS)
+    #if (HOST_MSG_API || BASS_ENERGY_STATUS)
+    /// Battery Energy Status characteristic
+    BASS_CHAR_TYPE_ENERGY_STATUS,
+    #endif // (HOST_MSG_API || BASS_ENERGY_STATUS)
+    #if (HOST_MSG_API || BASS_TIME_STATUS)
+    /// Battery Time Status characteristic
+    BASS_CHAR_TYPE_TIME_STATUS,
+    #endif // (HOST_MSG_API || BASS_TIME_STATUS)
+    #if (HOST_MSG_API || BASS_ESTIMATED_SERVICE_DATE)
+    /// Estimated Service Date characteristic
+    BASS_CHAR_TYPE_ESTIMATED_SERVICE_DATE,
+    #endif // (HOST_MSG_API || BASS_ESTIMATED_SERVICE_DATE)
+    #if (HOST_MSG_API || BASS_HEALTH_STATUS)
+    /// Battery Health Status characteristic
+    BASS_CHAR_TYPE_HEALTH_STATUS,
+    #endif // (HOST_MSG_API || BASS_HEALTH_STATUS)
+    #if (HOST_MSG_API || BASS_HEALTH_INFORMATION)
+    /// Battery Health Information characteristic
+    BASS_CHAR_TYPE_HEALTH_INFO,
+    #endif // (HOST_MSG_API || BASS_HEALTH_INFORMATION)
+    #if (HOST_MSG_API || BASS_INFORMATION)
+    /// Battery Information characteristic
+    BASS_CHAR_TYPE_INFO,
+    #endif // (HOST_MSG_API || BASS_INFORMATION)
+    #if (HOST_MSG_API || BASS_MANUFACTURER_NAME)
+    /// Manufacturer Name String characteristic
+    BASS_CHAR_TYPE_MANUFACTURER_NAME,
+    #endif // (HOST_MSG_API || BASS_MANUFACTURER_NAME)
+    #if (HOST_MSG_API || BASS_MODEL_NUMBER)
+    /// Model Number String characteristic
+    BASS_CHAR_TYPE_MODEL_NUMBER,
+    #endif // (HOST_MSG_API || BASS_MODEL_NUMBER)
+    #if (HOST_MSG_API || BASS_SERIAL_NUMBER)
+    /// Serial Number String characteristic
+    BASS_CHAR_TYPE_SERIAL_NUMBER,
+    #endif // (HOST_MSG_API || BASS_SERIAL_NUMBER)
+
+    BASS_CHAR_TYPE_MAX,
 };
 
-/*
- * TYPE DEFINITIONS
- ****************************************************************************************
- */
-
-/// Parameters for the database creation
-typedef struct bass_db_cfg
+/// Service configuration bit field meaning
+enum bass_config_bf
 {
-    /// Number of BAS to add
-    uint8_t             bas_nb;
-    /// Features of each BAS instance
-    uint8_t             features[BASS_NB_BAS_INSTANCES_MAX];
-    /// Battery Level Characteristic Presentation Format - Should not change during connection
-    prf_char_pres_fmt_t batt_level_pres_format[BASS_NB_BAS_INSTANCES_MAX];
-} bass_db_cfg_t;
+    /// Support Characteristic Presentation Format descriptor for Battery Level characteristic\n
+    /// Meaningful only if compiled with BASS_PRESENTATION_FORMAT option
+    BASS_CONFIG_PRESENTATION_FORMAT_POS = 0u,
+    BASS_CONFIG_PRESENTATION_FORMAT_BIT = CO_BIT(BASS_CONFIG_PRESENTATION_FORMAT_POS),
 
-/// @} BASS_API_COMMON
+    /// First optional characteristic (see #bass_char_type enumeration)
+    BASS_CONFIG_FIRST_OPT_CHAR_POS = BASS_CHAR_TYPE_LEVEL + 1u,
 
-/// @addtogroup BASS_API_NATIVE
-/// @{
+    /// Activate support of E2E-CRC\n
+    /// Meaningful only if compiled with CGMSS_E2E_CRC option
+    BASS_CONFIG_CRITICAL_POS = 12u,
+    BASS_CONFIG_CRITICAL_BIT = CO_BIT(BASS_CONFIG_CRITICAL_POS),
+};
 
 /*
  * NATIVE API CALLBACKS
  ****************************************************************************************
  */
 
-/// Battery Service server callback set
-typedef struct bass_cb
+/// Set of callback functions for Battery Service (Server)
+typedef struct
 {
     /**
      ****************************************************************************************
-     * @brief Completion of battery level update
+     * @brief Request value after read of one of Battery Service's characteristics/n
+     *        #bass_value_cfm function shall be called
      *
-     * @param[in] status Status of the procedure execution (see enum #hl_err)
+     * @param[in] conidx            Connection index
+     * @param[in] instance_idx      Instance index
+     * @param[in] char_type         Characteristic type (see #bass_char_type enumeration)
+     * @param[in] token             Token
      ****************************************************************************************
      */
-    void (*cb_batt_level_upd_cmp)(uint16_t status);
+    void (*cb_value_req)(uint8_t conidx, uint8_t instance_idx, uint8_t char_type, uint16_t token);
 
     /**
      ****************************************************************************************
-     * @brief Inform that Bond data updated for the connection.
+     * @brief Request value after read of one of Battery Service's Client Characteristic Configuration descriptor/n
+     *        #bass_value_cfm function shall be called
      *
-     * @param[in] conidx        Connection index
-     * @param[in] ntf_cfg       Notification Configuration
+     * @param[in] conidx            Connection index
+     * @param[in] instance_idx      Instance index
+     * @param[in] char_type         Characteristic type (see #bass_char_type enumeration)
+     * @param[in] token             Token
      ****************************************************************************************
      */
-    void (*cb_bond_data_upd)(uint8_t conidx, uint8_t ntf_ind_cfg);
-} bass_cb_t;
+    void (*cb_get_cccd_req)(uint8_t conidx, uint8_t instance_idx, uint8_t char_type, uint16_t token);
+
+    /**
+     ****************************************************************************************
+     * @brief Provide value written in one of Battery Service's Client Characteristic Configuration descriptor/n
+     *        #bass_set_cccd_cfm function shall be called
+     *
+     * @param[in] conidx            Connection index
+     * @param[in] instance_idx      Instance index
+     * @param[in] char_type         Characteristic type (see #bass_char_type enumeration)
+     * @param[in] token             Token
+     * @param[in] p_buf             Pointer to buffer
+     ****************************************************************************************
+     */
+    void (*cb_set_cccd_req)(uint8_t conidx, uint8_t instance_idx, uint8_t char_type, uint16_t token, co_buf_t* p_buf);
+
+    #if (BASS_PRESENTATION_FORMAT)
+    /**
+     ****************************************************************************************
+     * @brief Request value of Characteristic Presentation Format descriptor for Battery Level characteristic/n
+     *        #bass_value_cfm function shall be called
+     *
+     * @param[in] conidx            Connection index
+     * @param[in] instance_idx      Instance index
+     * @param[in] token             Token
+     ****************************************************************************************
+     */
+    void (*cb_presentation_format_req)(uint8_t conidx, uint8_t instance_idx, uint16_t token);
+    #endif // (BASS_PRESENTATION_FORMAT)
+
+    /**
+     ****************************************************************************************
+     * @brief Inform about indication or notification transmission status
+     *
+     * @param[in] conidx            Connection index
+     * @param[in] instance_idx      Instance index
+     * @param[in] char_type         Characteristic type (see #bass_char_type enumeration)
+     * @param[in] status            Status (see #hl_err enumeration)
+     ****************************************************************************************
+     */
+    void (*cb_sent)(uint8_t conidx, uint8_t instance_idx, uint8_t char_type, uint16_t status);
+} bass_cbs_t;
 
 /*
  * NATIVE API FUNCTIONS
  ****************************************************************************************
  */
 
+#if (!HOST_MSG_API)
 /**
  ****************************************************************************************
- * @brief Restore bond data of a known peer device (at connection establishment)
+ * @brief Add support of Battery Service as Server
  *
- * @param[in] conidx          Connection index
- * @param[in] ntf_cfg         Notification Configuration
- * @param[in] p_old_batt_lvl  Old Battery Level used to decide if notification should be triggered
- *                            Array of BASS_NB_BAS_INSTANCES_MAX size.
+ * @param[in] config_bf     Configuration bit field (see #bass_config_bf enumeration)\n
+ *                          Meaningful only if compiled with BASS_FLEXIBLE option\n
+ * @param[in] p_cbs         Pointer to set of callback functions for communication with upper layer
  *
- * @return Status of the function execution (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t bass_enable(uint8_t conidx, uint8_t ntf_cfg, const uint8_t* p_old_batt_lvl);
+uint16_t bass_add(uint16_t config_bf, const bass_cbs_t* p_cbs);
+#endif // (!HOST_MSG_API)
+
+#if (BASS_MULTI > 1)
+/**
+ ****************************************************************************************
+ * @brief Add an additional instance of Battery Service in the database
+ *
+ * @param[in] config_bf     Configuration bit field (see #bass_config_bf enumeration)\n
+ *                          Meaningful only if compiled with BASS_FLEXIBLE option
+ *
+ * @return An error status (see #hl_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t bass_add_instance(uint16_t config_bf);
+#endif // (BASS_MULTI > 1)
 
 /**
  ****************************************************************************************
- * @brief Update a battery level
+ * @brief Notify/indicate new value for a Battery Service characteristic
  *
- * Wait for #bass_cb_t.cb_batt_level_upd_cmp execution before starting a new procedure
+ * @param[in] conidx            Connection index
+ * @param[in] instance_idx      Instance index
+ * @param[in] char_type         Characteristic type (see #bass_char_type enumeration)
+ * @param[in] evt_type          Event type (see #gatt_evt_type enumeration)
+ * @param[in] p_buf             Pointer to buffer containing value\n
+ * For more details about data composition:
+ *  - Battery Level, see #bas_level_size enumeration
+ *  - Battery Level Status, see #bas_level_status_size enumeration
+ *  - Battery Critical Status, see #bas_critical_status_size enumeration
+ *  - Battery Energy Status, see #bas_energy_status_size enumeration
+ *  - Battery Time Status, see #bas_time_status_size enumeration
+ *  - Battery Health Status, see #bas_health_status_size enumeration
+ *  - Battery Health Information, see #bas_health_info_size enumeration
+ *  - Battery Information, see #bas_info_size enumeration
+ *  - Estimated Service Date, see #bas_service_date_size
  *
- * @param[in] bas_instance  Battery service instance
- * @param[in] batt_level    New Battery level
- *
- * @return Status of the function execution (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t bass_batt_level_upd(uint8_t bas_instance, uint8_t batt_level);
+uint16_t bass_update_value(uint8_t conidx, uint8_t instance_idx, uint8_t char_type, uint8_t evt_type,
+                           co_buf_t* p_buf);
 
 /**
  ****************************************************************************************
- * @return Return current battery level exposed for a BAS instance
+ * @brief Provide value requested by peer device
  *
- * @param[in] bas_instance  Battery Service instance
+ * @param[in] conidx            Connection index
+ * @param[in] token             Token
+ * @param[in] p_buf             Pointer to buffer containing value
  ****************************************************************************************
  */
-uint8_t bass_get_level(uint8_t bas_instance);
+void bass_value_cfm(uint8_t conidx, uint16_t token, co_buf_t* p_buf);
 
 /**
  ****************************************************************************************
- * @return Current client characteristic configuration for a given connection
+ * @brief Provide value requested by peer device
  *
- * @param[in] conidx        Connection index
+ * @param[in] conidx            Connection index
+ * @param[in] status            Status (see #hl_err enumeration)
+ * @param[in] token             Token
  ****************************************************************************************
  */
-uint8_t bass_get_client_cfg(uint8_t conidx);
+void bass_set_cccd_cfm(uint8_t conidx, uint16_t status, uint16_t token);
 
 /// @} BASS_API_NATIVE
 
