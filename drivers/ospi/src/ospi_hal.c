@@ -22,13 +22,17 @@ struct hal_ospi_inst {
 	uint32_t  rx_sample_delay;
 	uint32_t  ddr_drive_edge;
 	uint32_t  core_clk;
+	uint32_t  *aes_regs;
 
 	/* Data Transfer */
 	ospi_transfer_t transfer;
 
+	/* XiP Config*/
+	ospi_xip_config_t   xip_config;
+
 	/* Event Notifier */
 	hal_event_notify_cb *event_cb;
-	void				*user_data;
+	void  *user_data;
 };
 
 /* Fixed Instances */
@@ -58,7 +62,7 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 				struct ospi_init *init_d)
 {
 	OSPI_Type       *ospi_regs;
-	uint8_t         *aes_base;
+	OSPI_AES_Type   *aes_regs;
 	int32_t         i  = 0;
 
 	struct hal_ospi_inst *ospi_inst;
@@ -99,9 +103,22 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 	ospi_inst->tx_fifo_threshold = init_d->tx_fifo_threshold;
 	ospi_inst->event_cb = init_d->event_cb;
 	ospi_inst->user_data = init_d->user_data;
+	ospi_inst->aes_regs = init_d->aes_regs;
 
 	/* Clear Transfer Object */
 	memset(&ospi_inst->transfer, 0, sizeof(ospi_transfer_t));
+
+	/* Clear XiP Configuration Object */
+	memset(&ospi_inst->xip_config, 0, sizeof(ospi_xip_config_t));
+
+	/* XiP Configs */
+	ospi_inst->xip_config.wrap_cmd = init_d->xip_wrap_cmd;
+	ospi_inst->xip_config.incr_cmd = init_d->xip_incr_cmd;
+	ospi_inst->xip_config.xip_cs_pin = init_d->cs_pin;
+	ospi_inst->xip_config.xip_cnt_time_out = init_d->xip_cnt_time_out;
+	ospi_inst->xip_config.aes_rx_ds_dlay = init_d->rx_ds_delay;
+	ospi_inst->xip_config.xip_rxds_vl_en = init_d->xip_rxds_vl_en;
+	ospi_inst->xip_config.xip_wait_cycles = init_d->xip_wait_cycles;
 
 	ospi_regs = (OSPI_Type *) init_d->base_regs;
 
@@ -119,10 +136,9 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 
 	ospi_set_bus_speed(ospi_regs, init_d->bus_speed, init_d->core_clk);
 
-	aes_base = (uint8_t *)init_d->aes_regs;
+	aes_regs = (OSPI_AES_Type *) init_d->aes_regs;
 
-	/* Receive Datastrobe Delay */
-	*(aes_base + HAL_OSPI_AES_RX_DS_DELAY_REG_OFFSET) = init_d->rx_ds_delay;
+	aes_regs->AES_RXDS_DLY = init_d->rx_ds_delay;
 
 	return OSPI_ERR_NONE;
 }
@@ -155,6 +171,9 @@ int32_t alif_hal_ospi_deinit(HAL_OSPI_Handle_T handle)
 
 	/* Clear Transfer Object */
 	memset(&ospi_inst->transfer, 0, sizeof(ospi_transfer_t));
+
+	/* Clear XiP Configuration Object */
+	memset(&ospi_inst->xip_config, 0, sizeof(ospi_xip_config_t));
 
 	return  OSPI_ERR_NONE;
 }
@@ -341,5 +360,61 @@ int32_t alif_hal_ospi_receive(HAL_OSPI_Handle_T handle,
 				void *data_out, int num)
 {
 	/*TODO*/
+	return OSPI_ERR_NONE;
+}
+
+
+/**
+ * \fn          alif_hal_ospi_xip_enable
+ * \brief       Enable XiP.
+ * \param[in]   handle  Instance handlerd
+ * \return      0 on Success, else error code.
+ */
+int32_t alif_hal_ospi_xip_enable(HAL_OSPI_Handle_T handle)
+{
+	struct hal_ospi_inst *ospi_inst;
+
+	ospi_inst = get_inst_by_handle(handle);
+	if (ospi_inst == NULL)
+		return OSPI_ERR_INVALID_HANDLE;
+
+	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+			ospi_inst->cs_pin, SPI_SS_STATE_DISABLE);
+
+	ospi_xip_enable((OSPI_Type *) ospi_inst->regs,
+			(OSPI_AES_Type *) ospi_inst->aes_regs,
+			&ospi_inst->xip_config);
+
+	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+			ospi_inst->cs_pin, SPI_SS_STATE_ENABLE);
+
+	return OSPI_ERR_NONE;
+}
+
+/**
+ * \fn          alif_hal_ospi_xip_disable
+ * \brief       Disable XiP.
+ * \param[in]   handle  Instance handlerd
+ * \return      0 on Success, else error code.
+ */
+int32_t alif_hal_ospi_xip_disable(HAL_OSPI_Handle_T handle)
+{
+	struct hal_ospi_inst *ospi_inst;
+
+	ospi_inst = get_inst_by_handle(handle);
+	if (ospi_inst == NULL)
+		return OSPI_ERR_INVALID_HANDLE;
+
+	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+			ospi_inst->cs_pin, SPI_SS_STATE_DISABLE);
+
+
+	ospi_xip_disable((OSPI_Type *) ospi_inst->regs,
+			(OSPI_AES_Type *) ospi_inst->aes_regs,
+			&ospi_inst->transfer, &ospi_inst->xip_config);
+
+	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+			ospi_inst->cs_pin, SPI_SS_STATE_ENABLE);
+
 	return OSPI_ERR_NONE;
 }

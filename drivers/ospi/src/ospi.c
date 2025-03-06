@@ -413,7 +413,7 @@ void ospi_hyperbus_xip_init(OSPI_Type *ospi, uint8_t wait_cycles)
  * \fn          void ospi_irq_handler(OSPI_Type *ospi, ospi_transfer_t *transfer)
  * \brief       Handle interrupts for the OSPI instance.
  * \param[in]   ospi      Pointer to the OSPI register map
- * \param[in]   transfer  The transfer structure for the SPI instance
+ * \param[in]   transfer  The transfer structure for the OSPI instance
  * \return      none
  */
 void ospi_irq_handler(OSPI_Type *ospi, ospi_transfer_t *transfer)
@@ -570,4 +570,121 @@ void ospi_irq_handler(OSPI_Type *ospi, ospi_transfer_t *transfer)
 	(void) ospi->OSPI_RXOICR;
 	(void) ospi->OSPI_RXUICR;
 	(void) ospi->OSPI_ICR;
+}
+
+/**
+ * \fn          void ospi_xip_enable(OSPI_Type *ospi, OSPI_AES_Type *aes,
+ *                                   ospi_xip_config_t *xfg)
+ * \brief       Enable XiP Mode
+ * \param[in]   ospi Pointer to the OSPI register map
+ * \param[in]   aes  Pointer to the AES register map
+ * \param[in]   xfg  configurations for XiP mode
+ * \return      none
+ */
+void ospi_xip_enable(OSPI_Type *ospi, OSPI_AES_Type *aes,
+		ospi_xip_config_t *xfg)
+{
+	uint32_t val;
+
+	ospi_disable(ospi);
+
+	/* Set OSPI CTRL0 */
+	val = OSPI_CTRLR0_IS_MST
+		|(OCTAL << OSPI_CTRLR0_SPI_FRF_OFFSET)
+		|(0 << OSPI_CTRLR0_SCPOL_OFFSET)
+		|(0 << OSPI_CTRLR0_SCPH_OFFSET)
+		|(0 << OSPI_CTRLR0_SSTE_OFFSET)
+		|(TMODE_RD_ONLY << OSPI_CTRLR0_TMOD_OFFSET)
+		|(SPI_CTRLR0_DFS_16bit << OSPI_CTRLR0_DFS_OFFSET);
+
+	ospi->OSPI_CTRLR0 = val;
+
+	val = (OCTAL << XIP_CTRL_FRF_OFFSET)
+		| (0x2 << XIP_CTRL_TRANS_TYPE_OFFSET)
+		| (XIP_CTRL_ADDR_LEN_36_BIT << XIP_CTRL_ADDR_L_OFFSET)
+		| (XIP_CTRL_INST_LEN_8_BIT << XIP_CTRL_INST_L_OFFSET)
+		| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
+		| (xfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+		| (0x1 << XIP_CTRL_DFS_HC_OFFSET)
+		| (0x1 << XIP_CTRL_DDR_EN_OFFSET)
+		| (0x0 << XIP_CTRL_INST_DDR_EN_OFFSET)
+		| (0x1 << XIP_CTRL_RXDS_EN_OFFSET)
+		| (0x1 << XIP_CTRL_INST_EN_OFFSET)
+		| (0x0 << XIP_CTRL_CONT_XFER_EN_OFFSET)
+		| (0x0 << XIP_CTRL_XIP_HYPERBUS_EN_OFFSET)
+		| (0x0 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
+		| (0x0 << XIP_CTRL_XIP_MBL_OFFSET)
+		| (0x0 << XIP_CTRL_XIP_PREFETCH_EN_OFFSET)
+		| (xfg->xip_rxds_vl_en << XIP_CTRL_RXDS_VL_EN_OFFSET);
+
+	/* Set OSPI XIP CTRL */
+	ospi->OSPI_XIP_CTRL = val;
+
+	ospi->OSPI_XIP_INCR_INST = xfg->incr_cmd;
+	ospi->OSPI_XIP_WRAP_INST = xfg->wrap_cmd;
+	ospi->OSPI_XIP_MODE_BITS = xfg->xip_mod_bits;
+	ospi->OSPI_RX_SAMPLE_DELAY = xfg->rx_smpl_dlay;
+
+#ifndef CONFIG_FLASH_ADDRESS_IN_SINGLE_FIFO_LOCATION
+	ospi_control_xip_ss(ospi, xfg->xip_cs_pin, SPI_SS_STATE_ENABLE);
+#endif
+	ospi_enable(ospi);
+
+	/* Enable XiP */
+	aes->AES_CTRL |= AES_CONTROL_XIP_EN;
+}
+
+
+/**
+ * \fn          void ospi_xip_disable(OSPI_Type *ospi, OSPI_AES_Type *aes,
+ *                         ospi_transfer_t *transfer, ospi_xip_config_t *xfg)
+ * \brief       Disable XiP Mode
+ * \param[in]   ospi Pointer to the OSPI register map
+ * \param[in]   aes  Pointer to the AES register map
+ * \param[in]   transfer  The transfer structure for the OSPI instance
+ * \param[in]   xfg  configurations for XiP mode
+ * \return      none
+ */
+void ospi_xip_disable(OSPI_Type *ospi, OSPI_AES_Type *aes,
+			ospi_transfer_t *transfer, ospi_xip_config_t *xfg)
+{
+	uint32_t val = 0;
+
+	ospi_disable(ospi);
+
+	/* Set OSPI CTRL0 */
+	val = OSPI_CTRLR0_IS_MST
+		|(OCTAL << OSPI_CTRLR0_SPI_FRF_OFFSET)
+		|(0 << OSPI_CTRLR0_SCPOL_OFFSET)
+		|(0 << OSPI_CTRLR0_SCPH_OFFSET)
+		|(0 << OSPI_CTRLR0_SSTE_OFFSET)
+		|(TMODE_RD_ONLY << OSPI_CTRLR0_TMOD_OFFSET)
+		|(SPI_CTRLR0_DFS_32bit << OSPI_CTRLR0_DFS_OFFSET);
+
+	ospi->OSPI_CTRLR0 = val;
+
+	val = SPI_TRANS_TYPE_FRF_DEFINED
+		|((transfer->ddr) << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
+		|(2 << SPI_CTRLR0_XIP_MBL_OFFSET)
+		|(1 << SPI_CTRLR0_XIP_DFS_HC_OFFSET)
+		|(1 << SPI_CTRLR0_XIP_INST_EN_OFFSET)
+		|(SPI_CTRLR0_INST_L_8bit << SPI_CTRLR0_INST_L_OFFSET)
+		|(transfer->addr_len) << (SPI_CTRLR0_ADDR_L_OFFSET)
+		|(transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
+
+	ospi->OSPI_SPI_CTRLR0 = val;
+
+	ospi->OSPI_XIP_MODE_BITS = 0x1;
+	ospi->OSPI_XIP_WRITE_INCR_INST = xfg->incr_cmd;
+	ospi->OSPI_XIP_WRAP_INST = xfg->wrap_cmd;
+
+	ospi->OSPI_XIP_CNT_TIME_OUT = 100;
+
+#ifndef CONFIG_FLASH_ADDRESS_IN_SINGLE_FIFO_LOCATION
+	ospi_control_xip_ss(ospi, xfg->xip_cs_pin, SPI_SS_STATE_ENABLE);
+#endif
+	ospi_enable(ospi);
+
+	/* XiP Disable */
+	aes->AES_CTRL &= ~AES_CONTROL_XIP_EN;
 }
