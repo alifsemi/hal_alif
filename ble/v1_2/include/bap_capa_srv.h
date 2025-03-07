@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Capabilities Server - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -205,11 +205,16 @@ uint16_t bap_capa_srv_configure(const bap_capa_srv_cb_t* p_cb, bap_capa_srv_cfg_
  * @param[in] pac_lid             PAC local index
  * @param[in] record_id           Record identifier
  * @param[in] p_codec_id          Pointer to Codec ID value
- * @param[in] p_capa              Pointer to Codec Capabilities structure (must remain allocated by Upper Layer)\n
- *                                Cannot be NULL
+ * @param[in] p_capa              Pointer to Codec Capabilities structure\n
+ *                                Cannot be NULL\n
+ *                                Structure shall be allocated by Upper Layer and maintained until an update of the
+ *                                record with a new call of #bap_capa_srv_set_record or a call of
+ *                                #bap_capa_srv_remove_record
  * @param[in] p_metadata          Pointer to Codec Capabilities Metadata structure (must remain allocated by Upper
- *                                Layer)
- *                                Can be NULL
+ *                                Layer)\n
+ *                                Can be NULL\n
+ *                                Structure shall be allocated by Upper Layer and maintained until a new call of
+ *                                #bap_capa_srv_set_record or a call of #bap_capa_srv_remove_record
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************

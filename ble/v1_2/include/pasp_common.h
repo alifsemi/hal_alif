@@ -5,8 +5,8 @@
  *
  * @brief Header File - Phone Alert Status Profile Common types.
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  * $ Rev $
  *
@@ -91,4 +91,4 @@ enum pasp_ringer_ctnl_pt_value
 
 /// @} pasp_common
 
-#endif //(_HTP_COMMON_H_)
+#endif //(_PASP_COMMON_H_)

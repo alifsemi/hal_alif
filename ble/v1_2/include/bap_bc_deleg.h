@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Broadcast Delegator - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -368,7 +368,10 @@ uint16_t bap_bc_deleg_set_sgrp_bis_sync(uint8_t src_lid, uint8_t sgrp_idx, uint3
  *
  * @param[in] src_lid       Source local index
  * @param[in] sgrp_idx      Subgroup index (between 0 and (nb_subgroups - 1))
- * @param[in] p_metadata    Pointer to Metadata
+ * @param[in] p_metadata    Pointer to Metadata\n
+ *                          Can be NULL\n
+ *                          Structure shall be allocated by Upper Layer and maintained until a new call of
+ *                          #bap_bc_deleg_set_sgrp_metadata for the Subgroup
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************

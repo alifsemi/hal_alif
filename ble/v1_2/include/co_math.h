@@ -309,6 +309,17 @@ __STATIC_FORCEINLINE uint32_t co_max(uint32_t a, uint32_t b)
 
 /**
  ****************************************************************************************
+ * @brief Function to return the greatest of 2 signed 32 bits words.
+ * @return The greatest value.
+ ****************************************************************************************
+ */
+__STATIC_FORCEINLINE int32_t co_max_s(int32_t a, int32_t b)
+{
+    return a > b ? a : b;
+}
+
+/**
+ ****************************************************************************************
  * @brief Function to return the absolute value of a signed integer.
  * @return The absolute value.
  ****************************************************************************************

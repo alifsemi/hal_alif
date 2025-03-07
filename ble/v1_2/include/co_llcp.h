@@ -109,6 +109,11 @@ enum co_llcp_op_code
     LL_PER_SYNC_WR_IND_OPCODE       = 0x2A,
     #endif // (BLE_PAWR)
 
+    #if (BT_60)
+    LL_FEATURE_EXT_REQ_OPCODE       = 0x2B,
+    LL_FEATURE_EXT_RSP_OPCODE       = 0x2C,
+    #endif // (BT_60)
+
     #if (BLE_CHSD)
     LL_CS_SEC_RSP_OPCODE            = 0x2D,
     LL_CS_CAP_REQ_OPCODE            = 0x2E,
@@ -132,9 +137,7 @@ enum co_llcp_op_code
     #endif //(BLE_FSU)
 
     #if (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
-    LL_OTA_TM_LONG_IND_OPCODE       = 0xEC, // TBD
-    LL_OTA_TM_IND_OPCODE            = 0xED, // TBD
-    LL_OTA_TM_SHORT_IND_OPCODE      = 0xFB, // TBD
+    LL_OTA_UTP_IND_OPCODE           = 0xED, // TBD
     #endif // (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
 
     /// Opcode length
@@ -205,6 +208,11 @@ enum co_llcp_length
     LL_PER_SYNC_WR_IND_LEN           = 43,
     #endif // (BLE_PAWR)
 
+    #if (BT_60)
+    LL_FEATURE_EXT_REQ_LEN           = 27,
+    LL_FEATURE_EXT_RSP_LEN           = 27,
+    #endif // (BT_60)
+
     #if (BLE_CHSD)
     LL_CS_REQ_LEN                    = 29,
     LL_CS_RSP_LEN                    = 22,
@@ -227,24 +235,21 @@ enum co_llcp_length
     LL_FRAME_SPACE_RSP_LEN           = 6,
     #endif //(BLE_FSU)
 
-    #if (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
-    LL_OTA_TM_SHORT_IND_LEN          = 11,
-    LL_OTA_TM_IND_LEN                = 27,
-    LL_OTA_TM_LONG_IND_LEN           = 251,
-    #endif // (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
-
     #if (BLE_CHSD)
-    /// Control Length Extension feature
     LL_PDU_LENGTH_MAX                = LL_CS_FAE_RSP_LEN,
     #elif (BLE_PAWR)
-    /// Control Length Extension feature
-    LL_PDU_LENGTH_MAX                = 44,
-    #elif (BLE_CIS || BLE_PAST)
-    /// Control Length Extension feature
-    LL_PDU_LENGTH_MAX                = 36,
+    LL_PDU_LENGTH_MAX                = LL_PER_SYNC_WR_IND_LEN,
+    #elif (BLE_CIS)
+    LL_PDU_LENGTH_MAX                = LL_CIS_REQ_LEN,
+    #elif (BLE_PAST)
+    LL_PDU_LENGTH_MAX                = LL_PER_SYNC_IND_LEN,
     #else // !(BLE_CIS || BLE_PAST)
     LL_PDU_LENGTH_MAX                = LE_MIN_OCTETS,
     #endif // !(BLE_CIS || BLE_PAST)
+
+    #if (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
+    LL_OTA_UTP_IND_LEN               = LL_PDU_LENGTH_MAX, // Variable size, adapts to the maximum LLCP supported
+    #endif // (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
 };
 
 
@@ -1198,6 +1203,30 @@ struct ll_ch_status_ind
 };
 #endif // (BT_53)
 
+#if (BT_60)
+/// LL_FEATURE_EXT_REQ structure.
+/*@TRACE
+* @NO_PAD
+*/
+typedef struct ll_feat_ext_req
+{
+    /// op_code
+    uint8_t     op_code;
+    /// Max page
+    uint8_t     max_page;
+    /// Page number
+    uint8_t     page_nb;
+    /// Feature page
+    le_ext_features_t feats;
+} ll_feat_ext_req_t;
+
+/// LL_FEATURE_EXT_RSP structure.
+/*@TRACE
+* @NO_PAD
+*/
+typedef ll_feat_ext_req_t ll_feat_ext_rsp_t;
+#endif // (BT_60)
+
 #if (BLE_CHSD)
 /// LL_CS_REQ structure.
 /*@TRACE
@@ -1556,40 +1585,20 @@ typedef struct
 #endif //(BLE_FSU)
 
 #if (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
-/// LL_OTA_TM_SHORT_IND structure.
+/// LL_OTA_UTP_IND structure.
 /*@TRACE
 * @NO_PAD
 */
-struct ll_ota_tm_short_ind
+struct ll_ota_utp_ind
 {
     /// op_code
     uint8_t         op_code;
-    /// Data
-    uint8_t         data[BLE_OTA_TM_SHORT_IND_DATA_LEN];
-};
 
-/// LL_OTA_TM_IND structure.
-/*@TRACE
-* @NO_PAD
-*/
-struct ll_ota_tm_ind
-{
-    /// op_code
-    uint8_t         op_code;
-    /// Data
-    uint8_t         data[BLE_OTA_TM_IND_DATA_LEN];
-};
+    /// Length of the data (in bytes) (note: not present in the actual PDU data)
+    uint8_t         length;
 
-/// LL_OTA_TM_LONG_IND structure.
-/*@TRACE
-* @NO_PAD
-*/
-struct ll_ota_tm_long_ind
-{
-    /// op_code
-    uint8_t         op_code;
     /// Data
-    uint8_t         data[BLE_OTA_TM_LONG_IND_DATA_LEN];
+    uint8_t         data[LL_PDU_LENGTH_MAX];
 };
 #endif // (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
 
@@ -1737,6 +1746,14 @@ union llcp_pdu
     struct ll_per_sync_wr_ind           per_sync_wr_ind;
     #endif // (BLE_PAWR)
 
+    #if (BT_60)
+    //@trc_union op_code == LL_FEATURE_EXT_REQ_OPCODE
+    ll_feat_ext_req_t                   feat_ext_req;
+
+    //@trc_union op_code == LL_FEATURE_EXT_RSP_OPCODE
+    ll_feat_ext_rsp_t                   feat_ext_rsp;
+    #endif // (BT_60)
+
     #if (BLE_CHSD)
     //@trc_union op_code == LL_CS_REQ_OPCODE
     ll_cs_req_t                         cs_res;
@@ -1790,14 +1807,8 @@ union llcp_pdu
     #endif //(BLE_FSU)
 
     #if (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
-    //@trc_union op_code == LL_OTA_TM_SHORT_IND_OPCODE
-    struct ll_ota_tm_short_ind             ota_tm_short_ind;
-
-    //@trc_union op_code == LL_OTA_TM_IND_OPCODE
-    struct ll_ota_tm_ind                   ota_tm_ind;
-
-    //@trc_union op_code == LL_OTA_TM_LONG_IND_OPCODE
-    struct ll_ota_tm_long_ind              ota_tm_long_ind;
+    //@trc_union op_code == LL_OTA_UTP_IND_OPCODE
+    struct ll_ota_utp_ind               ota_utp_ind;
     #endif // (BLE_ENH_TEST_MODE) || (BLE_UPPER_TESTER)
 };
 

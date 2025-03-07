@@ -5,8 +5,8 @@
  *
  * @brief Generic Audio Framework - Header file
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -352,7 +352,7 @@ enum gaf_announcement_fmt
 /// Audio Locations bit field meaning
 enum gaf_loc_bf
 {
-    GAF_LOC_NOT_ALLOWED = 0,
+    GAF_LOC_MONO_AUDIO = 0,
 
     /// Front Left
     GAF_LOC_FRONT_LEFT_POS = 0,
@@ -438,10 +438,6 @@ enum gaf_loc_bf
     /// Right Surround
     GAF_LOC_RIGHT_SURROUND_POS = 27,
     GAF_LOC_RIGHT_SURROUND_BIT = CO_BIT(GAF_LOC_RIGHT_SURROUND_POS),
-
-    /// RFU mask
-    GAF_LOC_RFU_LSB = 28,
-    GAF_LOC_RFU_MASK = 0xF0000000,
 };
 
 /// @} GAF_ENUM

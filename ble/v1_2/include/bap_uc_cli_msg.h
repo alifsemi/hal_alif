@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Unicast Client - Definition of Message API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -67,6 +67,8 @@ enum bap_uc_cli_msg_cmd_code
     BAP_UC_CLI_REMOVE_GROUP = GAF_CODE(BAP, UC_CLI, BAP_UC_CLI_CMD_TYPE_REMOVE_GROUP),
     /// Control CIS (see #bap_uc_cli_cis_control_cmd_t)
     BAP_UC_CLI_CIS_CONTROL = GAF_CODE(BAP, UC_CLI, BAP_UC_CLI_CMD_TYPE_CIS_CONTROL),
+    /// Set Group parameters (see #bap_uc_cli_set_group_params_cmd_t)
+    BAP_UC_CLI_SET_GROUP_PARAMS = GAF_CODE(BAP, UC_CLI, BAP_UC_CLI_CMD_TYPE_SET_GROUP_PARAMS),
 };
 
 /// List of GAF_REQ request code values for Unicast Client module
@@ -80,6 +82,8 @@ enum bap_uc_cli_msg_req_code
     BAP_UC_CLI_CREATE_GROUP = GAF_CODE(BAP, UC_CLI, 2),
     /// Update write type used for ASE Control Point characteristic - Mainly for PTS testing purpose
     BAP_UC_CLI_SET_WRITE_TYPE = GAF_CODE(BAP, UC_CLI, 3),
+    /// Create Stream
+    BAP_UC_CLI_CREATE_STREAM = GAF_CODE(BAP, UC_CLI, 4),
 };
 
 /// List of GAF_IND indication code values for Unicast Client module
@@ -157,6 +161,19 @@ typedef struct bap_uc_cli_create_group_req
     /// Group parameters
     bap_uc_cli_grp_param_t params;
 } bap_uc_cli_create_group_req_t;
+
+/// Structure for #BAP_UC_CLI_CREATE_STREAM request message
+typedef struct
+{
+    /// Request code (shall be set to #BAP_UC_CLI_CREATE_STREAM)
+    uint16_t req_code;
+    /// Group local index
+    uint8_t grp_lid;
+    /// CIS ID
+    uint8_t cis_id;
+    /// Stream parameters
+    gapi_us_param_t params;
+} bap_uc_cli_create_stream_req_t;
 
 /// Structure for #BAP_UC_CLI_SET_WRITE_TYPE request message
 typedef struct bap_uc_cli_set_write_type_req
@@ -340,6 +357,15 @@ typedef struct bap_uc_cli_get_state_cmd
     /// Meaningful only if configuration for an instance of the ASE characteristic is requested
     uint8_t ase_instance_idx;
 } bap_uc_cli_get_state_cmd_t;
+
+/// Structure for #BAP_UC_CLI_SET_GROUP_PARAMS command message
+typedef struct
+{
+    /// Command code (shall be set to #BAP_UC_CLI_SET_GROUP_PARAMS)
+    uint16_t cmd_code;
+    /// Group local index
+    uint8_t grp_lid;
+} bap_uc_cli_set_group_params_cmd_t;
 
 /// Structure for command complete event message
 typedef struct bap_uc_cli_cmp_evt

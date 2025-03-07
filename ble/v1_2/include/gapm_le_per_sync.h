@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Manager - Low Energy Periodic Synchronization Activities
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -221,6 +221,7 @@ typedef struct
      */
     void (*established)(uint32_t metainfo, uint8_t actv_idx, const gapm_le_per_sync_info_t* p_info);
 
+    #if (BLE_CONLESS_CTE_RX)
     /**
      ****************************************************************************************
      * Callback executed when an IQ report is received
@@ -236,6 +237,8 @@ typedef struct
      */
     void (*iq_report_received)(uint32_t metainfo, uint8_t actv_idx, const gapm_le_iq_report_info_t* p_info,
                                uint8_t nb_sample, const gap_le_iq_sample_t* p_samples);
+    #endif // (BLE_CONLESS_CTE_RX)
+
     #if (BLE_BIS)
     /**
      ****************************************************************************************
@@ -297,7 +300,7 @@ uint16_t gapm_le_start_per_sync(uint8_t actv_idx, const gapm_le_per_sync_param_t
  */
 uint16_t gapm_le_control_per_sync_report(uint8_t actv_idx, uint8_t report_en_bf);
 
-#if (BLE_AOD || BLE_AOA)
+#if (BLE_CONLESS_CTE_RX)
 /**
  ****************************************************************************************
  * @brief Control capturing IQ samples from the Constant Tone Extension of periodic advertising packets
@@ -316,7 +319,7 @@ uint16_t gapm_le_control_per_sync_report(uint8_t actv_idx, uint8_t report_en_bf)
 uint16_t gapm_le_control_per_sync_iq_report(uint8_t actv_idx, uint8_t enable, uint8_t slot_dur,
                                             uint8_t max_sampl_cte, uint8_t switching_pattern_len,
                                             const uint8_t* p_antenna_id);
-#endif // (BLE_AOD || BLE_AOA)
+#endif // (BLE_CONLESS_CTE_RX)
 
 /**
  ***************************************************************************************

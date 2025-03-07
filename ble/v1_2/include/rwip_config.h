@@ -392,7 +392,7 @@
 /******************************************************************************************/
 
 /// Periodic Advertising with Responses
-#if defined(CFG_PAWR) && defined(CFG_PER_ADV) && (BLE_PAST)
+#if defined(CFG_PAWR) && defined(CFG_PER_ADV) && (BLE_PAST) && BT_54
     #define BLE_PAWR                           (1)
 #else // !(defined (CFG_PAWR) && defined(CFG_PER_ADV) && (BLE_PAST))
     #define BLE_PAWR                           (0)
@@ -425,7 +425,7 @@
 /******************************************************************************************/
 
 /// Coding Scheme Selection on Advertising
-#if defined (CFG_CSSA)
+#if defined (CFG_CSSA) && BT_54
     #define BLE_CSSA                           (1)
 #else // !(defined (CFG_CSSA))
     #define BLE_CSSA                           (0)
@@ -470,6 +470,28 @@
 #else // !(defined (CFG_FSU))
     #define BLE_FSU                          (0)
 #endif // !(defined (CFG_FSU))
+
+/******************************************************************************************/
+/* ----------------------- Monitored Advertisers List                  -------------------*/
+/******************************************************************************************/
+
+/// Monitored Advertisers List
+#if (BLE_OBSERVER && defined(CFG_MONITOR_ADV))
+    #define BLE_MONITOR_ADV                          (1)
+#else // !(BLE_OBSERVER && defined(CFG_MONITOR_ADV))
+    #define BLE_MONITOR_ADV                          (0)
+#endif // !(BLE_OBSERVER && defined(CFG_MONITOR_ADV))
+
+/******************************************************************************************/
+/* ----------------------- Higher Data Throughput                      -------------------*/
+/******************************************************************************************/
+
+/// Higher Data Throughput
+#if defined (CFG_HDT)
+    #define BLE_HDT                          (1)
+#else // !(defined (CFG_HDT))
+    #define BLE_HDT                          (0)
+#endif // !(defined (CFG_HDT))
 
 /******************************************************************************************/
 /* ----------------------- Test Mode                                   -------------------*/
@@ -992,6 +1014,14 @@
     #define RW_MWS_COEX_TEST            0
 #endif // defined(CFG_MWS_COEX)
 
+/// To let the HW use the default values set in the registers
+#if (0 || BT_60)
+#define RW_PTI_PRIO_AUTO    0x00
+/// To let the SW force the override values set with PTI_PRIO[3:0]
+#define RW_PTI_PRIO_FORCED  0x10
+#else // !(EAVESDROPPING_SUPPORT || BT_60)
+#define RW_PTI_PRIO_AUTO    0x1F
+#endif // !(EAVESDROPPING_SUPPORT || BT_60)
 
 /******************************************************************************************/
 /* ------------------------   RSSI & POWER CONTROL   -------------------------------------*/
@@ -1347,6 +1377,16 @@ enum KE_TASK_TYPE
 /*@TRACE*/
 enum KE_MEM_HEAP
 {
+    /* For SPARK_EXTSYS0 platform, re-order the heap memory identifiers. The non-retention heap is
+       not protected by the firewall, so should only be used for data intended to be shared.
+       Stack's heap allocation algorithm will allocate memory in a heap with a higher index if the
+       desired heap is full, so placing the non-retention heap at index 0 prevents any "overflow"
+       of data from the other heaps into this heap. */
+    #if defined(CFG_SPARK_EXTSYS0)
+    /// Non Retention memory block
+    KE_MEM_NON_RETENTION,
+    #endif
+
     /// Memory allocated for environment variables
     KE_MEM_ENV,
 
@@ -1357,6 +1397,10 @@ enum KE_MEM_HEAP
 
     /// Memory allocated for kernel messages
     KE_MEM_KE_MSG,
+
+    #if !defined(CFG_SPARK_EXTSYS0)
+    KE_MEM_NON_RETENTION,
+    #endif
 
     KE_MEM_BLOCK_MAX,
 };
@@ -1416,11 +1460,22 @@ enum KE_MEM_HEAP
                                       HOST_HEAP_MSG_SZ      )
 
 /// Size of Environment heap
+#if defined(CFG_SPARK_EXTSYS0)
+// For SPARK_EXTSYS0 platform, ECC memory should be allocated in ENV heap
+#define RWIP_HEAP_ENV_SIZE         ( BT_HEAP_ENV_SZ       + \
+                                     BLE_HEAP_ENV_SZ      + \
+                                     MAC154_HEAP_ENV_SZ   + \
+                                     HOST_HEAP_ENV_SZ     + \
+                                     ECC_HEAP_NON_RET_SIZE_ + \
+                                     TWS_HEAP_ENV_SIZE_        )
+#else
 #define RWIP_HEAP_ENV_SIZE         ( BT_HEAP_ENV_SZ       + \
                                      BLE_HEAP_ENV_SZ      + \
                                      MAC154_HEAP_ENV_SZ   + \
                                      HOST_HEAP_ENV_SZ     + \
                                      TWS_HEAP_ENV_SIZE_        )
+#endif
+
 
 /// Size of Attribute database heap
 #define RWIP_HEAP_PROFILE_SIZE     (  HOST_HEAP_PROFILE_SZ  )
@@ -1546,7 +1601,7 @@ enum PARAM_ID
 
     /// Alif
     PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME   = 0xD0,
-    /// 32 bits of configurations for balletto platform.
+    /// 32 bits of configurations for SPARK platform.
     PARAM_ID_CONFIGURATION              = 0xD1,
 };
 
@@ -2063,6 +2118,15 @@ enum rwip_incr_dft
 #else
     #define RESET_SPLIT  (0)
     #define UART_SPLIT   (0)
+#endif
+
+#if (defined(PLF_SPARK_EXTSYS0) && PLF_SPARK_EXTSYS0)
+/// @brief  Configuration bits for spark board. This configuration is received from NVDS
+
+extern uint32_t spark_configuration;
+
+/// bit0        HPA/LPA if bit is set the HPA is used
+#define SPARK_CONFIG_HPA_ENABLED ((spark_configuration & 1) == 1)
 #endif
 
 #endif //RWIP_CONFIG_H_

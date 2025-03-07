@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Manager Message API. Low Energy
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -528,13 +528,14 @@ typedef struct
         /// BD address\n
         /// For operation = #GAPM_LE_LIST_ADD and type = GAPM_LE_LIST_TYPE_FAL,\n
         /// Or operation = #GAPM_LE_LIST_REMOVE and type = GAPM_LE_LIST_TYPE_FAL,\n
-        /// Or operation = #GAPM_LE_LIST_REMOVE and type = GAPM_LE_LIST_TYPE_RAL
+        /// Or operation = #GAPM_LE_LIST_REMOVE and type = GAPM_LE_LIST_TYPE_RAL,\n
+        /// Or operation = #GAPM_LE_LIST_REMOVE and type = GAPM_LE_LIST_TYPE_MAL
         gap_bdaddr_t bd_addr;
         /// Resolving list entry information\n
         /// For operation = #GAPM_LE_LIST_ADD and type = GAPM_LE_LIST_TYPE_RAL
         gapm_le_list_ral_entry_t ral_entry;
         #if (BLE_PER_ADV)
-        /// Periodic advertiser list entry
+        /// Periodic advertiser list entry\n
         /// For operation = #GAPM_LE_LIST_ADD and type = GAPM_LE_LIST_TYPE_PAL,\n
         /// Or operation = #GAPM_LE_LIST_REMOVE and type = GAPM_LE_LIST_TYPE_PAL,\n
         gapm_le_per_adv_bdaddr_t pal_entry;
@@ -793,6 +794,7 @@ typedef struct
     gap_le_subrate_req_t subrate_req;
 } gapm_le_set_default_subrate_cmd_t;
 #endif // (BLE_SUBRATING)
+
 
 
 

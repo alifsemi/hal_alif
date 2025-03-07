@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Controller  Message API. - Low Energy
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -647,6 +647,8 @@ typedef struct
     uint16_t mtu;
 } gapc_le_att_legacy_bearer_mtu_changed_ind_t;
 #endif // (GATT_INDICATE_LEGACY_MTU_CHANGED)
+
+
 
 
 /// @} GAPC_MSG_STRUCT_API

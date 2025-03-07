@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Unicast Client - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -129,6 +129,8 @@ enum bap_uc_cli_cmd_type
     BAP_UC_CLI_CMD_TYPE_REMOVE_GROUP,
     /// Control CIS
     BAP_UC_CLI_CMD_TYPE_CIS_CONTROL,
+    /// Set Group Parameters
+    BAP_UC_CLI_CMD_TYPE_SET_GROUP_PARAMS,
 };
 
 /// Configuration bit field meaning for BAP Unicast Client
@@ -491,7 +493,10 @@ uint16_t bap_uc_cli_restore_bond_data(uint8_t con_lid, bap_uc_cli_ascs_t* p_ascs
  *                                  See #bap_dp_cfg_bf for bit field meaning
  * @param[in] p_codec_id            Pointer to Codec ID
  * @param[in] ctl_delay_us          Controller Delay in microseconds
- * @param[in] p_cfg                 Pointer to Codec Configuration structure (allocated by Upper Layer)
+ * @param[in] p_cfg                 Pointer to Codec Configuration structure\n
+ *                                  Can be NULL\n
+ *                                  Structure shall be allocated by Upper Layer and maintained until a call of
+ *                                  #bap_uc_cli_configure_codec or a new call of #bap_uc_cli_restore_bond_data_codec
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************
@@ -512,6 +517,37 @@ uint16_t bap_uc_cli_restore_bond_data_codec(uint8_t con_lid, uint8_t ase_instanc
  ****************************************************************************************
  */
 uint16_t bap_uc_cli_create_group(uint8_t cig_id, bap_uc_cli_grp_param_t* p_param, uint8_t* p_grp_lid);
+
+/**
+ ****************************************************************************************
+ * @brief Configure a Stream before any ASE configuration\n
+ * See #bap_msc_cig_configuration\n
+ * Up to application to ensure that QoS parameters set using #bap_uc_cli_configure_qos are compatible with
+ * provided configuration
+ *
+ * @param[in] grp_lid           Group local index
+ * @param[in] cis_id            CIS ID
+ * @param[out] p_params         Pointer to Stream parameters
+ *
+ * @return An error status (see #gaf_err enumeration)
+ ****************************************************************************************
+ */
+uint16_t bap_uc_cli_create_stream(uint8_t grp_lid, uint8_t cis_id, gapi_us_param_t* p_params);
+
+/**
+ ****************************************************************************************
+ * @brief Provide Group parameters (set using #bap_uc_cli_create_group and #bap_uc_cli_create_stream function) to
+ * the Controller (using HCI LE Set CIG Parameters command).
+ * See #bap_msc_cig_configuration\n
+
+ * @param[in] grp_lid           Group local index
+ *
+ * @return An error status (see #gaf_err enumeration).
+ *         If #GAF_ERR_NO_ERROR is returned, operation will be considered as completed with call of cb_cmp_evt
+ *         callback function
+ ****************************************************************************************
+ */
+uint16_t bap_uc_cli_set_group_params(uint8_t grp_lid);
 
 /**
  ****************************************************************************************
@@ -550,7 +586,10 @@ uint16_t bap_uc_cli_cis_control(uint8_t ase_lid, bool establish);
  * @param[in] tgt_latency       Target Latency (see #bap_uc_tgt_latency enumeration)
  * @param[in] tgt_phy           Target PHY (see #bap_uc_tgt_phy enumeration)
  * @param[in] ctl_delay_us      Controller Delay in microseconds
- * @param[in] p_cfg             Pointer to Codec Configuration structure (allocated by Upper Layer)
+ * @param[in] p_cfg             Pointer to Codec Configuration structure\n
+ *                              Can be NULL
+ *                              Structure shall be allocated by Upper Layer and maintained until a call of
+ *                              #bap_uc_cli_configure_codec or #bap_uc_cli_cb.cb_state_codec
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************

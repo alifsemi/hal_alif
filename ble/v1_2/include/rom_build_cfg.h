@@ -25,6 +25,8 @@
 #define CFG_GAPI_INTF_NB 2
 #define CFG_L2CAP_COC_CHAN_PER_CON_NB 10
 #define CFG_L2CAP_CHAN_IN_ENV_NB 20
+#define CFG_HL_BONDABLE
+#define CFG_HL_API_CHECKS
 #define CFG_HL_ADV_ADD_FLAGS
 #define CFG_BLE_HOST_ISO
 #define CFG_BLE_GAF
@@ -82,14 +84,18 @@
 #define CFG_BLE_MESH_MDL_GENC
 #define CFG_BLE_MESH_MDL_LIGHTS
 #define CFG_BLE_MESH_MDL_LIGHTC
-#define CFG_PRF_PXPM
-#define CFG_PRF_PXPR
-#define CFG_PRF_FMPL
-#define CFG_PRF_FMPT
+#define CFG_PRF_IASC
+#define CFG_PRF_IASS
+#define CFG_PRF_LLSC
+#define CFG_PRF_LLSS
+#define CFG_PRF_TPSC
+#define CFG_PRF_TPSS
 #define CFG_PRF_HTPC
 #define CFG_PRF_HTPT
 #define CFG_PRF_DISC
+#define CFG_DISC_ALL
 #define CFG_PRF_DISS
+#define CFG_DISS_ALL
 #define CFG_PRF_BLPC
 #define CFG_PRF_BLPS
 #define CFG_PRF_HRPC
@@ -99,7 +105,9 @@
 #define CFG_PRF_SCPPC
 #define CFG_PRF_SCPPS
 #define CFG_PRF_BASC
+#define CFG_BASC_MULTI 1
 #define CFG_PRF_BASS
+#define CFG_BASS_MULTI 1
 #define CFG_PRF_GLPC
 #define CFG_PRF_GLPS
 #define CFG_PRF_RSCPC
@@ -122,8 +130,8 @@
 #define CFG_PRF_UDSC
 #define CFG_PRF_PLXS
 #define CFG_PRF_PLXC
-#define CFG_PRF_CGMS
-#define CFG_PRF_CGMC
+#define CFG_PRF_CGMSS
+#define CFG_PRF_CGMSC
 #define CFG_PRF_CSISM
 #define CFG_PRF_CSISC
 #define CFG_PRF_OTS
@@ -133,6 +141,8 @@
 #define CFG_PRF
 #define CFG_NB_PRF 10
 #define CFG_AHITL
+#define CFG_AES_CTR_SUPPORT
+#define CFG_SHA_BLOOM_FILTER_SUPPORT
 #define CFG_SYSTEM_MEM_SAFETY_MARGIN_SIZE 1000
 #define CFG_ISOOHCI
 #define CFG_H4TL
@@ -164,4 +174,4 @@
 #define CFG_ALIFMAC154
 #define CFG_PATCHING
 
-#endif /* ROM_BUILD_CFG_H_ */
+#endif // ROM_BUILD_CFG_H_

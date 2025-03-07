@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Manager Message API.
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -177,7 +177,8 @@ enum gapm_msg_ids
     /// Indicate size of list indicated in GAPM_GET_DEV_CONFIG_CMD message
     /// see #gapm_le_list_size_ind_t
     GAPM_LE_LIST_SIZE_IND = MSG_ID(GAPM, 0x53u),
-    /// Update content of either Filter Accept list or Resolving list or Periodic Advertiser list.\n
+    /// Update content of either Filter Accept list or Resolving list or Periodic Advertiser list\n
+    /// or Monitored Advertisers list.\n
     /// See #gapm_le_list_update_cmd_t
     GAPM_LE_LIST_UPDATE_CMD = MSG_ID(GAPM, 0x54u),
     /// Set privacy mode for a device in Resolving list
@@ -249,7 +250,6 @@ enum gapm_msg_ids
     /// See #gapm_le_per_adv_stop_synchronizability_cmd_t
     GAPM_LE_PER_ADV_STOP_SYNCHRONIZABILITY_CMD = MSG_ID(GAPM, 0x87u),
     #endif // (BLE_PER_ADV)
-
     /* LE Test Mode */
     /// Control of the test mode command
     GAPM_LE_CONTROL_TEST_MODE_CMD = MSG_ID(GAPM, 0x90u),
@@ -302,8 +302,9 @@ enum gapm_msg_ids
     /// Complete event message for #GAPM_CODEC_GET_DELAY_CMD message
     GAPM_CODEC_GET_DELAY_CMP_EVT = MSG_ID(GAPM, 0xA7u),
 
-    /// Controller hardware error indication
-    GAPM_CTRL_HW_ERR_IND = MSG_ID(GAPM, 0xC0),
+    /* Unified Test Protocol */
+    /// Enable/disable use of Unified Test Protocol over the air
+    GAPM_LE_UTP_ENABLE_OTA_CMD = MSG_ID(GAPM, 0xB0u),
 
     /* ************************************************ */
     /* ------------ Vendor specific commands ---------- */
@@ -390,6 +391,26 @@ enum gapm_features_bf
     GAPM_FEAT_BYTE3_OLD_LIST_BIT = CO_BIT(0),
     /// Automatically add AD Type Flags in advertising data
     GAPM_FEAT_BYTE3_ADV_ADD_FLAGS_BIT = CO_BIT(1),
+    /// Channel Sounding
+    GAPM_FEAT_BYTE3_CHSD_BIT = CO_BIT(2),
+    /// Channel Sounding - Test Mode
+    GAPM_FEAT_BYTE3_CHSD_TEST_BIT = CO_BIT(3),
+    /// Unified Test Protocol
+    GAPM_FEAT_BYTE3_UTP_BIT = CO_BIT(4),
+    /// Frame Space Update
+    GAPM_FEAT_BYTE3_FSU_BIT = CO_BIT(5),
+    /// Monitored Advertisers List
+    GAPM_FEAT_BYTE3_MAL_BIT = CO_BIT(6),
+    /// Constant Tone Extension connected responder
+    GAPM_FEAT_BYTE3_CON_CTE_RSP_BIT = CO_BIT(7),
+
+    /// Constant Tone Extension connected requester
+    GAPM_FEAT_BYTE4_CON_CTE_REQ_BIT = CO_BIT(0),
+    /// Constant Tone Extension connection less transmiter
+    GAPM_FEAT_BYTE4_CONLESS_CTE_TX_BIT = CO_BIT(1),
+    /// Constant Tone Extension connection less receiver
+    GAPM_FEAT_BYTE4_CONLESS_CTE_RX_BIT = CO_BIT(2),
+
 };
 
 /// List of LTV type values for #GAPM_VERSION_IND message
@@ -419,7 +440,7 @@ enum gapm_version_length
     /// Profile SIG Version (#GAPM_VERSION_TYPE_PROFILE_SIG_VERSION)
     GAPM_VERSION_LENGTH_PROFILE_SIG_VERSION = 4u,
     /// Length of Supported Features bit field value (#GAPM_VERSION_TYPE_SUPPORTED_FEATURES)
-    GAPM_VERSION_LENGTH_SUPPORTED_FEATURES = 4u,
+    GAPM_VERSION_LENGTH_SUPPORTED_FEATURES = 5u,
 };
 /// @} GAPM_MSG_ID_API
 
@@ -642,7 +663,12 @@ enum gapm_operation
     /// Get list of codec capabilities supported by the controller for a given codec
     GAPM_CODEC_GET_CAPABILITIES = 0xA2u,
     /// Get range of supported controller delays for a specified configuration of a given codec
-    GAPM_CODEC_GET_DELAY = 0xA1u,
+    GAPM_CODEC_GET_DELAY = 0xA3u,
+
+    /* LE Unified Test Protocol                         */
+    /* ************************************************ */
+    /// Control Unified Test Protocol
+    GAPM_LE_UTP_ENABLE_OTA = 0xB0u,
 
     /* Vendor Specific Commands                         */
     /* ************************************************ */

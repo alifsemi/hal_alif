@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Broadcast Source - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -236,10 +236,16 @@ uint16_t bap_bc_src_remove_group(uint8_t grp_lid);
  * @param[in] sgrp_lid           Subgroup local index
  * @param[in] p_codec_id         Pointer to Codec ID
  *                               Cannot be NULL
- * @param[in] p_cfg              Pointer to Codec Configuration structure (allocated by Upper Layer)
- *                                   - Can be NULL
- * @param[in] p_metadata         Pointer to Metadata structure (allocated by Upper Layer)
- *                                   - Can be NULL
+ * @param[in] p_cfg              Pointer to Codec Configuration structure\n
+ *                               Can be NULL\n
+ *                               Structure shall be allocated by Upper Layer and maintained until group is removed
+ *                               using #bap_bc_src_remove_group function or until a new call of
+ *                               #bap_bc_src_set_subgroup for the Subgroup
+ * @param[in] p_metadata         Pointer to Metadata structure\n
+ *                               Can be NULL\n
+ *                               Structure shall be allocated by Upper Layer and maintained until a new call of
+ *                               #bap_bc_src_set_subgroup or a call of #bap_bc_src_update_metadata function or
+ *                               until group is removed using #bap_bc_src_remove_group function
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************
@@ -259,8 +265,11 @@ uint16_t bap_bc_src_set_subgroup(uint8_t grp_lid, uint8_t sgrp_lid, const gaf_co
  * @param[in] dp_cfg_bf          Data Path configuration bit field (Data Path ID, Codec location, ...)\n
  *                               See #bap_dp_cfg_bf for bit field meaning
  * @param[in] ctl_delay_us       Controller delay in microseconds
- * @param[in] p_cfg              Pointer to Codec Configuration structure (allocated by Upper Layer)
- *                                   - Can be NULL
+ * @param[in] p_cfg              Pointer to Codec Configuration structure\n
+ *                               Can be NULL\n
+ *                               Structure shall be allocated by Upper Layer and maintained until group is removed
+ *                               using #bap_bc_src_remove_group function or until a new call of
+ *                               #bap_bc_src_set_stream for the Stream.
  *
  * @return An error status (see #gaf_err enumeration)
  ****************************************************************************************
@@ -372,8 +381,11 @@ uint16_t bap_bc_src_stop_streaming(uint8_t grp_lid, uint32_t stream_lid_bf);
  *
  * @param[in] grp_lid           Group local index
  * @param[in] sgrp_lid          Subgroup local index
- * @param[in] p_metadata        Pointer to Metadata structure (allocated by Upper Layer)
- *                                  - Can be NULL
+ * @param[in] p_metadata        Pointer to Metadata structure\n
+ *                              Can be NULL\n
+ *                              Structure shall be allocated by Upper Layer and maintained until a new call of
+ *                              #bap_bc_src_update_metadata function for the Subgroup or until group is removed using
+ *                              #bap_bc_src_remove_group function
  *
  * @return An error status (see #gaf_err enumeration).
  *         If no error, no new function should be executed from the Group until #bap_bc_src_cb_cmp_evt callback

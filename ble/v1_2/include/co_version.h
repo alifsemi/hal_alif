@@ -34,9 +34,9 @@
 /// RWBT SW Major Version
 #define RWBT_SW_VERSION_MAJOR                   BT60_VERSION
 /// RWBT SW Minor Version
-#define RWBT_SW_VERSION_MINOR                   0
+#define RWBT_SW_VERSION_MINOR                   1
 /// RWBT SW Build Version
-#define RWBT_SW_VERSION_BUILD                   2
+#define RWBT_SW_VERSION_BUILD                   0
 
 /// @} CO_VERSION
 

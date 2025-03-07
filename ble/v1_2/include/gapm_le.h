@@ -6,8 +6,8 @@
  *
  * @brief Generic Access Profile Manager - Low Energy Activities
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -573,7 +573,7 @@ uint16_t gapm_le_get_appearance(void);
 /// @addtogroup GAPM_INFO_API
 /// @{
 
-#if (BLE_AOD || BLE_AOA)
+#if (BLE_AOA || BLE_AOD)
 /**
  ***************************************************************************************
  * @brief Get controller antenna information. Information returned in res_cb function
@@ -586,7 +586,7 @@ uint16_t gapm_le_get_appearance(void);
  ***************************************************************************************
  */
 uint16_t gapm_le_get_antenna_info(uint32_t metainfo, gapm_le_antenna_info_cb res_cb);
-#endif // (BLE_AOD || BLE_AOA)
+#endif // (BLE_AOA || BLE_AOD)
 
 /**
  ***************************************************************************************
@@ -627,18 +627,6 @@ uint16_t gapm_le_get_max_data_len(uint32_t metainfo, gapm_le_max_data_len_cb res
  */
 uint16_t gapm_le_get_tx_power(uint32_t metainfo, gapm_le_tx_power_range_cb res_cb);
 
-/**
- ***************************************************************************************
- * @brief Get device advertising power level. TX power returned in res_cb function
- *
- * @param[in] metainfo  Metadata information that will be returned in procedure callback functions (see \glos{METAINFO})
- * @param[in] res_cb    Function called when Advertising TX power procedure is over
- *
- * @return Execution status (see #hl_err enumeration).
- *         If returns GAP_ERR_NO_ERROR, upper layer SW shall wait for #gapm_le_adv_cb_tx_power callback execution
- ***************************************************************************************
- */
-uint16_t gapm_le_get_adv_tx_power(uint32_t metainfo, gapm_le_adv_cb_tx_power res_cb);
 
 /**
  ***************************************************************************************

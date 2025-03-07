@@ -5,8 +5,8 @@
  *
  * @brief Generic Access Profile Controller - Low Energy API.
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -491,7 +491,7 @@ typedef struct
 
 /// @addtogroup GAPC_CTE_API
 /// @{
-
+#if (BLE_CON_CTE_REQ)
 /// Callback structure used to be notified about constant tone extension events
 typedef struct
 {
@@ -524,7 +524,7 @@ typedef struct
      */
     void (*request_failed_event)(uint8_t conidx, uint32_t metainfo, uint16_t reason);
 } gapc_le_cte_cb_t;
-
+#endif // (BLE_CON_CTE_REQ)
 /// @} GAPC_CTE_API
 
 /**
@@ -1176,8 +1176,11 @@ uint16_t gapc_le_disable_path_loss(uint8_t conidx, uint32_t metainfo, gapc_proc_
 
 /// @} GAPC_LE_POWER_API
 
+#if (BLE_CON_CTE_RSP || BLE_CON_CTE_REQ)
 /// @addtogroup GAPC_CTE_API Constant Tone Extension
 /// @{
+
+#if (BLE_CON_CTE_REQ)
 /**
  ****************************************************************************************
  * @brief Set Callbacks used to handle IQ reports
@@ -1188,24 +1191,6 @@ uint16_t gapc_le_disable_path_loss(uint8_t conidx, uint32_t metainfo, gapc_proc_
  ****************************************************************************************
  */
 uint16_t gapc_le_set_cte_callbacks(const gapc_le_cte_cb_t* p_cbs);
-
-/**
- ****************************************************************************************
- * @brief Configure constant tone extension transmission parameters.
- *
- * @param[in] conidx                Connection index
- * @param[in] metainfo              Metadata information that will be returned in procedure callback functions (see \glos{METAINFO})
- * @param[in] cte_types             CTE types (bit0: AOA | bit1: AOD-1us | bit2: AOD-2us) (see #gap_le_cte_type_bf enumeration)
- * @param[in] switching_pattern_len Length of switching pattern (number of antenna IDs in the pattern)
- * @param[in] p_antenna_id          Pointer to antenna IDs
- * @param[in] cmp_cb                Function called when procedure is over.
- *
- * @return Return function execution status (see #hl_err enumeration)
- *         If returns GAP_ERR_NO_ERROR, upper layer SW shall wait for #gapc_proc_cmp_cb callback execution
- ****************************************************************************************
- */
-uint16_t gapc_le_configure_cte_tx(uint8_t conidx, uint32_t metainfo, uint8_t cte_types, uint8_t switching_pattern_len,
-                                  const uint8_t* p_antenna_id, gapc_proc_cmp_cb cmp_cb);
 
 /**
  ****************************************************************************************
@@ -1244,6 +1229,25 @@ uint16_t gapc_le_configure_cte_rx(uint8_t conidx, uint32_t metainfo, bool sample
  */
 uint16_t gapc_le_control_cte_request(uint8_t conidx, uint32_t metainfo, bool enable, uint16_t interval,
                                      uint8_t cte_length, uint8_t cte_type, gapc_proc_cmp_cb cmp_cb);
+#endif //(BLE_CON_CTE_REQ)
+#if (BLE_CON_CTE_RSP)
+/**
+ ****************************************************************************************
+ * @brief Configure constant tone extension transmission parameters.
+ *
+ * @param[in] conidx                Connection index
+ * @param[in] metainfo              Metadata information that will be returned in procedure callback functions (see \glos{METAINFO})
+ * @param[in] cte_types             CTE types (bit0: AOA | bit1: AOD-1us | bit2: AOD-2us) (see #gap_le_cte_type_bf enumeration)
+ * @param[in] switching_pattern_len Length of switching pattern (number of antenna IDs in the pattern)
+ * @param[in] p_antenna_id          Pointer to antenna IDs
+ * @param[in] cmp_cb                Function called when procedure is over.
+ *
+ * @return Return function execution status (see #hl_err enumeration)
+ *         If returns GAP_ERR_NO_ERROR, upper layer SW shall wait for #gapc_proc_cmp_cb callback execution
+ ****************************************************************************************
+ */
+uint16_t gapc_le_configure_cte_tx(uint8_t conidx, uint32_t metainfo, uint8_t cte_types, uint8_t switching_pattern_len,
+                                  const uint8_t* p_antenna_id, gapc_proc_cmp_cb cmp_cb);
 
 /**
  ****************************************************************************************
@@ -1259,8 +1263,9 @@ uint16_t gapc_le_control_cte_request(uint8_t conidx, uint32_t metainfo, bool ena
  ****************************************************************************************
  */
 uint16_t gapc_le_control_cte_response(uint8_t conidx, uint32_t metainfo, bool enable, gapc_proc_cmp_cb cmp_cb);
-
+#endif // (BLE_CON_CTE_RSP)
 /// @} GAPC_CTE_API
+#endif // (BLE_CON_CTE_RSP || BLE_CON_CTE_REQ)
 
 
 #endif /* GAPC_LE_H_ */

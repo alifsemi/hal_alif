@@ -3,10 +3,10 @@
  *
  * @file ias.h
  *
- * @brief Header file - Immediate Alert Service - Definitions
+ * @brief Header file - Immediate Alert Service - API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,7 @@
  ****************************************************************************************
  * @defgroup IAS_API Immediate Alert Service (IAS)
  * @ingroup PROFILE_API
- * @brief Description of Immediate Alert Service API
+ * @brief Description of API for Immediate Alert Service\n See \ref ias_msc
  ****************************************************************************************
  */
 
@@ -37,30 +37,37 @@
  */
 
 #include "rwip_task.h"
-#include "prf_types.h"
+#include "prf_utils.h"
 
 /// @addtogroup IAS_API_COMMON
 /// @{
 
 /*
- * ENUMERATIONS
+ * DEFINES
+ ****************************************************************************************
+ */
+
+/// Length of Alert Level characteristic value
+#define IAS_ALERT_LEVEL_SIZE (1u)
+
+/*
+ * ENUMERATION
  ****************************************************************************************
  */
 
 /// Alert level values
 enum ias_alert_level
 {
-    /// No alert - 0
-    IAS_ALERT_LEVEL_NONE = 0,
-    /// Mild alert - 1
+    /// No alert
+    IAS_ALERT_LEVEL_NONE = 0u,
+    /// Mild alert
     IAS_ALERT_LEVEL_MILD,
-    /// High alert - 2
+    /// High alert
     IAS_ALERT_LEVEL_HIGH,
 
-    /// Maximal value - Alert level cannot be equal or larger
     IAS_ALERT_LEVEL_MAX,
 };
 
-/// @} IAS_API
+/// @} IAS_API_COMMON
 
 #endif // IAS_H_

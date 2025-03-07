@@ -238,7 +238,13 @@ enum phy_rate
     /// Undefined rate (used for reporting when no packet is received)
     CO_RATE_UNDEF   = 4,
 
+    #if (BLE_HDT && RW_DEBUG)
+    /// High Data Throughput
+    CO_RATE_HDT     = 4,
+    CO_RATE_NB      = 5,
+    #else
     CO_RATE_NB      = 4,
+    #endif // (BLE_HDT && RW_DEBUG)
 };
 
 /*
@@ -822,6 +828,7 @@ uint8_t co_nb_good_channels(const struct bt_ch_map* map);
  *     - XXB:           table of several bytes, where XX is the byte number, in decimal
  *     - XXG:           Number of several bytes, where XX is the byte number, in decimal
  *                      subject to be swapped according to endianess
+ *     - sB :           table size over 1 byte (the size is not part of the packed data), followed by the table of bytes
  *     - nB :           table size over 1 byte, followed by the table of bytes
  *     - NB :           table size over 2 bytes, followed by the table of bytes
  *     - [a...]:        Array of structures with n elements, number of element is an 8-bit value read in the bytes stream.

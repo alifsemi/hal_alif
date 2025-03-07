@@ -5,8 +5,8 @@
  *
  * @brief Header file - Cycling Power Profile Sensor - Native API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -150,7 +150,10 @@ uint16_t cpps_adv_data_pack(co_buf_t* p_buf, const cpp_cp_meas_t* p_meas);
  *
  * @param[in] conidx_bf        Bit field of connection index on which measurement will be send
  *                             will be mask according to client that supports measurement reception
- * @param[in] cumul_wheel_rev  Cumulative Wheel Revolutions
+ * @param[in] cumul_wheel_rev  Cumulative Wheel Revolutions\n
+ *                             Meaningful only if Wheel Revolution Data feature is supported
+ *                             (#CPP_FEAT_WHEEL_REV_DATA_SUP_BIT in Cycling Power Feature characteristic value)
+ *                             and #CPP_MEAS_WHEEL_REV_DATA_PRESENT_BIT bit set in flags value.
  * @param[in] p_meas           Pointer to the cycling power measurement
  *
  * @return Status of the function execution (see enum #hl_err)

@@ -5,8 +5,8 @@
  *
  * @brief Header file - Device Information Service - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,7 +20,7 @@
  ****************************************************************************************
  * @defgroup DIS_API Device Information Service (DIS)
  * @ingroup PROFILE_API
- * @brief Description of Device Information Service API
+ * @brief Description of Device Information Service API\n See \ref dis_msc
  ****************************************************************************************
  */
 
@@ -37,7 +37,7 @@
  */
 
 #include "rwip_task.h"
-#include "prf_types.h"
+#include "prf_utils.h"
 
 /// @addtogroup DIS_API_COMMON
 /// @{
@@ -48,7 +48,7 @@
  */
 
 /// Length of PnP ID characteristic value
-#define DIS_PNP_ID_VALUE_LENGTH         (7)
+#define DIS_PNP_ID_VALUE_LENGTH (7u)
 
 /// @} DIS_API_COMMON
 

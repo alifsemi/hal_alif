@@ -779,11 +779,9 @@ void rwip_mac154_us_to_bt_time(uint32_t us_time, rwip_time_t* p_bt_time);
  *
  * @param[in] p_client      Pointer to AES client
  * @param[in] val           16 bytes value array to encrypt using AES
- * @param[in] cipher        True to cipher data; de-cipher data otherwise
  ****************************************************************************************
  */
-void rwip_aes_poll(rwip_aes_client_t* p_client, uint8_t* p_val);
-//void rwip_aes_poll(const uint8_t* p_key, const uint8_t* p_val, bool cipher, uint8_t* aes_result);
+void rwip_mac154_aes_poll(rwip_aes_client_t* p_client, uint8_t* p_val, bool set_key);
 #endif // (MAC154_EMB_PRESENT)
 
 #if (BT_EMB_PRESENT || BLE_EMB_PRESENT || MAC154_EMB_PRESENT)

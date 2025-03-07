@@ -3,10 +3,10 @@
  *
  * @file diss.h
  *
- * @brief Header file - Device Info Service Server - Native API
+ * @brief Header file - Device Information Service Server - Native API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -20,14 +20,7 @@
  ****************************************************************************************
  * @defgroup DISS_API Device Information Service Server
  * @ingroup DIS_API
- * @brief Description of API for Device Information Service Server
- ****************************************************************************************
- */
-
-/**
- ****************************************************************************************
- * @defgroup DISS_API_COMMON Common
- * @ingroup DISS_API
+ * @brief Description of API for Device Information Service Server\n See \ref dis_msc
  ****************************************************************************************
  */
 
@@ -45,156 +38,115 @@
  */
 
 #include "dis.h"
-#include "co_math.h"
+#include "diss_cfg.h"
 
-/// @addtogroup DISS_API_COMMON
+/// @addtogroup DISS_API_NATIVE
 /// @{
-
-/*
- * DEFINES
- ****************************************************************************************
- */
-
-/// All features are supported
-#define DIS_ALL_FEAT_SUP                     (0x01FF)
 
 /*
  * ENUMERATIONS
  ****************************************************************************************
  */
 
-/// Attribute Table Indexes
-enum diss_val_id
+/// Characteristic type
+enum diss_char_type
 {
-    /// Manufacturer Name
-    DIS_VAL_MANUFACTURER_NAME = 0,
-    /// Model Number
-    DIS_VAL_MODEL_NB_STR,
-    /// Serial Number
-    DIS_VAL_SERIAL_NB_STR,
-    /// HW Revision Number
-    DIS_VAL_HARD_REV_STR,
-    /// FW Revision Number
-    DIS_VAL_FIRM_REV_STR,
-    /// SW Revision Number
-    DIS_VAL_SW_REV_STR,
-    /// System Identifier Name
-    DIS_VAL_SYSTEM_ID,
-    /// IEEE Certificate
-    DIS_VAL_IEEE,
-    /// Plug and Play Identifier
-    DIS_VAL_PNP_ID,
+    #if (HOST_MSG_API || DISS_MANUFACTURER)
+    /// Manufacturer Name String characteristic
+    DISS_CHAR_TYPE_MANUFACTURER_NAME = 0u,
+    #endif // (HOST_MSG_API || DISS_MANUFACTURER)
+    #if (HOST_MSG_API || DISS_MODEL_NB)
+    /// Model Number String characteristic
+    DISS_CHAR_TYPE_MODEL_NUMBER,
+    #endif // (HOST_MSG_API || DISS_MODEL_NB)
+    #if (HOST_MSG_API || DISS_SERIAL_NB)
+    /// Serial Number String characteristic
+    DISS_CHAR_TYPE_SERIAL_NUMBER,
+    #endif // (HOST_MSG_API || DISS_SERIAL_NB)
+    #if (HOST_MSG_API || DISS_HW_REV)
+    /// Hardware Revision String characteristic
+    DISS_CHAR_TYPE_HW_REVISION,
+    #endif // (HOST_MSG_API || DISS_HW_REV)
+    #if (HOST_MSG_API || DISS_FW_REV)
+    /// Firmware Revision String characteristic
+    DISS_CHAR_TYPE_FW_REVISION,
+    #endif // (HOST_MSG_API || DISS_FW_REV)
+    #if (HOST_MSG_API || DISS_SW_REV)
+    /// Software Revision String characteristic
+    DISS_CHAR_TYPE_SW_REVISION,
+    #endif // (HOST_MSG_API || DISS_SW_REV)
+    #if (HOST_MSG_API || DISS_SYSTEM_ID)
+    /// System ID characteristic
+    DISS_CHAR_TYPE_SYSTEM_ID,
+    #endif // (HOST_MSG_API || DISS_SYSTEM_ID)
+    #if (HOST_MSG_API || DISS_IEEE)
+    /// IEEE 11073-20601 Regulatory Certification Data List characteristic
+    DISS_CHAR_TYPE_IEEE,
+    #endif // (HOST_MSG_API || DISS_IEEE)
+    #if (HOST_MSG_API || DISS_PNP_ID)
+    /// PnP ID characteristic
+    DISS_CHAR_TYPE_PNP_ID,
+    #endif // (HOST_MSG_API || DISS_PNP_ID)
+    #if (HOST_MSG_API || DISS_UDI)
+    /// UDI for Medical Devices characteristic
+    DISS_CHAR_TYPE_UDI,
+    #endif // (HOST_MSG_API || DISS_UDI)
 
-    DIS_VAL_MAX,
+    DISS_CHAR_TYPE_MAX,
 };
-
-/// Database Configuration Flags (not used)
-enum diss_features_bf
-{
-    /// Indicate if Manufacturer Name String characteristic is supported
-    DIS_MANUFACTURER_NAME_CHAR_SUP_POS = 0,
-    DIS_MANUFACTURER_NAME_CHAR_SUP_BIT = CO_BIT(DIS_MANUFACTURER_NAME_CHAR_SUP_POS),
-
-    /// Indicate if Model Number String characteristic is supported
-    DIS_MODEL_NB_STR_CHAR_SUP_POS      = 1,
-    DIS_MODEL_NB_STR_CHAR_SUP_BIT      = CO_BIT(DIS_MODEL_NB_STR_CHAR_SUP_POS),
-
-    /// Indicate if Serial Number String characteristic is supported
-    DIS_SERIAL_NB_STR_CHAR_SUP_POS     = 2,
-    DIS_SERIAL_NB_STR_CHAR_SUP_BIT     = CO_BIT(DIS_SERIAL_NB_STR_CHAR_SUP_POS),
-
-    /// Indicate if Hardware Revision String characteristic is supported
-    DIS_HARD_REV_STR_CHAR_SUP_POS      = 3,
-    DIS_HARD_REV_STR_CHAR_SUP_BIT      = CO_BIT(DIS_HARD_REV_STR_CHAR_SUP_POS),
-
-    /// Indicate if Firmware Revision String characteristic is supported
-    DIS_FIRM_REV_STR_CHAR_SUP_POS      = 4,
-    DIS_FIRM_REV_STR_CHAR_SUP_BIT      = CO_BIT(DIS_FIRM_REV_STR_CHAR_SUP_POS),
-
-    /// Indicate if Software Revision String characteristic is supported
-    DIS_SW_REV_STR_CHAR_SUP_POS        = 5,
-    DIS_SW_REV_STR_CHAR_SUP_BIT        = CO_BIT(DIS_SW_REV_STR_CHAR_SUP_POS),
-
-    /// Indicate if System ID characteristic is supported
-    DIS_SYSTEM_ID_CHAR_SUP_POS         = 6,
-    DIS_SYSTEM_ID_CHAR_SUP_BIT         = CO_BIT(DIS_SYSTEM_ID_CHAR_SUP_POS),
-
-    /// Indicate if IEEE characteristic is supported
-    DIS_IEEE_CHAR_SUP_POS              = 7,
-    DIS_IEEE_CHAR_SUP_BIT              = CO_BIT(DIS_IEEE_CHAR_SUP_POS),
-
-    /// Indicate if PnP ID characteristic is supported
-    DIS_PNP_ID_CHAR_SUP_POS            = 8,
-    DIS_PNP_ID_CHAR_SUP_BIT            = CO_BIT(DIS_PNP_ID_CHAR_SUP_POS),
-};
-
-/*
- * TYPES DEFINITION
- ****************************************************************************************
- */
-
-/// Parameters for the database creation
-typedef struct diss_db_cfg
-{
-    /// Database configuration see enum #diss_features_bf
-    uint16_t features;
-} diss_db_cfg_t;
-
-/// @} DISS_API_COMMON
-
-/// @addtogroup DISS_API_NATIVE
-/// @{
 
 /*
  * NATIVE API CALLBACKS
  ****************************************************************************************
  */
 
-/// Device Information Service server callback set
-typedef struct diss_cb
+/// Set of callback functions for Device Information Service (Server)
+typedef struct
 {
     /**
      ****************************************************************************************
-     * @brief This function is called when GATT server user has initiated event send to peer
-     *        device or if an error occurs.
+     * @brief Request value after read of one of Device Information Service's characteristics/n
+     *        #diss_value_cfm function shall be called
      *
-     * @param[in] token         Procedure token that must be returned in confirmation function
-     * @param[in] val_id        Requested value identifier (see #diss_val_id enumeration)
+     * @param[in] conidx            Connection index
+     * @param[in] char_type         Characteristic type (see #diss_char_type enumeration)
+     * @param[in] token             Token
      ****************************************************************************************
      */
-    void (*cb_value_get) (uint32_t token, uint8_t val_id);
-} diss_cb_t;
+    void (*cb_value_req)(uint8_t conidx, uint8_t char_type, uint16_t token);
+} diss_cbs_t;
 
 /*
  * NATIVE API FUNCTIONS
  ****************************************************************************************
  */
 
+#if (!HOST_MSG_API)
 /**
  ****************************************************************************************
- * @brief Store DIS value information that can be used by service.
+ * @brief Add support of Device Information Service as Server
  *
- * @param[in] val_id   Value identifier (see #diss_val_id enumeration)
- * @param[in] length   Data value length
- * @param[in] p_data   Pointer to the value data
+ * @param[in] char_type_bf  Bit field (based on #diss_char_type enumeration) indicating characteristics that are
+ *                          supported\n
+ *                          Meaningful only if compiled with DISS_FLEXIBLE option
+ * @param[in] p_cbs         Pointer to set of callback functions for communication with upper layer
  *
- * @return Function execution status (see enum #hl_err)
+ * @return An error status (see #hl_err enumeration)
  ****************************************************************************************
  */
-uint16_t diss_value_set(uint8_t val_id, uint8_t length, const uint8_t* p_data);
+uint16_t diss_add(uint16_t char_type_bf, const diss_cbs_t* p_cbs);
+#endif // (!HOST_MSG_API)
 
 /**
  ****************************************************************************************
- * @brief Provide DIS value information requested by a peer device
+ * @brief Provide value requested by peer device
  *
- * @param[in] token    Procedure token provided in request
- * @param[in] length   Data value length
- * @param[in] p_data   Pointer to the value data
- *
- * @return Function execution status (see enum #hl_err)
+ * @param[in] conidx            Connection index
+ * @param[in] token             Token
+ * @param[in] p_buf             Pointer to buffer containing value
  ****************************************************************************************
  */
-uint16_t diss_value_cfm(uint32_t token, uint8_t length, const uint8_t* p_data);
+void diss_value_cfm(uint8_t conidx, uint16_t token, co_buf_t* p_buf);
 
 /// @} DISS_API_NATIVE
 

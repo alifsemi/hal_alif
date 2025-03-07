@@ -149,6 +149,7 @@ enum random_addr_type
 #define RAND_VAL_LEN        0x10
 #define RAND_NB_LEN         0x08
 #define LE_FEATS_LEN        0x08
+#define LE_EXT_FEATS_LEN    24
 #define SUPP_CMDS_LEN       0x40
 #define FEATS_LEN           0x08
 #define NAME_VECT_SIZE      14
@@ -428,6 +429,13 @@ enum ble_feature
     BLE_FEAT_FRAME_SPACE_UPD             = (65),
 };
 
+/// Maximum index of extended features page request
+#define LE_EXT_FEATS_PAGE_IDX_MAX                   (10)
+/// Maximum page containing a supported feature
+#define LE_EXT_FEAT_PAGE_MAX                        (1)
+/// Length of Bit Mask List of the supported LE features, in bytes (HCI 7.8.128, 7.8.129)
+#define LE_ALL_EXT_FEATS_LEN                        (248)
+
 /// BLE supported states
 //byte 0
 #define BLE_NON_CON_ADV_STATE                       0x01
@@ -689,6 +697,8 @@ enum ble_feature
 // byte 47
 #define BLE_LL_EXT_CREATE_CON_V2_CMD                    0
 #define BLE_LL_SET_PER_ADV_PARAM_V2_CMD                 1
+#define BLE_LL_RD_ALL_LOC_SUPP_FEATS_CMD                2
+#define BLE_LL_RD_ALL_REM_FEATS_CMD                     3
 // byte 48
 #define BLE_LE_FRAME_SPACE_UPD_CMD                      1
 // byte 63
@@ -2783,19 +2793,25 @@ enum adv_pdu_code
 enum adv_prop_mask
 {
     ///Connectable advertising
-    ADV_CON                = 0x01,
+    ADV_CON                = 0x0001,
     ///Scannable advertising
-    ADV_SCAN               = 0x02,
+    ADV_SCAN               = 0x0002,
     ///Directed advertising
-    ADV_DIRECT             = 0x04,
+    ADV_DIRECT             = 0x0004,
     ///High duty cycle directed connectable advertising
-    ADV_DIRECT_HI          = 0x08,
+    ADV_DIRECT_HI          = 0x0008,
     ///Use legacy advertising PDUs
-    ADV_LEGACY             = 0x10,
+    ADV_LEGACY             = 0x0010,
     ///Omit advertiser's address from all PDUs ("anonymous advertising")
-    ADV_ANONYMOUS          = 0x20,
+    ADV_ANONYMOUS          = 0x0020,
     ///Include TxPower in the extended header of the advertising PDU
-    ADV_TX_PWR             = 0x40,
+    ADV_TX_PWR             = 0x0040,
+    ///Use decision PDUs when advertising
+    ADV_DECISION           = 0x0080,
+    ///Include AdvA in the extended header of all decision PDUs
+    ADV_DECISION_ADVA      = 0x0100,
+    ///Include ADI in the extended header of all decision PDUs
+    ADV_DECISION_ADI       = 0x0200,
 };
 
 ///BD address type
@@ -3734,13 +3750,29 @@ typedef struct ext_adv_report
     uint8_t        data[EXT_ADV_DATA_MAX_LEN];
 } ext_adv_report_t;
 
-///Supported LE Features structure
+///Supported LE Features structure (page 0)
 /*@TRACE*/
 typedef struct le_features
 {
     ///8-byte array for LE features
     uint8_t feats[LE_FEATS_LEN];
 } le_features_t;
+
+///Supported LE Extended Features structure (one of page 1-10)
+/*@TRACE*/
+typedef struct le_ext_features
+{
+    ///24-byte array for LE extended features
+    uint8_t feats[LE_EXT_FEATS_LEN];
+} le_ext_features_t;
+
+///Supported LE All Features structure (all pages 0-10)
+/*@TRACE*/
+typedef struct le_all_ext_features
+{
+    ///248-byte array for all LE extended features
+    uint8_t feats[LE_ALL_EXT_FEATS_LEN];
+} le_all_ext_features_t;
 
 ///Simple pairing hash structure
 /*@TRACE*/
@@ -4215,47 +4247,47 @@ struct big_info
 
 /// UTP operation TypeIDs
 /// Configuration operations (sent by Tester)
-#define BLE_TM_NOP                              0x00
-#define BLE_TM_SET_RF_CHANNEL                   0x01
-#define BLE_TM_SET_PACKET_PAYLOAD               0x02
-#define BLE_TM_SET_PAYLOAD_LEN                  0x03
-#define BLE_TM_SET_PHY                          0x04
-#define BLE_TM_SET_MODULUATION_INDEX            0x05
-#define BLE_TM_SET_CTE_LEN                      0x06
-#define BLE_TM_SET_CTE_TYPE                     0x07
-#define BLE_TM_SET_CTE_SLOT_DURATIONS           0x08
-#define BLE_TM_SET_CTE_ANT_SWITCH_PATT_LEN      0x09
-#define BLE_TM_SET_CTE_ANT_IDS                  0x0a
-#define BLE_TM_SET_PACKET_COUNT                 0x0b
-#define BLE_TM_SET_TX_POWER_LEVEL               0x0c
-#define BLE_TM_SET_OTA_EXCLUSION_PERIOD         0x0d
+#define UTP_NOP                              0x00
+#define UTP_SET_RF_CHANNEL                   0x01
+#define UTP_SET_PACKET_PAYLOAD               0x02
+#define UTP_SET_PAYLOAD_LEN                  0x03
+#define UTP_SET_PHY                          0x04
+#define UTP_SET_MODULUATION_INDEX            0x05
+#define UTP_SET_CTE_LEN                      0x06
+#define UTP_SET_CTE_TYPE                     0x07
+#define UTP_SET_CTE_SLOT_DURATIONS           0x08
+#define UTP_SET_CTE_ANT_SWITCH_PATT_LEN      0x09
+#define UTP_SET_CTE_ANT_IDS                  0x0a
+#define UTP_SET_PACKET_COUNT                 0x0b
+#define UTP_SET_TX_POWER_LEVEL               0x0c
+#define UTP_SET_OTA_EXCLUSION_PERIOD         0x0d
 /// Control operations sent by IUT
-#define BLE_TM_ACCEPT                           0x12
-#define BLE_TM_REJECT                           0x13
-#define BLE_TM_RESET_ACK                        0x14
-#define BLE_TM_TEST_ENDED                       0x15
+#define UTP_ACCEPT                           0x12
+#define UTP_REJECT                           0x13
+#define UTP_RESET_ACK                        0x14
+#define UTP_TEST_ENDED                       0x15
 /// Control operations sent by Tester
-#define BLE_TM_QUERY_SUPPORTED_FEATURES         0x0e
-#define BLE_TM_RESET                            0x0f
-#define BLE_TM_START_TEST                       0x10
-#define BLE_TM_STOP_TEST                        0x11
+#define UTP_QUERY_SUPPORTED_FEATURES         0x0e
+#define UTP_RESET                            0x0f
+#define UTP_START_TEST                       0x10
+#define UTP_STOP_TEST                        0x11
 /// Report operations (sent by IUT)
-#define BLE_TM_REPORT_SUPPORTED_FEATURES        0x16
-#define BLE_TM_REPORT_IQ_SAMPLES                0x17
-#define BLE_TM_REPORT_RX_QUALITY_COUNTERS       0x18
+#define UTP_REPORT_SUPPORTED_FEATURES        0x16
+#define UTP_REPORT_IQ_SAMPLES                0x17
+#define UTP_REPORT_RX_QUALITY_COUNTERS       0x18
 
 /// UTP operations data lengths
-#define BLE_TM_REPORT_SUPPORTED_MTU_SIZES_LEN   (2) // 1 x 16bit param
-#define BLE_TM_REPORT_SUPPORTED_FEATURES_LEN    (1) // 1 x 8bit param
-#define BLE_TM_RESET_ACK_LEN                    (1) // 1 x 8bit param
-#define BLE_TM_ACCEPT_LEN                       (1) // 1 x 8bit param
-#define BLE_TM_REJECT_LEN                       (2) // 2 x 8bit params
-#define BLE_TM_TEST_ENDED_LEN                   (4) // 1 x 32bit param
-#define BLE_TM_RX_QUALITY_COUNTERS_REPORT_LEN   (18) // 1B + 1B + 4 x 32bit params
-#define BLE_TM_IQ_SAMPLES_REPORT_LEN(n)         (7 + 2*(n)) // 5 x 8bit + 1 x 16bit + 2 x sample_cnt x 8bit
+#define UTP_REPORT_SUPPORTED_MTU_SIZES_LEN   (2) // 1 x 16bit param
+#define UTP_REPORT_SUPPORTED_FEATURES_LEN    (1) // 1 x 8bit param
+#define UTP_RESET_ACK_LEN                    (1) // 1 x 8bit param
+#define UTP_ACCEPT_LEN                       (1) // 1 x 8bit param
+#define UTP_REJECT_LEN                       (2) // 2 x 8bit params
+#define UTP_TEST_ENDED_LEN                   (4) // 1 x 32bit param
+#define UTP_RX_QUALITY_COUNTERS_REPORT_LEN   (18) // 1B + 1B + 4 x 32bit params
+#define UTP_IQ_SAMPLES_REPORT_LEN(n)         (7 + 2*(n)) // 5 x 8bit + 1 x 16bit + 2 x sample_cnt x 8bit
 
 /// UTP TLV Header Length (TypeID 1 byte + length 2 bytes)
-#define BLE_TM_UTP_HEADER_LEN                  (3u)
+#define UTP_TLV_HEADER_LEN                  (3u)
 
 /// Test mode RF channel
 #define BLE_TM_RF_CHANNEL_MIN                  (0)
@@ -4330,11 +4362,6 @@ struct big_info
 #define BLE_CNT_INVALID_CRC_PKT_BIT            (0x02)
 #define BLE_CNT_INCORRECT_PKT_PLD_BIT          (0x04)
 #define BLE_CNT_INCORRECT_PLD_LEN_BIT          (0x08)
-
-/// OTA Test mode short data length
-#define BLE_OTA_TM_SHORT_IND_DATA_LEN          (10)
-#define BLE_OTA_TM_IND_DATA_LEN                (26)
-#define BLE_OTA_TM_LONG_IND_DATA_LEN           (250)
 
 /// Test mode connection handle for non-ACL transport of UTP
 #define BLE_UTP_CONHDL_NONE                    (0xFFFF)
@@ -4452,7 +4479,7 @@ struct big_info
 /// Channel Sounding T_FCS maximum value (in usecs)
 #define BLE_CHSD_T_FCS_MAX                        (150)
 
-/// Channel Sounding anntenna switch period
+/// Channel Sounding antenna switch period
 #define BLE_CHSD_T_SW_MIN                         (0x00)
 #define BLE_CHSD_T_SW_0US                         (0)
 #define BLE_CHSD_T_SW_1US                         (1)
@@ -4488,8 +4515,21 @@ struct big_info
 #define BLE_CHSD_CH_MAP_REP_MIN                   (1)
 #define BLE_CHSD_CH_MAP_REP_MAX                   (0xFF)
 
-/// Frequency compensation unknown
+/// Channel Sounding Frequency Compensation unknown
 #define BLE_CHSD_FREQ_COMP_UNKNOWN                (0xC000)
+/// Channel Sounding Mode0 Measured Frequency Offset unknown
+#define BLE_CHSD_MEAS_FREQ_OFFSET_UNKNOWN         (0xC000)
+/// Channel Sounding Time Difference not available
+#define BLE_CHSD_TIME_DIFF_NOT_AVAILABLE          (0x8000)
+
+/// Channel Sounding Packet Quality AA with no bit errors
+#define BLE_CHSD_PKT_QUAL_AA_MATCH                (0)
+/// Channel Sounding Packet Quality AA with bit errors
+#define BLE_CHSD_PKT_QUAL_AA_BIT_ERR              (1)
+/// Channel Sounding Packet Quality AA not found
+#define BLE_CHSD_PKT_QUAL_AA_NONE                 (2)
+/// Channel Sounding Packet Quality RTT Seqeunce maximum bit error
+#define BLE_CHSD_PKT_QUAL_SEQ_BIT_ERR_MAX         (15)
 
 /// Channel Sounding Procedure Done Status
 #define BLE_CHSD_PROC_COMPLETE                    (0)
@@ -4756,6 +4796,17 @@ enum chsd_abort
     /// Abort reason for aborted Sub-Event
     CHSD_ABORT_SUBEVT_MASK            = 0xF0,
     CHSD_ABORT_SUBEVT_LSB             = 4,
+};
+
+/// Channel Sounding packet quality indicator
+enum chsd_pkt_qual
+{
+    /// Packet quality of Access Address
+    CHSD_PKT_QUAL_AA_MASK        = 0x0F,
+    CHSD_PKT_QUAL_AA_LSB         = 0,
+    /// Number of bit errors in random/sounding sequence
+    CHSD_PKT_QUAL_SEQ_ERR_MASK   = 0xF0,
+    CHSD_PKT_QUAL_SEQ_ERR_LSB    = 4,
 };
 
 /// Channel Sounding supported role bit field meaning

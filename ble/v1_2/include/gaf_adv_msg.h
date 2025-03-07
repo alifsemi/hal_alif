@@ -5,8 +5,8 @@
  *
  * @brief Generic Audio Framework - Advertiser - Definition of Message API
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -120,8 +120,10 @@ typedef struct gaf_adv_set_params_req
     uint8_t ch_map;
     /// Maximum number of advertising events the controller can skip before sending the AUX_ADV_IND packets
     uint8_t max_skip;
-    /// Maximum power level at which the advertising packets have to be transmitted (between -127 and 126 dBm)
-    int8_t max_tx_pwr;
+    /// Required TX Power level in dBm (from -127 to 20 dBm)\n
+    /// ADV_TX_PWR_NO_PREF (0x7F) means no preference\n
+    /// TX Power level value chosen by controller reported in created callback function
+    int8_t tx_pwr;
 } gaf_adv_set_params_req_t;
 
 /// Structure for #GAF_ADV_GET_ACTV_IDX request message

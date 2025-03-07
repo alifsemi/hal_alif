@@ -5,8 +5,8 @@
  *
  * @brief Basic Audio Profile - Broadcast Assistant - Definitions
  *
- * Copyright (C) RivieraWaves 2009-2024
- * Release Identifier: 6cde5ef4
+ * Copyright (C) RivieraWaves 2009-2025
+ * Release Identifier: 0e0cd311
  *
  ****************************************************************************************
  */
@@ -451,7 +451,7 @@ uint16_t bap_bc_assist_update_scan(uint8_t con_lid, uint8_t started);
  *                              #bap_bc_assist_set_sgrp_info function must be called after this function for each
  *                              additional Subgroup
  * @param[in] p_metadata        Pointer to Metadata\n
- *                              Meaningful only if nb_subgroups != 0
+ *                              Meaningful only if nb_subgroups != 0\n
  *                              Can be NULL
  *
  * @return An error status (see #gaf_err enumeration)
