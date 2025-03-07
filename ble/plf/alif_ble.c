@@ -23,13 +23,16 @@
 LOG_MODULE_REGISTER(alif_ble);
 
 /* Heap memory blocks for Alif BLE host stack */
-static uint32_t ble_heap_env[RWIP_CALC_HEAP_LEN(RWIP_HEAP_ENV_SIZE)]  __attribute__ ((noinit));
+static uint32_t ble_heap_env[RWIP_CALC_HEAP_LEN(RWIP_HEAP_ENV_SIZE) +
+			     RWIP_CALC_HEAP_LEN(CONFIG_ALIF_BLE_HOST_ADDL_ENV_HEAPSIZE)]
+	__attribute__((noinit));
 static uint32_t ble_heap_profile[RWIP_CALC_HEAP_LEN(RWIP_HEAP_PROFILE_SIZE) +
-			  RWIP_CALC_HEAP_LEN(CONFIG_ALIF_BLE_HOST_ADDL_PRF_HEAPSIZE)]  __attribute__ ((noinit));
-static uint32_t ble_heap_msg[RWIP_CALC_HEAP_LEN(RWIP_HEAP_MSG_SIZE)]  __attribute__ ((noinit));
-static uint32_t ble_heap_non_ret[RWIP_CALC_HEAP_LEN(1000)]  __attribute__ ((noinit));
+				 RWIP_CALC_HEAP_LEN(CONFIG_ALIF_BLE_HOST_ADDL_PRF_HEAPSIZE)]
+	__attribute__((noinit));
+static uint32_t ble_heap_msg[RWIP_CALC_HEAP_LEN(RWIP_HEAP_MSG_SIZE)] __attribute__((noinit));
+static uint32_t ble_heap_non_ret[RWIP_CALC_HEAP_LEN(1000)] __attribute__((noinit));
 
-static uint32_t initialised  __attribute__ ((noinit));
+static uint32_t initialised __attribute__((noinit));
 #define INITIALISED_MAGIC 0x45454545
 
 #ifdef CONFIG_ALIF_BLE_HOST_PATCHING
