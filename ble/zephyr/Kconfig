@@ -28,6 +28,13 @@ config ALIF_BLE_HOST_ADDL_PRF_HEAPSIZE
 	  Depending on the profiles enabled in the stack the profile
 	  heap size allocated needs to be adjusted.
 
+config ALIF_BLE_HOST_ADDL_ENV_HEAPSIZE
+	int "Additional heap size required for supported environments"
+	default 0
+	help
+	  Depending on the environments enabled in the stack the environment
+	  heap size allocated needs to be adjusted.
+
 endmenu
 
 endif
