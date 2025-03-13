@@ -14,7 +14,7 @@ extern "C"
 #include <stdbool.h>
 #include <stddef.h>
 
-typedef struct {
+struct ospi_regs {
 	volatile uint32_t  OSPI_CTRLR0;      /* 0x00 Control Reg 0           */
 	volatile uint32_t  OSPI_CTRLR1;      /* 0x04 Control Reg 1           */
 	volatile uint32_t  OSPI_ENR;         /* 0x08 Enable Reg              */
@@ -89,10 +89,10 @@ typedef struct {
 	volatile uint32_t  OSPI_XIP_WRITE_INCR_INST; /* 0x140 INCR Tx Opcode */
 	volatile uint32_t  OSPI_XIP_WRITE_WRAP_INST; /* 0x144 WRAP Tx Opcode */
 	volatile uint32_t  OSPI_XIP_WRITE_CTRL;      /* 0x148 XIP Write Ctrl */
-} OSPI_Type;
+};
 
 
-typedef struct {
+struct ospi_aes_regs {
 	volatile uint32_t  AES_CTRL;        /*  0x00 AES Control             */
 	volatile uint32_t  AES_INTR;        /*  0x04 AES Interrupt Control   */
 	volatile uint32_t  AES_INTR_MASK;   /*  0x08 AES Interrupt Mask      */
@@ -102,7 +102,7 @@ typedef struct {
 	volatile uint32_t  AES_RES_3;       /*  0x18 Reserved Register       */
 	volatile uint32_t  AES_RES_4;       /*  0x1C Reserved Register       */
 	volatile uint32_t  AES_RXDS_DLY;    /*  0x20 AES RXDS Delay Reg      */
-} OSPI_AES_Type;
+};
 
 /* Bit fields for SPI FRF */
 #define SINGLE               0x0
@@ -319,129 +319,129 @@ typedef struct {
 #define AES_CONTROL_DECRYPT_EN          (1U << 0)
 
 /**
- * enum SPI_FRAME_FORMAT.
+ * enum spi_frame_format.
  * SPI frame formats.
  */
-typedef enum _SPI_FRAME_FORMAT {
+enum spi_frame_format {
 	SPI_FRAME_FORMAT_STANDARD,          /* Standard SPI frame format */
 	SPI_FRAME_FORMAT_DUAL,              /* Dual SPI frame format */
 	SPI_FRAME_FORMAT_QUAD,              /* Quad SPI frame format */
 	SPI_FRAME_FORMAT_OCTAL              /* Octal SPI frame format */
-} SPI_FRAME_FORMAT;
+};
 
 /**
- * enum SPI_MODE.
+ * enum spi_mode.
  * SPI modes.
  */
-typedef enum _SPI_MODE {
-	SPI_MODE_0,                             /* SPI Mode - 0 : CPHA = 0, CPOL = 0 */
-	SPI_MODE_1,                             /* SPI Mode - 1 : CPHA = 1, CPOL = 0 */
-	SPI_MODE_2,                             /* SPI Mode - 2 : CPHA = 0, CPOL = 1 */
-	SPI_MODE_3                              /* SPI Mode - 3 : CPHA = 1, CPOL = 1 */
-} SPI_MODE;
+enum spi_mode {
+	SPI_MODE_0,                 /* SPI Mode - 0 : CPHA = 0, CPOL = 0 */
+	SPI_MODE_1,                 /* SPI Mode - 1 : CPHA = 1, CPOL = 0 */
+	SPI_MODE_2,                 /* SPI Mode - 2 : CPHA = 0, CPOL = 1 */
+	SPI_MODE_3                  /* SPI Mode - 3 : CPHA = 1, CPOL = 1 */
+};
 
 /**
- * enum SPI_TMOD.
+ * enum spi_tmode.
  * SPI transfer modes.
  */
-typedef enum _SPI_TMOD {
+enum spi_tmode {
 	SPI_TMOD_TX_AND_RX     = TMODE_TX_AND_RX,       /* Tx and Rx */
 	SPI_TMOD_TX            = TMODE_TX_ONLY,         /* Transmit only  */
 	SPI_TMOD_RX            = TMODE_RD_ONLY,         /* Receive only */
 	SPI_TMOD_EEPROM_READ   = TMODE_EPROM_READ       /* EEPROM read  */
-} SPI_TMOD;
+};
 
 /**
- * enum SPI_SS_STATE.
+ * enum spi_ss_state.
  * SPI Slave Select States.
  */
-typedef enum _SPI_SS_STATE {
+enum spi_ss_state {
 	SPI_SS_STATE_DISABLE,                   /* Slave select disabled */
 	SPI_SS_STATE_ENABLE,                    /* Slave select Enabled */
-} SPI_SS_STATE;
+};
 
 /**
- * enum SPI_TRANSFER_STATUS.
+ * enum spi_transfer_status.
  * Status of an ongoing SPI transfer.
  */
-typedef enum _SPI_TRANSFER_STATUS {
-	SPI_TRANSFER_STATUS_NONE,               /* Transfer status none */
-	SPI_TRANSFER_STATUS_COMPLETE,           /* Transfer status complete */
-	SPI_TRANSFER_STATUS_OVERFLOW,           /* Transfer status Tx/Rx overflow */
-	SPI_TRANSFER_STATUS_MASTER_CONTENTION,  /* Transfer status master contention */
-	SPI_TRANSFER_STATUS_RX_UNDERFLOW,       /* Transfer status Rx underflow */
-} SPI_TRANSFER_STATUS;
+enum spi_transfer_status {
+	SPI_TRANSFER_STATUS_NONE,               /* Status none */
+	SPI_TRANSFER_STATUS_COMPLETE,           /* Status complete */
+	SPI_TRANSFER_STATUS_OVERFLOW,           /* Status Tx/Rx overflow */
+	SPI_TRANSFER_STATUS_MASTER_CONTENTION,  /* Status master contention */
+	SPI_TRANSFER_STATUS_RX_UNDERFLOW,       /* Status Rx underflow */
+};
 
 /**
- * struct ospi_transfer_t.
+ * struct ospi_transfer.
  * Information about an ongoing OSPI transfer.
  */
-typedef struct _ospi_transfer_t {
-	volatile uint32_t               tx_current_cnt;     /* Current Tx Transfer count */
-	volatile uint32_t               rx_current_cnt;     /* Current Rx Transfer count */
-	uint32_t                        tx_total_cnt;       /* Total count to transmit */
-	uint32_t                        rx_total_cnt;       /* Total count to receive */
-	const uint32_t                  *tx_buff;           /* Pointer to TX buffer */
-	void                            *rx_buff;           /* Pointer to Rx buffer */
-	uint32_t                        tx_default_val;     /* Default value to Transfer */
-	uint32_t                        spi_frf;            /* Standard/Dual/Quad/Octal */
-	uint32_t                        addr_len;           /* Address length for the transfer */
-	uint32_t                        dummy_cycle;        /* Dummy cycles for the transfer */
-	uint32_t                        ddr;                /* DDR / SDR mode for the transfer */
-	bool                            tx_default_enable;  /* Enable Tx default value transfer */
-	SPI_TMOD                        mode;               /* SPI transfer mode */
-	volatile SPI_TRANSFER_STATUS    status;             /* transfer status */
+struct ospi_transfer {
+	uint32_t            tx_current_cnt;     /* Current Tx Transfer count */
+	uint32_t            rx_current_cnt;     /* Current Rx Transfer count */
+	uint32_t            tx_total_cnt;       /* Total count to transmit */
+	uint32_t            rx_total_cnt;       /* Total count to receive */
+	const uint32_t      *tx_buff;           /* Pointer to TX buffer */
+	void                *rx_buff;           /* Pointer to Rx buffer */
+	uint32_t            tx_default_val;     /* Default value to Transfer */
+	uint32_t            spi_frf;            /* Standard/Dual/Quad/Octal  */
+	uint32_t            addr_len;           /* Address length  */
+	uint32_t            dummy_cycle;        /* Dummy cycles    */
+	uint32_t            ddr;                /* DDR / SDR mode  */
+	bool                tx_default_enable;  /* Enable Tx default */
+	enum spi_tmode      mode;               /* SPI transfer mode */
+	enum spi_transfer_status    status;    /* transfer status */
 
 	/**XiP Configuration*/
-	uint16_t                        wrap_cmd;
-	uint16_t                        incr_cmd;
-} ospi_transfer_t;
+	uint16_t            wrap_cmd;           /* WRAP OpCode */
+	uint16_t            incr_cmd;           /* INCR OpCode */
+};
 
 /**
- * struct xip_config_t.
+ * struct ospi_xip_config.
  * configuration for xip setup.
  */
-typedef struct _xip_config_t {
-	int16_t                 xip_cs_pin;
-	uint16_t                wrap_cmd;
-	uint16_t                incr_cmd;
-	uint16_t                rx_smpl_dlay;
-	uint16_t                aes_rx_ds_dlay;
-	uint16_t                xip_mod_bits;
-	uint16_t                xip_cnt_time_out;
-	uint16_t                xip_wait_cycles;
-	uint16_t                xip_rxds_vl_en;
-} ospi_xip_config_t;
+struct ospi_xip_config {
+	int16_t                 xip_cs_pin;          /* CS PIN   */
+	uint16_t                wrap_cmd;            /* WRAP cmd */
+	uint16_t                incr_cmd;            /* INCR cmd */
+	uint16_t                rx_smpl_dlay;        /* Delay on Sampling */
+	uint16_t                aes_rx_ds_dlay;      /* AES Dly */
+	uint16_t                xip_mod_bits;        /* XIP Mod */
+	uint16_t                xip_cnt_time_out;    /* Timeout value */
+	uint16_t                xip_wait_cycles;     /* Dummy cycles*/
+	uint16_t                xip_rxds_vl_en;      /* Enable RxDS_VL_EN bit */
+};
 
 /**
- * \fn          static inline void ospi_disable(OSPI_Type *spi)
+ * \fn          static inline void ospi_disable(struct ospi_regs *spi)
  * \brief       Disable the OSPI instance
  * \param[in]   ospi     Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_disable(OSPI_Type *ospi)
+static inline void ospi_disable(struct ospi_regs *ospi)
 {
 	ospi->OSPI_ENR = OSPI_DISABLE;
 }
 
 /**
- * \fn          static inline void ospi_enable(OSPI_Type *spi)
+ * \fn          static inline void ospi_enable(struct ospi_regs *spi)
  * \brief       Enable the OSPI instance
  * \param[in]   ospi     Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_enable(OSPI_Type *ospi)
+static inline void ospi_enable(struct ospi_regs *ospi)
 {
 	ospi->OSPI_ENR = OSPI_ENABLE;
 }
 
 /***
- * \fn          static inline void ospi_mode_master(OSPI_Type *ospi)
+ * \fn          static inline void ospi_mode_master(struct ospi_regs *ospi)
  * \brief       Enable master mode in the OSPI instance.
  * \param[in]   ospi     Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_mode_master(OSPI_Type *ospi)
+static inline void ospi_mode_master(struct ospi_regs *ospi)
 {
 	ospi_disable(ospi);
 	ospi->OSPI_CTRLR0 |= SPI_CTRLR0_SSI_IS_MST_MASTER;
@@ -449,12 +449,12 @@ static inline void ospi_mode_master(OSPI_Type *ospi)
 }
 
 /***
- * \fn          static inline void ospi_mode_slave(OSPI_Type *ospi)
+ * \fn          static inline void ospi_mode_slave(struct ospi_regs *ospi)
  * \brief       Enable slave mode in the OSPI instance.
  * \param[in]   ospi     Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_mode_slave(OSPI_Type *ospi)
+static inline void ospi_mode_slave(struct ospi_regs *ospi)
 {
 	ospi_disable(ospi);
 	ospi->OSPI_CTRLR0 &= ~SPI_CTRLR0_SSI_IS_MST_MASTER;
@@ -462,14 +462,16 @@ static inline void ospi_mode_slave(OSPI_Type *ospi)
 }
 
 /***
- * \fn          static inline void ospi_set_bus_speed(OSPI_Type *ospi, uint32_t speed, uint32_t clk)
+ * \fn          static inline void ospi_set_bus_speed(struct ospi_regs *ospi,
+ *                                       uint32_t speed, uint32_t clk)
  * \brief       Set the bus speed for the OSPI instance.
  * \param[in]   ospi    Pointer to the OSPI register map
  * \param[in]   speed   The bus speed to be set
  * \param[in]   clk     OSPI input clk
  * \return      none
  */
-static inline void ospi_set_bus_speed(OSPI_Type *ospi, uint32_t speed, uint32_t clk)
+static inline void ospi_set_bus_speed(struct ospi_regs *ospi,
+					uint32_t speed, uint32_t clk)
 {
 	ospi_disable(ospi);
 	ospi->OSPI_BAUDR = (clk / speed);
@@ -477,303 +479,329 @@ static inline void ospi_set_bus_speed(OSPI_Type *ospi, uint32_t speed, uint32_t 
 }
 
 /***
- * \fn          static inline uint32_t ospi_get_bus_speed(OSPI_Type *ospi, uint32_t clk)
+ * \fn          static inline uint32_t ospi_get_bus_speed(
+ *                                         struct ospi_regs *ospi, uint32_t clk)
  * \brief       Get the current bus speed of the OSPI instance.
  * \param[in]   ospi    Pointer to the OSPI register map
  * \param[in]   clk     OSPI input clk
  * \return      Current bus speed
  */
-static inline uint32_t ospi_get_bus_speed(OSPI_Type *ospi, uint32_t clk)
+static inline uint32_t ospi_get_bus_speed(struct ospi_regs *ospi, uint32_t clk)
 {
 	return clk / ospi->OSPI_BAUDR;
 }
 
 /***
- * \fn          static inline void ospi_mask_interrupts(OSPI_Type *spi)
+ * \fn          static inline void ospi_mask_interrupts(struct ospi_regs *spi)
  * \brief       Mask all the interrupts for the OSPI instance
  * \param[in]   ospi       Pointer to the SPI register map
  * \return      none
  */
-static inline void ospi_mask_interrupts(OSPI_Type *ospi)
+static inline void ospi_mask_interrupts(struct ospi_regs *ospi)
 {
 	ospi->OSPI_IMR = 0;
 }
 
 /***
- * \fn          static inline uint32_t ospi_get_dma_addr(OSPI_Type *ospi)
+ * \fn          static inline uint32_t ospi_get_dma_addr(struct ospi_regs *ospi)
  * \brief       Get the Data(FIFO) register address for the OSPI instance
  * \param[in]   ospi     Pointer to the OSPI register map
  * \return      TXDMA register address.
  */
-static inline volatile uint32_t *ospi_get_dma_addr(OSPI_Type *ospi)
+static inline volatile uint32_t *ospi_get_dma_addr(struct ospi_regs *ospi)
 {
 	return &ospi->OSPI_DR0;
 }
 
 /***
- * \fn          void ospi_set_tx_dma_data_level(OSPI_Type *ospi, uint8_t level)
+ * \fn          void ospi_set_tx_dma_data_level(struct ospi_regs *ospi,
+ *                                              uint8_t level)
  * \brief       Set Tx DMA trigger level for the OSPI instance.
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   trig_level Tx DMA trigger level
  * \return      none
  */
-static inline void ospi_set_tx_dma_data_level(OSPI_Type *ospi, uint8_t level)
+static inline void ospi_set_tx_dma_data_level(struct ospi_regs *ospi,
+					uint8_t level)
 {
 	ospi->OSPI_DMATDLR = level;
 }
 
 /***
- * \fn          void ospi_set_rx_dma_data_level(OSPI_Type *ospi, uint8_t level)
+ * \fn          void ospi_set_rx_dma_data_level(struct ospi_regs *ospi,
+ *                                              uint8_t level)
  * \brief       Set Tx DMA trigger level for the OSPI instance.
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   trig_level Tx DMA trigger level
  * \return      none
  */
-static inline void ospi_set_rx_dma_data_level(OSPI_Type *ospi, uint8_t level)
+static inline void ospi_set_rx_dma_data_level(struct ospi_regs *ospi,
+					uint8_t level)
 {
 	ospi->OSPI_DMARDLR = level;
 }
 
 /**
- * \fn          void ospi_enable_tx_dma(OSPI_Type *ospi)
+ * \fn          void ospi_enable_tx_dma(struct ospi_regs *ospi)
  * \brief       Enable Tx DMA for the OSPI instance.
  * \param[in]   ospi       Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_enable_tx_dma(OSPI_Type *ospi)
+static inline void ospi_enable_tx_dma(struct ospi_regs *ospi)
 {
 	ospi->OSPI_DMACR |= SPI_DMACR_TDMAE;
 }
 
 /**
- * \fn          void ospi_enable_rx_dma(OSPI_Type *ospi)
+ * \fn          void ospi_enable_rx_dma(struct ospi_regs *ospi)
  * \brief       Enable Tx DMA for the OSPI instance.
  * \param[in]   ospi       Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_enable_rx_dma(OSPI_Type *ospi)
+static inline void ospi_enable_rx_dma(struct ospi_regs *ospi)
 {
 	ospi->OSPI_DMACR |= SPI_DMACR_RDMAE;
 }
 
 /**
- * \fn          void ospi_disable_tx_dma(OSPI_Type *ospi)
+ * \fn          void ospi_disable_tx_dma(struct ospi_regs *ospi)
  * \brief       Disable Tx DMA for the OSPI instance.
  * \param[in]   ospi       Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_disable_tx_dma(OSPI_Type *ospi)
+static inline void ospi_disable_tx_dma(struct ospi_regs *ospi)
 {
 	ospi->OSPI_DMACR &= ~SPI_DMACR_TDMAE;
 }
 
 /**
- * \fn          void ospi_disable_rx_dma(OSPI_Type *ospi)
+ * \fn          void ospi_disable_rx_dma(struct ospi_regs *ospi)
  * \brief       Disable Tx DMA for the OSPI instance.
  * \param[in]   ospi       Pointer to the OSPI register map
  * \return      none
  */
-static inline void ospi_disable_rx_dma(OSPI_Type *ospi)
+static inline void ospi_disable_rx_dma(struct ospi_regs *ospi)
 {
 	ospi->OSPI_DMACR &= ~SPI_DMACR_RDMAE;
 }
 
 /**
- * \fn          bool ospi_busy(OSPI_Type *ospi)
+ * \fn          bool ospi_busy(struct ospi_regs *ospi)
  * \brief       Get the busy status of the OSPI instance.
  * \param[in]   ospi       Pointer to the OSPI register map
  * \return      True/False based on the busy status
  */
-static inline bool ospi_busy(OSPI_Type *ospi)
+static inline bool ospi_busy(struct ospi_regs *ospi)
 {
-	return (ospi->OSPI_SR & (SPI_SR_BUSY | SPI_SR_TX_FIFO_EMPTY)) != SPI_SR_TX_FIFO_EMPTY;
+	return (ospi->OSPI_SR &
+	     (SPI_SR_BUSY | SPI_SR_TX_FIFO_EMPTY)) != SPI_SR_TX_FIFO_EMPTY;
 }
 
 /**
- * \fn          uint32_t ospi_get_dfs(OSPI_Type *ospi)
+ * \fn          uint32_t ospi_get_dfs(struct ospi_regs *ospi)
  * \brief       Get the data frame size for the OSPI instance.
  * \param[in]   ospi     Pointer to the OSPI register map
  * \return      current dfs configuration
  */
-static inline uint32_t ospi_get_dfs(OSPI_Type *ospi)
+static inline uint32_t ospi_get_dfs(struct ospi_regs *ospi)
 {
 	return (ospi->OSPI_CTRLR0 & SPI_CTRLR0_DFS_MASK) + 1;
 }
 
 /**
- * \fn          void ospi_set_mode(OSPI_Type *ospi, SPI_MODE mode)
+ * \fn          void ospi_set_mode(struct ospi_regs *ospi, enum spi_mode mode)
  * \brief       Set the OSPI mode for the OSPI instance.
  * \param[in]   ospi     Pointer to the OSPI register map
  * \param[in]   mode    The mode to be set.
  * \return      none
  */
-void ospi_set_mode(OSPI_Type *ospi, SPI_MODE mode);
+void ospi_set_mode(struct ospi_regs *ospi, enum spi_mode mode);
 
 /**
- * \fn          void ospi_set_dfs(OSPI_Type *ospi, uint8_t dfs)
+ * \fn          void ospi_set_dfs(struct ospi_regs *ospi, uint8_t dfs)
  * \brief       Set the data frame size for the OSPI instance.
  * \param[in]   ospi    Pointer to the SPI register map
  * \param[in]   dfs     The data frame size
  * \return      none
  */
-void ospi_set_dfs(OSPI_Type *ospi, uint8_t dfs);
+void ospi_set_dfs(struct ospi_regs *ospi, uint8_t dfs);
 
 /**
- * \fn          void ospi_set_tmode(OSPI_Type *ospi, SPI_TMOD tmod)
+ * \fn          void ospi_set_tmode(struct ospi_regs *ospi, enum spi_tmode tmod)
  * \brief       Set the transfer mode for the OSPI instance.
  * \param[in]   ospi    Pointer to the OSPI register map
  * \param[in]   tmod    Transfer mode
  * \return      none
  */
-void ospi_set_tmod(OSPI_Type *ospi, SPI_TMOD tmod);
+void ospi_set_tmod(struct ospi_regs *ospi, enum spi_tmode tmod);
 
 /**
- * \fn          void ospi_set_tx_threshold(OSPI_Type *ospi, uint8_t threshold)
+ * \fn          void ospi_set_tx_threshold(struct ospi_regs *ospi,
+ *                                         uint8_t threshold)
  * \brief       Set Transmit FIFO interrupt threshold for the OSPI instance
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   threshold  Transmit FIFO threshold
  * \return      none
  */
-void ospi_set_tx_threshold(OSPI_Type *ospi, uint8_t threshold);
+void ospi_set_tx_threshold(struct ospi_regs *ospi, uint8_t threshold);
 
 /**
- * \fn          void ospi_set_rx_threshold(OSPI_Type *ospi, uint8_t threshold)
+ * \fn          void ospi_set_rx_threshold(struct ospi_regs *ospi,
+ *                                         uint8_t threshold)
  * \brief       Set Receive FIFO interrupt threshold for the OSPI instance
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   threshold  Receive FIFO threshold
  * \return      none
  */
-static inline void ospi_set_rx_threshold(OSPI_Type *ospi, uint8_t threshold)
+static inline void ospi_set_rx_threshold(struct ospi_regs *ospi,
+					uint8_t threshold)
 {
 	ospi->OSPI_RXFTLR = threshold;
 }
 
 /**
- * \fn          void ospi_set_tx_fifo_start_level(OSPI_Type *spi, uint16_t level)
+ * \fn          void ospi_set_tx_fifo_start_level(struct ospi_regs *spi,
+ *                                                uint16_t level)
  * \brief       Set Transmit FIFO start level
  * \param[in]   ospi   Pointer to the OSPI register map
  * \param[in]   level  Transmit FIFO start level
  * \return      none
  */
-void ospi_set_tx_fifo_start_level(OSPI_Type *ospi, uint16_t level);
+void ospi_set_tx_fifo_start_level(struct ospi_regs *ospi, uint16_t level);
 
 /**
- * \fn          void ospi_set_rx_sample_delay(OSPI_Type *ospi, uint8_t rx_sample_delay)
+ * \fn          void ospi_set_rx_sample_delay(struct ospi_regs *ospi,
+ *                                            uint8_t rx_sample_delay)
  * \brief       Set Receive sample delay for the OSPI instance
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   threshold  Receive FIFO threshold
  * \return      none
  */
-void ospi_set_rx_sample_delay(OSPI_Type *ospi, uint8_t rx_sample_delay);
+void ospi_set_rx_sample_delay(struct ospi_regs *ospi, uint8_t rx_sample_delay);
 
 /**
- * \fn          void ospi_set_ddr_drive_edge(OSPI_Type *ospi, uint8_t ddr_drive_edge)
+ * \fn          void ospi_set_ddr_drive_edge(struct ospi_regs *ospi,
+ *                                           uint8_t ddr_drive_edge)
  * \brief       Set DDR drive edge for the OSPI instance
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   threshold  Receive FIFO threshold
  * \return      none
  */
-void ospi_set_ddr_drive_edge(OSPI_Type *ospi, uint8_t ddr_drive_edge);
+void ospi_set_ddr_drive_edge(struct ospi_regs *ospi, uint8_t ddr_drive_edge);
 
 /**
- * \fn          void ospi_control_ss(OSPI_Type *ospi, uint8_t slave, SPI_SS_STATE state)
+ * \fn          void ospi_control_ss(struct ospi_regs *ospi, uint8_t slave,
+ *                                   enum spi_ss_state state)
  * \brief       Control the slave select line
  * \param[in]   ospi   Pointer to the OSPI register map
  * \param[in]   slave  The slave to be selected
  * \param[in]   state  The state of the slave select line
  * \return      none
  */
-void ospi_control_ss(OSPI_Type *ospi, uint8_t slave, SPI_SS_STATE state);
+void ospi_control_ss(struct ospi_regs *ospi, uint8_t slave,
+			enum spi_ss_state state);
 
 /**
- * \fn          void ospi_control_xip_ss(OSPI_Type *ospi, uint8_t slave, SPI_SS_STATE state)
+ * \fn          void ospi_control_xip_ss(struct ospi_regs *ospi, uint8_t slave,
+ *                                       enum spi_ss_state state)
  * \brief       Control the XIP slave select line
  * \param[in]   ospi   Pointer to the OSPI register map
  * \param[in]   slave  The slave to be selected
  * \param[in]   state  The state of the slave select line
  * \return      none
  */
-void ospi_control_xip_ss(OSPI_Type *ospi, uint8_t slave, SPI_SS_STATE state);
+void ospi_control_xip_ss(struct ospi_regs *ospi, uint8_t slave,
+			enum spi_ss_state state);
 
 /**
- * \fn          void ospi_send(OSPI_Type *spi, ospi_transfer_t *transfer)
+ * \fn          void ospi_send(struct ospi_regs *spi,
+ *                             struct ospi_transfer *transfer)
  * \brief       Prepare the OSPI instance for transmission
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   transfer   Transfer parameters
  * \return      none
  */
-void ospi_send(OSPI_Type *ospi, ospi_transfer_t *transfer);
+void ospi_send(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 /**
- * \fn          void ospi_receive(OSPI_Type *ospi, ospi_transfer_t *transfer)
+ * \fn          void ospi_receive(struct ospi_regs *ospi,
+ *                                struct ospi_transfer *transfer)
  * \brief       Prepare the OSPI instance for reception
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   transfer   Transfer parameters
  * \return      none
  */
-void ospi_receive(OSPI_Type *ospi, ospi_transfer_t *transfer);
+void ospi_receive(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 /**
- * \fn          void ospi_transfer(OSPI_Type *spi, ospi_transfer_t *transfer)
+ * \fn          void ospi_transfer(struct ospi_regs *spi,
+ *                                 struct ospi_transfer *transfer)
  * \brief       Prepare the OSPI instance for transfer
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   transfer   Transfer parameters
  * \return      none
  */
-void ospi_transfer(OSPI_Type *ospi, ospi_transfer_t *transfer);
+void ospi_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 /**
- * \fn          void ospi_dma_send(OSPI_Type *spi, ospi_transfer_t *transfer)
+ * \fn          void ospi_dma_send(struct ospi_regs *spi,
+ *                                 struct ospi_transfer *transfer)
  * \brief       Prepare the OSPI instance for transmission with DMA support
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   transfer   Transfer parameters
  * \return      none
  */
-void ospi_dma_send(OSPI_Type *ospi, ospi_transfer_t *transfer);
+void ospi_dma_send(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 /**
- * \fn          void ospi_dma_transfer(OSPI_Type *spi, ospi_transfer_t *transfer)
+ * \fn          void ospi_dma_transfer(struct ospi_regs *spi,
+ *                                     struct ospi_transfer *transfer)
  * \brief       Prepare the OSPI instance for transfer with DMA support
  * \param[in]   ospi       Pointer to the OSPI register map
  * \param[in]   transfer   Transfer parameters
  * \return      none
  */
-void ospi_dma_transfer(OSPI_Type *ospi, ospi_transfer_t *transfer);
+void ospi_dma_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 /**
- * \fn          void ospi_hyperbus_xip_init(OSPI_Type *ospi, uint8_t wait_cycles)
+ * \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi,
+ *                                          uint8_t wait_cycles)
  * \brief       Initialize hyperbus XIP configuration for the OSPI instance
  * \param[in]   ospi        Pointer to the OSPI register map
  * \param[in]   wait_cycles Wait cycles needed by the hyperbus device
  * \return      none
  */
-void ospi_hyperbus_xip_init(OSPI_Type *ospi, uint8_t wait_cycles);
+void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles);
 
 /**
- * \fn          void ospi_irq_handler(OSPI_Type *ospi, ospi_transfer_t *transfer)
+ * \fn          void ospi_irq_handler(struct ospi_regs *ospi,
+ *                                    struct ospi_transfer *transfer)
  * \brief       Handle interrupts for the OSPI instance.
  * \param[in]   ospi      Pointer to the OSPI register map
  * \param[in]   transfer  The transfer structure for the SPI instance
  * \return      none
  */
-void ospi_irq_handler(OSPI_Type *ospi, ospi_transfer_t *transfer);
+void ospi_irq_handler(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 
 /**
- * \fn          void ospi_xip_enable(OSPI_Type *ospi, OSPI_AES_Type *aes,
- *                                    ospi_xip_config_t *xfg)
+ * \fn          void ospi_xip_enable(struct ospi_regs *ospi,
+ *                                    struct ospi_aes_regs *aes,
+ *                                    struct ospi_xip_config *xfg)
  * \brief       Enable XiP Mode
  * \param[in]   ospi Pointer to the OSPI register map
  * \param[in]   aes  Pointer to the AES register map
  * \param[in]   xfg  configurations for XiP mode
  * \return      none
  */
-void ospi_xip_enable(OSPI_Type *ospi, OSPI_AES_Type *aes,
-		ospi_xip_config_t *xip_configs);
+void ospi_xip_enable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
+		struct ospi_xip_config *xip_configs);
 
 /**
- * \fn          void ospi_xip_disable(OSPI_Type *ospi, OSPI_AES_Type *aes,
- *                            ospi_transfer_t *transfer, ospi_xip_config_t *xfg)
+ * \fn          void ospi_xip_disable(struct ospi_regs *ospi,
+ *                            struct ospi_aes_regs *aes,
+ *                            struct ospi_transfer *transfer,
+ *                            struct ospi_xip_config *xfg)
  * \brief       Disable XiP Mode
  * \param[in]   ospi Pointer to the OSPI register map
  * \param[in]   aes  Pointer to the AES register map
@@ -781,8 +809,8 @@ void ospi_xip_enable(OSPI_Type *ospi, OSPI_AES_Type *aes,
  * \param[in]   xfg  configurations for XiP mode
  * \return      none
  */
-void ospi_xip_disable(OSPI_Type *ospi, OSPI_AES_Type *aes,
-			ospi_transfer_t *transfer, ospi_xip_config_t *xfg);
+void ospi_xip_disable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
+		struct ospi_transfer *transfer, struct ospi_xip_config *xfg);
 
 #ifdef __cplusplus
 }

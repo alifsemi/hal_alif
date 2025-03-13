@@ -25,10 +25,10 @@ struct hal_ospi_inst {
 	uint32_t  *aes_regs;
 
 	/* Data Transfer */
-	ospi_transfer_t transfer;
+	struct ospi_transfer transfer;
 
 	/* XiP Config*/
-	ospi_xip_config_t   xip_config;
+	struct ospi_xip_config   xip_config;
 
 	/* Event Notifier */
 	hal_event_notify_cb *event_cb;
@@ -61,8 +61,8 @@ static struct hal_ospi_inst *get_inst_by_handle(HAL_OSPI_Handle_T handle)
 int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 				struct ospi_init *init_d)
 {
-	OSPI_Type       *ospi_regs;
-	OSPI_AES_Type   *aes_regs;
+	struct ospi_regs       *ospi_regs;
+	struct ospi_aes_regs   *aes_regs;
 	int32_t         i  = 0;
 
 	struct hal_ospi_inst *ospi_inst;
@@ -106,10 +106,10 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 	ospi_inst->aes_regs = init_d->aes_regs;
 
 	/* Clear Transfer Object */
-	memset(&ospi_inst->transfer, 0, sizeof(ospi_transfer_t));
+	memset(&ospi_inst->transfer, 0, sizeof(struct ospi_transfer));
 
 	/* Clear XiP Configuration Object */
-	memset(&ospi_inst->xip_config, 0, sizeof(ospi_xip_config_t));
+	memset(&ospi_inst->xip_config, 0, sizeof(struct ospi_xip_config));
 
 	/* XiP Configs */
 	ospi_inst->xip_config.wrap_cmd = init_d->xip_wrap_cmd;
@@ -120,7 +120,7 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 	ospi_inst->xip_config.xip_rxds_vl_en = init_d->xip_rxds_vl_en;
 	ospi_inst->xip_config.xip_wait_cycles = init_d->xip_wait_cycles;
 
-	ospi_regs = (OSPI_Type *) init_d->base_regs;
+	ospi_regs = (struct ospi_regs *) init_d->base_regs;
 
 	ospi_set_tx_threshold(ospi_regs, init_d->tx_fifo_threshold);
 
@@ -136,7 +136,7 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 
 	ospi_set_bus_speed(ospi_regs, init_d->bus_speed, init_d->core_clk);
 
-	aes_regs = (OSPI_AES_Type *) init_d->aes_regs;
+	aes_regs = (struct ospi_aes_regs *) init_d->aes_regs;
 
 	aes_regs->AES_RXDS_DLY = init_d->rx_ds_delay;
 
@@ -170,10 +170,10 @@ int32_t alif_hal_ospi_deinit(HAL_OSPI_Handle_T handle)
 	ospi_inst->tx_fifo_threshold = 0;
 
 	/* Clear Transfer Object */
-	memset(&ospi_inst->transfer, 0, sizeof(ospi_transfer_t));
+	memset(&ospi_inst->transfer, 0, sizeof(struct ospi_transfer));
 
 	/* Clear XiP Configuration Object */
-	memset(&ospi_inst->xip_config, 0, sizeof(ospi_xip_config_t));
+	memset(&ospi_inst->xip_config, 0, sizeof(struct ospi_xip_config));
 
 	return  OSPI_ERR_NONE;
 }
@@ -189,7 +189,7 @@ int32_t alif_hal_ospi_prepare_transfer(HAL_OSPI_Handle_T handle,
 				struct ospi_trans_config *trans_conf)
 {
 	struct hal_ospi_inst *ospi_inst;
-	OSPI_Type *ospi_regs;
+	struct ospi_regs *ospi_regs;
 
 	ospi_inst = get_inst_by_handle(handle);
 
@@ -199,7 +199,7 @@ int32_t alif_hal_ospi_prepare_transfer(HAL_OSPI_Handle_T handle,
 	if (ospi_inst == NULL)
 		return OSPI_ERR_INVALID_HANDLE;
 
-	ospi_regs = (OSPI_Type *) ospi_inst->regs;
+	ospi_regs = (struct ospi_regs *) ospi_inst->regs;
 
 	ospi_set_dfs(ospi_regs, trans_conf->frame_size);
 
@@ -226,10 +226,10 @@ int32_t alif_hal_ospi_cs_enable(HAL_OSPI_Handle_T handle, int enable)
 	if (ospi_inst == NULL)
 		return OSPI_ERR_INVALID_HANDLE;
 
-	if (ospi_busy((OSPI_Type *) ospi_inst->regs))
+	if (ospi_busy((struct ospi_regs *) ospi_inst->regs))
 		return OSPI_ERR_CTRL_BUSY;
 
-	ospi_control_ss((OSPI_Type *) ospi_inst->regs, ospi_inst->cs_pin,
+	ospi_control_ss((struct ospi_regs *) ospi_inst->regs, ospi_inst->cs_pin,
 		(enable == 1 ? SPI_SS_STATE_ENABLE : SPI_SS_STATE_DISABLE));
 
 	return OSPI_ERR_NONE;
@@ -254,7 +254,7 @@ int32_t alif_hal_ospi_send(HAL_OSPI_Handle_T handle, void *data, int num)
 	if (num <= 0)
 		return OSPI_ERR_INVALID_PARAM;
 
-	if (ospi_busy((OSPI_Type *) ospi_inst->regs))
+	if (ospi_busy((struct ospi_regs *) ospi_inst->regs))
 		return OSPI_ERR_CTRL_BUSY;
 
 	/* Update Transfer Settings */
@@ -265,7 +265,7 @@ int32_t alif_hal_ospi_send(HAL_OSPI_Handle_T handle, void *data, int num)
 	ospi_inst->transfer.status = SPI_TRANSFER_STATUS_NONE;
 
 	/* Send */
-	ospi_send((OSPI_Type *)ospi_inst->regs, &(ospi_inst->transfer));
+	ospi_send((struct ospi_regs *)ospi_inst->regs, &(ospi_inst->transfer));
 
 	return OSPI_ERR_NONE;
 }
@@ -288,7 +288,7 @@ int32_t alif_hal_ospi_transfer(HAL_OSPI_Handle_T handle,
 	if (ospi_inst == NULL)
 		return OSPI_ERR_INVALID_HANDLE;
 
-	if (ospi_busy((OSPI_Type *) ospi_inst->regs))
+	if (ospi_busy((struct ospi_regs *) ospi_inst->regs))
 		return OSPI_ERR_CTRL_BUSY;
 
 	ospi_inst->transfer.rx_total_cnt   = num;
@@ -308,7 +308,8 @@ int32_t alif_hal_ospi_transfer(HAL_OSPI_Handle_T handle,
 	ospi_inst->transfer.rx_current_cnt = 0;
 	ospi_inst->transfer.status         = SPI_TRANSFER_STATUS_NONE;
 
-	ospi_transfer((OSPI_Type *)ospi_inst->regs, &(ospi_inst->transfer));
+	ospi_transfer((struct ospi_regs *)ospi_inst->regs,
+			&(ospi_inst->transfer));
 
 	return OSPI_ERR_NONE;
 }
@@ -326,7 +327,9 @@ int32_t alif_hal_ospi_irq_handler(HAL_OSPI_Handle_T handle)
 
 	ospi_inst = get_inst_by_handle(handle);
 
-	OSPI_Type *ospi_reg = (OSPI_Type *) ospi_inst->regs;
+	struct ospi_regs *ospi_reg = (struct ospi_regs *) ospi_inst->regs;
+
+	ospi_inst->transfer.status = SPI_TRANSFER_STATUS_NONE;
 
 	ospi_irq_handler(ospi_reg, &ospi_inst->transfer);
 
@@ -378,14 +381,14 @@ int32_t alif_hal_ospi_xip_enable(HAL_OSPI_Handle_T handle)
 	if (ospi_inst == NULL)
 		return OSPI_ERR_INVALID_HANDLE;
 
-	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+	ospi_control_ss((struct ospi_regs *) ospi_inst->regs,
 			ospi_inst->cs_pin, SPI_SS_STATE_DISABLE);
 
-	ospi_xip_enable((OSPI_Type *) ospi_inst->regs,
-			(OSPI_AES_Type *) ospi_inst->aes_regs,
+	ospi_xip_enable((struct ospi_regs *) ospi_inst->regs,
+			(struct ospi_aes_regs *) ospi_inst->aes_regs,
 			&ospi_inst->xip_config);
 
-	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+	ospi_control_ss((struct ospi_regs *) ospi_inst->regs,
 			ospi_inst->cs_pin, SPI_SS_STATE_ENABLE);
 
 	return OSPI_ERR_NONE;
@@ -405,15 +408,15 @@ int32_t alif_hal_ospi_xip_disable(HAL_OSPI_Handle_T handle)
 	if (ospi_inst == NULL)
 		return OSPI_ERR_INVALID_HANDLE;
 
-	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+	ospi_control_ss((struct ospi_regs *) ospi_inst->regs,
 			ospi_inst->cs_pin, SPI_SS_STATE_DISABLE);
 
 
-	ospi_xip_disable((OSPI_Type *) ospi_inst->regs,
-			(OSPI_AES_Type *) ospi_inst->aes_regs,
+	ospi_xip_disable((struct ospi_regs *) ospi_inst->regs,
+			(struct ospi_aes_regs *) ospi_inst->aes_regs,
 			&ospi_inst->transfer, &ospi_inst->xip_config);
 
-	ospi_control_ss((OSPI_Type *) ospi_inst->regs,
+	ospi_control_ss((struct ospi_regs *) ospi_inst->regs,
 			ospi_inst->cs_pin, SPI_SS_STATE_ENABLE);
 
 	return OSPI_ERR_NONE;

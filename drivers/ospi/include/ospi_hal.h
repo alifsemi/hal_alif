@@ -19,18 +19,18 @@
 #define OSPI_DDR_DISABLE                   0x0     /* Disable DDR Mode */
 #define OSPI_DDR_ENABLE                    0x1     /* Enable DDR Mode */
 
-#define OSPI_FRF_STANDRAD                  0x0      /* 0x0 Standard OSPI Format */
+#define OSPI_FRF_STANDRAD                  0x0      /* 0x0 Std OSPI Format */
 #define OSPI_FRF_DUAL                      0x1      /* 0x1 Dual OSPI Format */
 #define OSPI_FRF_QUAD                      0x2      /* 0X2 Quad OSPI Format */
 #define OSPI_FRF_OCTAL                     0x3      /* 0X2 Octal OSPI Format */
 
 /*---- OSPI Slave Select Signal definitions ----*/
-#define OSPI_SS_INACTIVE                   0UL      /* OSPI Slave Select Signal Inactive */
-#define OSPI_SS_ACTIVE                     1UL      /* OSPI Slave Select Signal Active */
+#define OSPI_SS_INACTIVE                   0UL      /* Slave Select  Inactive */
+#define OSPI_SS_ACTIVE                     1UL      /* Slave Select  Active */
 
 /*---- OSPI Event ---------------------*/
-#define OSPI_EVENT_TRANSFER_COMPLETE (1UL << 0)     /* Data Transfer completed */
-#define OSPI_EVENT_DATA_LOST         (1UL << 1)     /* Data lost: Rx overflow / Tx underflow */
+#define OSPI_EVENT_TRANSFER_COMPLETE (1UL << 0)     /* Transfer completed */
+#define OSPI_EVENT_DATA_LOST         (1UL << 1)     /* Rx o-flow / Tx u-flow */
 #define OSPI_EVENT_MODE_FAULT        (1UL << 2)     /* Master Mode Fault */
 
 /*---- OSPI Event ---------------------*/
@@ -42,16 +42,16 @@
 
 /*---- OSPI Status ---------------------*/
 struct ospi_status {
-	uint32_t busy       : 1;              /* Transmitter/Receiver busy flag */
-	uint32_t data_lost  : 1;              /* Data lost: Rx overflow / Tx underflow */
-	uint32_t mode_fault : 1;              /* Mode fault detected; optional */
+	uint32_t busy       : 1;              /* Tx/Rx busy flag */
+	uint32_t data_lost  : 1;              /* Rx o-flow / Tx u-flow */
+	uint32_t mode_fault : 1;              /* Mode fault detected */
 	uint32_t reserved   : 29;
 };
 
 /*---- OSPI State ---------------------*/
 struct ospi_driver_state {
-	uint32_t initialized: 1;                /* SPI driver initialized status */
-	uint32_t powered    : 1;                /* SPI driver powered status */
+	uint32_t initialized: 1;                /* Initialized status */
+	uint32_t powered    : 1;                /* Powered status */
 	uint32_t reserved   : 30;               /* Reserved */
 };
 
