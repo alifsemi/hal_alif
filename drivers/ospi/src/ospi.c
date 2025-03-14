@@ -5,6 +5,87 @@
 
 #include "ospi.h"
 
+#define TX_INTR_MASK  (SPI_IMR_TX_FIFO_EMPTY_INTERRUPT_MASK		   \
+			| SPI_IMR_TX_FIFO_OVER_FLOW_INTERRUPT_MASK	   \
+			| SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK)  \
+
+#define RX_INTR_MASK  (SPI_IMR_RX_FIFO_UNDER_FLOW_INTERRUPT_MASK           \
+			| SPI_IMR_RX_FIFO_OVER_FLOW_INTERRUPT_MASK         \
+			| SPI_IMR_RX_FIFO_FULL_INTERRUPT_MASK		   \
+			| SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK)  \
+
+/* Helper : update CTRL0 Reg with Frame Format and Transer mode bits */
+static uint32_t update_ctrl0_frf_tmode(uint32_t reg_val,
+					uint32_t frf,
+					uint32_t t_mode)
+{
+	reg_val &= ~(SPI_CTRLR0_SPI_FRF_MASK
+			| (SPI_CTRLR0_TMOD_MASK | SPI_CTRLR0_SSTE_MASK));
+	reg_val |= ((frf << SPI_CTRLR0_SPI_FRF) | t_mode);
+
+	return reg_val;
+}
+
+/* Helper : value to set spi_ctrl0 */
+static uint32_t set_spi_ctrlr0_reg(struct ospi_transfer *transfer,
+				uint8_t inst_len)
+{
+	uint32_t val;
+
+	val = SPI_TRANS_TYPE_FRF_DEFINED
+		| (SPI_CTRLR0_SPI_RXDS_ENABLE << SPI_CTRLR0_SPI_RXDS_EN_OFFSET)
+		| (transfer->ddr << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
+		| (inst_len << SPI_CTRLR0_INST_L_OFFSET)
+		| (transfer->addr_len << SPI_CTRLR0_ADDR_L_OFFSET)
+		| (transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
+
+	return val;
+}
+
+/* Helper : value to ospi_ctrl0 for XiP */
+static uint32_t set_ospi_ctrl0_in_xip(uint8_t frf,
+			uint8_t t_mode, uint8_t dfs)
+{
+	uint32_t val;
+
+	/* Set OSPI CTRL0 */
+	val = OSPI_CTRLR0_IS_MST
+		|(frf << OSPI_CTRLR0_SPI_FRF_OFFSET)
+		|(0 << OSPI_CTRLR0_SCPOL_OFFSET)
+		|(0 << OSPI_CTRLR0_SCPH_OFFSET)
+		|(0 << OSPI_CTRLR0_SSTE_OFFSET)
+		|(t_mode << OSPI_CTRLR0_TMOD_OFFSET)
+		|(dfs << OSPI_CTRLR0_DFS_OFFSET);
+
+	return val;
+}
+
+/* Helper : value to ospi_xip_ctrl0 for XiP */
+static uint32_t set_xip_ctrl(uint8_t wait_cycles, uint8_t rxds_vl_en)
+{
+	uint32_t val;
+
+	val = (OCTAL << XIP_CTRL_FRF_OFFSET)
+	| (0x2 << XIP_CTRL_TRANS_TYPE_OFFSET)
+	| (XIP_CTRL_ADDR_LEN_36_BIT << XIP_CTRL_ADDR_L_OFFSET)
+	| (XIP_CTRL_INST_LEN_8_BIT << XIP_CTRL_INST_L_OFFSET)
+	| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
+	| (wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+	| (0x1 << XIP_CTRL_DFS_HC_OFFSET)
+	| (0x1 << XIP_CTRL_DDR_EN_OFFSET)
+	| (0x0 << XIP_CTRL_INST_DDR_EN_OFFSET)
+	| (0x1 << XIP_CTRL_RXDS_EN_OFFSET)
+	| (0x1 << XIP_CTRL_INST_EN_OFFSET)
+	| (0x0 << XIP_CTRL_CONT_XFER_EN_OFFSET)
+	| (0x0 << XIP_CTRL_XIP_HYPERBUS_EN_OFFSET)
+	| (0x0 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
+	| (0x0 << XIP_CTRL_XIP_MBL_OFFSET)
+	| (0x0 << XIP_CTRL_XIP_PREFETCH_EN_OFFSET)
+	| (rxds_vl_en << XIP_CTRL_RXDS_VL_EN_OFFSET);
+
+	return val;
+}
+
 /**
  * \fn          void ospi_set_mode(struct ospi_regs *ospi, enum spi_mode mode)
  * \brief       Set the OSPI mode for the OSPI instance.
@@ -195,7 +276,6 @@ void ospi_control_xip_ss(struct ospi_regs *ospi,
 	ospi_enable(ospi);
 }
 
-
 /**
  * \fn          void ospi_send(struct ospi_regs *spi,
  *                             struct ospi_transfer *transfer)
@@ -206,31 +286,19 @@ void ospi_control_xip_ss(struct ospi_regs *ospi,
  */
 void ospi_send(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 {
-	uint32_t val;
-
 	ospi_disable(ospi);
 
-	val = ospi->OSPI_CTRLR0;
-	val &= ~(SPI_CTRLR0_SPI_FRF_MASK
-			| (SPI_CTRLR0_TMOD_MASK | SPI_CTRLR0_SSTE_MASK));
-	val |= ((transfer->spi_frf << SPI_CTRLR0_SPI_FRF)
-			| SPI_CTRLR0_TMOD_SEND_ONLY);
-	ospi->OSPI_CTRLR0 = val;
+	ospi->OSPI_CTRLR0 = update_ctrl0_frf_tmode(ospi->OSPI_CTRLR0,
+					transfer->spi_frf,
+					SPI_CTRLR0_TMOD_SEND_ONLY);
 
 	ospi->OSPI_CTRLR1 = 0;
 
-	val = SPI_TRANS_TYPE_FRF_DEFINED
-		| SPI_CTRLR0_SPI_RXDS_ENABLE << SPI_CTRLR0_SPI_RXDS_EN_OFFSET
-		| (transfer->ddr << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
-		| (SPI_CTRLR0_INST_L_8bit << SPI_CTRLR0_INST_L_OFFSET)
-		| (transfer->addr_len << SPI_CTRLR0_ADDR_L_OFFSET)
-		| (transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
+	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
+						SPI_CTRLR0_INST_L_8bit);
 
-	ospi->OSPI_SPI_CTRLR0 = val;
-
-	ospi->OSPI_IMR = (SPI_IMR_TX_FIFO_EMPTY_INTERRUPT_MASK
-			| SPI_IMR_TX_FIFO_OVER_FLOW_INTERRUPT_MASK
-			| SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK);
+	//Unmask Tx interrupts.
+	ospi->OSPI_IMR = TX_INTR_MASK;
 
 	ospi_enable(ospi);
 }
@@ -245,34 +313,19 @@ void ospi_send(struct ospi_regs *ospi, struct ospi_transfer *transfer)
  */
 void ospi_receive(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 {
-	uint32_t val;
-
 	ospi_disable(ospi);
 
-	val = ospi->OSPI_CTRLR0;
-	val &= ~(SPI_CTRLR0_SPI_FRF_MASK
-			| (SPI_CTRLR0_TMOD_MASK | SPI_CTRLR0_SSTE_MASK));
-	val |= ((transfer->spi_frf << SPI_CTRLR0_SPI_FRF)
-			| SPI_CTRLR0_TMOD_RECEIVE_ONLY);
-	ospi->OSPI_CTRLR0 = val;
+	ospi->OSPI_CTRLR0 = update_ctrl0_frf_tmode(ospi->OSPI_CTRLR0,
+					transfer->spi_frf,
+					SPI_CTRLR0_TMOD_RECEIVE_ONLY);
 
 	ospi->OSPI_CTRLR1 = transfer->rx_total_cnt - 1;
 
-	val = SPI_TRANS_TYPE_FRF_DEFINED
-		| (SPI_CTRLR0_SPI_RXDS_ENABLE << SPI_CTRLR0_SPI_RXDS_EN_OFFSET)
-		| (transfer->ddr << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
-		| (SPI_CTRLR0_INST_L_0bit << SPI_CTRLR0_INST_L_OFFSET)
-		| (transfer->addr_len << SPI_CTRLR0_ADDR_L_OFFSET)
-		| (transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
+	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
+						SPI_CTRLR0_INST_L_0bit);
 
-	ospi->OSPI_SPI_CTRLR0 = val;
-
-	ospi->OSPI_IMR = (SPI_IMR_TX_FIFO_EMPTY_INTERRUPT_MASK
-			| SPI_IMR_TX_FIFO_OVER_FLOW_INTERRUPT_MASK
-			| SPI_IMR_RX_FIFO_UNDER_FLOW_INTERRUPT_MASK
-			| SPI_IMR_RX_FIFO_OVER_FLOW_INTERRUPT_MASK
-			| SPI_IMR_RX_FIFO_FULL_INTERRUPT_MASK
-			| SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK);
+	//Unmask Tx and Rx interrupts.
+	ospi->OSPI_IMR = TX_INTR_MASK | RX_INTR_MASK;
 
 	ospi_enable(ospi);
 }
@@ -287,34 +340,18 @@ void ospi_receive(struct ospi_regs *ospi, struct ospi_transfer *transfer)
  */
 void ospi_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 {
-	uint32_t val;
-
 	ospi_disable(ospi);
 
-	val = ospi->OSPI_CTRLR0;
-	val &= ~(SPI_CTRLR0_SPI_FRF_MASK
-			| (SPI_CTRLR0_TMOD_MASK | SPI_CTRLR0_SSTE_MASK));
-	val |= ((transfer->spi_frf << SPI_CTRLR0_SPI_FRF)
-			| SPI_CTRLR0_TMOD_RECEIVE_ONLY);
-	ospi->OSPI_CTRLR0 = val;
+	ospi->OSPI_CTRLR0 = update_ctrl0_frf_tmode(ospi->OSPI_CTRLR0,
+					transfer->spi_frf,
+					SPI_CTRLR0_TMOD_RECEIVE_ONLY);
 
 	ospi->OSPI_CTRLR1 = transfer->rx_total_cnt - 1;
 
-	val = SPI_TRANS_TYPE_FRF_DEFINED
-		| (SPI_CTRLR0_SPI_RXDS_ENABLE << SPI_CTRLR0_SPI_RXDS_EN_OFFSET)
-		| (transfer->ddr << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
-		| (SPI_CTRLR0_INST_L_8bit << SPI_CTRLR0_INST_L_OFFSET)
-		| (transfer->addr_len << SPI_CTRLR0_ADDR_L_OFFSET)
-		| (transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
+	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
+						SPI_CTRLR0_INST_L_8bit);
 
-	ospi->OSPI_SPI_CTRLR0 = val;
-
-	ospi->OSPI_IMR = (SPI_IMR_TX_FIFO_EMPTY_INTERRUPT_MASK
-			| SPI_IMR_TX_FIFO_OVER_FLOW_INTERRUPT_MASK
-			| SPI_IMR_RX_FIFO_UNDER_FLOW_INTERRUPT_MASK
-			| SPI_IMR_RX_FIFO_OVER_FLOW_INTERRUPT_MASK
-			| SPI_IMR_RX_FIFO_FULL_INTERRUPT_MASK
-			| SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK);
+	ospi->OSPI_IMR = TX_INTR_MASK | RX_INTR_MASK;
 
 	ospi_enable(ospi);
 }
@@ -329,25 +366,14 @@ void ospi_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer)
  */
 void ospi_dma_send(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 {
-	uint32_t val;
-
 	ospi_disable(ospi);
 
-	val = ospi->OSPI_CTRLR0;
-	val &= ~(SPI_CTRLR0_SPI_FRF_MASK
-		| (SPI_CTRLR0_TMOD_MASK | SPI_CTRLR0_SSTE_MASK));
-	val |= ((transfer->spi_frf << SPI_CTRLR0_SPI_FRF)
-		| SPI_CTRLR0_TMOD_SEND_ONLY);
-	ospi->OSPI_CTRLR0 = val;
+	ospi->OSPI_CTRLR0 = update_ctrl0_frf_tmode(ospi->OSPI_CTRLR0,
+					transfer->spi_frf,
+					SPI_CTRLR0_TMOD_SEND_ONLY);
 
-	val = SPI_TRANS_TYPE_FRF_DEFINED
-		| SPI_CTRLR0_SPI_RXDS_ENABLE << SPI_CTRLR0_SPI_RXDS_EN_OFFSET
-		| (transfer->ddr << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
-		| (SPI_CTRLR0_INST_L_8bit << SPI_CTRLR0_INST_L_OFFSET)
-		| (transfer->addr_len << SPI_CTRLR0_ADDR_L_OFFSET)
-		| (transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
-
-	ospi->OSPI_SPI_CTRLR0 = val;
+	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
+						SPI_CTRLR0_INST_L_8bit);
 
 	ospi->OSPI_IMR = SPI_IMR_TX_FIFO_OVER_FLOW_INTERRUPT_MASK;
 
@@ -371,27 +397,16 @@ void ospi_dma_send(struct ospi_regs *ospi, struct ospi_transfer *transfer)
  */
 void ospi_dma_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 {
-	uint32_t val;
-
 	ospi_disable(ospi);
 
-	val = ospi->OSPI_CTRLR0;
-	val &= ~(SPI_CTRLR0_SPI_FRF_MASK
-		| (SPI_CTRLR0_TMOD_MASK | SPI_CTRLR0_SSTE_MASK));
-	val |= ((transfer->spi_frf << SPI_CTRLR0_SPI_FRF)
-		| SPI_CTRLR0_TMOD_RECEIVE_ONLY);
-	ospi->OSPI_CTRLR0 = val;
+	ospi->OSPI_CTRLR0 = update_ctrl0_frf_tmode(ospi->OSPI_CTRLR0,
+					transfer->spi_frf,
+					SPI_CTRLR0_TMOD_RECEIVE_ONLY);
 
 	ospi->OSPI_CTRLR1 = transfer->rx_total_cnt - 1;
 
-	val = SPI_TRANS_TYPE_FRF_DEFINED
-		| (SPI_CTRLR0_SPI_RXDS_ENABLE << SPI_CTRLR0_SPI_RXDS_EN_OFFSET)
-		| (transfer->ddr << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
-		| (SPI_CTRLR0_INST_L_8bit << SPI_CTRLR0_INST_L_OFFSET)
-		| (transfer->addr_len << SPI_CTRLR0_ADDR_L_OFFSET)
-		| (transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
-
-	ospi->OSPI_SPI_CTRLR0 = val;
+	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
+						SPI_CTRLR0_INST_L_8bit);
 
 	ospi->OSPI_TXFTLR &= ~(0xFFU << SPI_TXFTLR_TXFTHR_SHIFT);
 
@@ -563,10 +578,7 @@ void ospi_irq_handler(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 			(SPI_SR_BUSY | SPI_SR_TX_FIFO_EMPTY)) ==
 				SPI_SR_TX_FIFO_EMPTY) {
 			/* Mask the TX interrupts */
-			ospi->OSPI_IMR &=
-				~(SPI_IMR_TX_FIFO_EMPTY_INTERRUPT_MASK |
-				SPI_IMR_TX_FIFO_OVER_FLOW_INTERRUPT_MASK |
-				SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK);
+			ospi->OSPI_IMR &= ~(TX_INTR_MASK);
 
 			transfer->tx_current_cnt = 0;
 			transfer->status = SPI_TRANSFER_STATUS_COMPLETE;
@@ -576,11 +588,7 @@ void ospi_irq_handler(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 	if ((transfer->mode == SPI_TMOD_RX) &&
 		(transfer->rx_total_cnt == transfer->rx_current_cnt)) {
 		/* Mask the RX interrupts */
-		ospi->OSPI_IMR &=
-				~(SPI_IMR_RX_FIFO_UNDER_FLOW_INTERRUPT_MASK |
-				SPI_IMR_RX_FIFO_OVER_FLOW_INTERRUPT_MASK |
-				SPI_IMR_RX_FIFO_FULL_INTERRUPT_MASK |
-				SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK);
+		ospi->OSPI_IMR &= ~(RX_INTR_MASK);
 
 		transfer->rx_current_cnt = 0;
 		transfer->status = SPI_TRANSFER_STATUS_COMPLETE;
@@ -606,10 +614,7 @@ void ospi_irq_handler(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 				~(0xFFU << SPI_TXFTLR_TXFTHR_SHIFT);
 
 			/* Mask the TX interrupts */
-			ospi->OSPI_IMR &=
-			   ~(SPI_IMR_TX_FIFO_EMPTY_INTERRUPT_MASK
-			   | SPI_IMR_TX_FIFO_OVER_FLOW_INTERRUPT_MASK
-			   | SPI_IMR_MULTI_MASTER_CONTENTION_INTERRUPT_MASK);
+			ospi->OSPI_IMR &= ~(TX_INTR_MASK);
 		}
 	}
 
@@ -619,6 +624,7 @@ void ospi_irq_handler(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 	(void) ospi->OSPI_RXUICR;
 	(void) ospi->OSPI_ICR;
 }
+
 
 /**
  * \fn          void ospi_xip_enable(struct ospi_regs *ospi,
@@ -633,41 +639,15 @@ void ospi_irq_handler(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 void ospi_xip_enable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
 			struct ospi_xip_config *xfg)
 {
-	uint32_t val;
-
 	ospi_disable(ospi);
 
 	/* Set OSPI CTRL0 */
-	val = OSPI_CTRLR0_IS_MST
-		|(OCTAL << OSPI_CTRLR0_SPI_FRF_OFFSET)
-		|(0 << OSPI_CTRLR0_SCPOL_OFFSET)
-		|(0 << OSPI_CTRLR0_SCPH_OFFSET)
-		|(0 << OSPI_CTRLR0_SSTE_OFFSET)
-		|(TMODE_RD_ONLY << OSPI_CTRLR0_TMOD_OFFSET)
-		|(SPI_CTRLR0_DFS_16bit << OSPI_CTRLR0_DFS_OFFSET);
-
-	ospi->OSPI_CTRLR0 = val;
-
-	val = (OCTAL << XIP_CTRL_FRF_OFFSET)
-		| (0x2 << XIP_CTRL_TRANS_TYPE_OFFSET)
-		| (XIP_CTRL_ADDR_LEN_36_BIT << XIP_CTRL_ADDR_L_OFFSET)
-		| (XIP_CTRL_INST_LEN_8_BIT << XIP_CTRL_INST_L_OFFSET)
-		| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
-		| (xfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
-		| (0x1 << XIP_CTRL_DFS_HC_OFFSET)
-		| (0x1 << XIP_CTRL_DDR_EN_OFFSET)
-		| (0x0 << XIP_CTRL_INST_DDR_EN_OFFSET)
-		| (0x1 << XIP_CTRL_RXDS_EN_OFFSET)
-		| (0x1 << XIP_CTRL_INST_EN_OFFSET)
-		| (0x0 << XIP_CTRL_CONT_XFER_EN_OFFSET)
-		| (0x0 << XIP_CTRL_XIP_HYPERBUS_EN_OFFSET)
-		| (0x0 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
-		| (0x0 << XIP_CTRL_XIP_MBL_OFFSET)
-		| (0x0 << XIP_CTRL_XIP_PREFETCH_EN_OFFSET)
-		| (xfg->xip_rxds_vl_en << XIP_CTRL_RXDS_VL_EN_OFFSET);
+	ospi->OSPI_CTRLR0 = set_ospi_ctrl0_in_xip(OCTAL,
+					TMODE_RD_ONLY, SPI_CTRLR0_DFS_16bit);
 
 	/* Set OSPI XIP CTRL */
-	ospi->OSPI_XIP_CTRL = val;
+	ospi->OSPI_XIP_CTRL = set_xip_ctrl(xfg->xip_wait_cycles,
+					xfg->xip_rxds_vl_en);
 
 	ospi->OSPI_XIP_INCR_INST = xfg->incr_cmd;
 	ospi->OSPI_XIP_WRAP_INST = xfg->wrap_cmd;
@@ -699,20 +679,13 @@ void ospi_xip_enable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
 void ospi_xip_disable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
 		struct ospi_transfer *transfer, struct ospi_xip_config *xfg)
 {
-	uint32_t val = 0;
+	uint32_t val;
 
 	ospi_disable(ospi);
 
 	/* Set OSPI CTRL0 */
-	val = OSPI_CTRLR0_IS_MST
-		|(OCTAL << OSPI_CTRLR0_SPI_FRF_OFFSET)
-		|(0 << OSPI_CTRLR0_SCPOL_OFFSET)
-		|(0 << OSPI_CTRLR0_SCPH_OFFSET)
-		|(0 << OSPI_CTRLR0_SSTE_OFFSET)
-		|(TMODE_RD_ONLY << OSPI_CTRLR0_TMOD_OFFSET)
-		|(SPI_CTRLR0_DFS_32bit << OSPI_CTRLR0_DFS_OFFSET);
-
-	ospi->OSPI_CTRLR0 = val;
+	ospi->OSPI_CTRLR0 = set_ospi_ctrl0_in_xip(OCTAL,
+					TMODE_RD_ONLY, SPI_CTRLR0_DFS_32bit);
 
 	val = SPI_TRANS_TYPE_FRF_DEFINED
 		|((transfer->ddr) << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
