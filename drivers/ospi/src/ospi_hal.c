@@ -341,7 +341,8 @@ int32_t alif_hal_ospi_irq_handler(HAL_OSPI_Handle_T handle)
 						ospi_inst->user_data);
 	}
 
-	if (ospi_inst->transfer.status == SPI_TRANSFER_STATUS_OVERFLOW) {
+	if (ospi_inst->transfer.status == SPI_TRANSFER_STATUS_OVERFLOW ||
+	ospi_inst->transfer.status == SPI_TRANSFER_STATUS_RX_UNDERFLOW) {
 		ospi_inst->transfer.status = SPI_TRANSFER_STATUS_NONE;
 
 		/* update event Status */
