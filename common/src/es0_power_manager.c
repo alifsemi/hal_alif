@@ -122,8 +122,6 @@ int8_t take_es0_into_use(void)
 		int err;
 		uint32_t version;
 
-		/* Synch at boot allways */
-		se_service_sync();
 		err = se_service_get_toc_version(&version);
 		if (err) {
 			return err;
