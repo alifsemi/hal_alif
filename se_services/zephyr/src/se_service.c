@@ -761,6 +761,7 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
  * parameters,
  * @nvds_buff - placeholder for NVDS data.
  * @nvds_size - length of the passed NVDS buff
+ * @clock_select - ES0 uart and main clock selection
  *
  * returns,
  * 0        - success.
@@ -768,7 +769,7 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
  * errno    - unable to unlock mutex.
  * resp_err - Error in service response for the requested service.
  */
-int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size)
+int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select)
 {
 	int err, resp_err;
 	uint32_t version;
@@ -793,8 +794,7 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size)
 	se_service_all_svc_d.boot_svc_d.send_trng_len = 64;
 	if (version > 0x01650000) {
 		/* additional fields are added only when SE supports it */
-		se_service_all_svc_d.boot_svc_d.send_es0_clock_select =
-			CONFIG_SE_SERVICE_RF_CORE_FREQUENCY;
+		se_service_all_svc_d.boot_svc_d.send_es0_clock_select = clock_select;
 	}
 
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.boot_svc_d,

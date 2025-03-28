@@ -51,6 +51,8 @@ LOG_MODULE_REGISTER(LOG_MODULE_NAME);
 
 #define MODULE_VERSION_1_1_0 0x10100
 
+#define HAL_MSG_TIMEOUT_MS 200
+
 /*
  * Static variables
  */
@@ -120,8 +122,8 @@ void alif_hal_msg_wait(struct msg_buf *p_msg_ptr)
 	resp_msg_ptr = p_msg_ptr;
 	p_msg_ptr->msg_len = 0;
 
-	if (k_sem_take(&ahi_receive_sem, K_MSEC(1000)) != 0) {
-		LOG_ERR("uart read timeout!");
+	if (k_sem_take(&ahi_receive_sem, K_MSEC(HAL_MSG_TIMEOUT_MS)) != 0) {
+		LOG_ERR("uart read timeout!, %u", p_msg_ptr->rsp_msg);
 	}
 }
 
