@@ -318,6 +318,10 @@ struct ospi_aes_regs {
 #define AES_CONTROL_XIP_EN              (1U << 4)
 #define AES_CONTROL_DECRYPT_EN          (1U << 0)
 
+/* AES_INTR_MASK fields */
+#define AES_INTR_MASK_BAUD2_DELAY       30U
+#define AES_INTR_MASK_BAUD2_DELAY_MASK  (1U << AES_INTR_MASK_BAUD2_DELAY)
+
 /**
  * enum spi_frame_format.
  * SPI frame formats.
@@ -476,6 +480,29 @@ static inline void ospi_set_bus_speed(struct ospi_regs *ospi,
 	ospi_disable(ospi);
 	ospi->OSPI_BAUDR = (clk / speed);
 	ospi_enable(ospi);
+}
+
+/***
+ * \fn          static inline void ospi_aes_set_baud2_delay(struct ospi_aes_regs *aes,
+ *                                                          bool baud2_delay_en)
+ * \brief       Enable or disable BAUD2 delay
+ * \param[in]   ospi    Pointer to the AES register map
+ * \param[in]   baud2_delay_en  Enable \c true or disable \c false
+ * \return      none
+ */
+static inline void ospi_aes_set_baud2_delay(struct ospi_aes_regs *aes,
+	bool baud2_delay_en)
+{
+#if defined(CONFIG_SOC_SERIES_ENSEMBLE_E1C) || defined(CONFIG_SOC_SERIES_BALLETTO_B1)
+	if (baud2_delay_en) {
+		aes->AES_INTR_MASK |= AES_INTR_MASK_BAUD2_DELAY_MASK;
+	} else {
+		aes->AES_INTR_MASK &= ~AES_INTR_MASK_BAUD2_DELAY_MASK;
+	}
+#else
+	(void)aes;
+	(void)baud2_delay_en;
+#endif
 }
 
 /***

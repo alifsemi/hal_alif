@@ -140,6 +140,22 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 
 	aes_regs->AES_RXDS_DLY = init_d->rx_ds_delay;
 
+	switch (init_d->baud2_delay) {
+	case OSPI_BAUD2_DELAY_DISABLE:
+		ospi_aes_set_baud2_delay(aes_regs, false);
+		break;
+	case OSPI_BAUD2_DELAY_ENABLE:
+		ospi_aes_set_baud2_delay(aes_regs, true);
+		break;
+
+	case OSPI_BAUD2_DELAY_AUTO:
+	    /* 'automatic' setting based on divisor */
+		ospi_aes_set_baud2_delay(aes_regs, ospi_regs->OSPI_BAUDR == 2);
+		break;
+	default:
+		return OSPI_ERR_INVALID_PARAM;
+	}
+
 	return OSPI_ERR_NONE;
 }
 

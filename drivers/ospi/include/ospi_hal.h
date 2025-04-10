@@ -60,6 +60,16 @@ typedef int8_t HAL_OSPI_Handle_T;
 
 typedef void hal_event_notify_cb(uint32_t event, void *u_data);
 
+/**
+ * enum ospi_baud2_delay
+ * BAUD2 delay configuration
+ */
+enum ospi_baud2_delay {
+	OSPI_BAUD2_DELAY_DISABLE = 0,
+	OSPI_BAUD2_DELAY_ENABLE = 1,
+	OSPI_BAUD2_DELAY_AUTO = 2 /* Set BAUD2 delay based on calculated BAUDR divisor */
+};
+
 /*---- OSPI Event ---------------------*/
 struct ospi_init {
 	uint32_t  bus_speed;                    /* Contrllor speed. */
@@ -70,6 +80,7 @@ struct ospi_init {
 	uint32_t  core_clk;                     /* System Clock */
 	uint32_t  cs_pin;                       /* Slave Pin */
 	uint32_t  rx_ds_delay;                  /* Rx-DS Delay */
+	enum ospi_baud2_delay baud2_delay;      /* BAUD2 delay initial setting */
 
 	uint32_t  *base_regs;                   /* OSPI REG */
 	uint32_t  *aes_regs;                    /* AES REG */
