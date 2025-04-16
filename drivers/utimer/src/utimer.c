@@ -257,3 +257,53 @@ void alif_utimer_set_driver_disable_val_low(uint32_t reg_base, uint8_t driver)
 	}
 }
 
+void alif_utimer_config_src1_trig_up_count(uint32_t reg_base, uint32_t triggers)
+{
+	REG(UTIMER_UP_1_SRC(reg_base)) |= triggers;
+}
+
+void alif_utimer_config_src1_trig_down_count(uint32_t reg_base, uint32_t triggers)
+{
+	REG(UTIMER_DOWN_1_SRC(reg_base)) |= triggers;
+}
+
+void alif_utimer_config_src1_trig_cntr_clear(uint32_t reg_base, uint32_t triggers)
+{
+	REG(UTIMER_CLEAR_1_SRC(reg_base)) |= triggers;
+}
+
+void alif_utimer_config_qdec_triggers(uint32_t reg_base)
+{
+	uint32_t up_trigs, down_trigs;
+
+	/* triggers to increment counter */
+	up_trigs = CNTR_SRC1_DRIVER_A_RISING_B_0 | CNTR_SRC1_DRIVER_A_FALLING_B_1 |
+			CNTR_SRC1_DRIVER_B_RISING_A_1 | CNTR_SRC1_DRIVER_B_FALLING_A_0;
+	/* triggers to decrement counter */
+	down_trigs = CNTR_SRC1_DRIVER_A_RISING_B_1 | CNTR_SRC1_DRIVER_A_FALLING_B_0 |
+			CNTR_SRC1_DRIVER_B_FALLING_A_1 | CNTR_SRC1_DRIVER_B_RISING_A_0;
+
+	alif_utimer_config_src1_trig_up_count(reg_base, up_trigs);
+	alif_utimer_config_src1_trig_down_count(reg_base, down_trigs);
+}
+
+void alif_utimer_enable_filter(uint32_t reg_base, uint8_t prescaler, uint8_t taps)
+{
+	uint32_t reg;
+
+	reg = REG(UTIMER_FILTER_CTRL_A(reg_base));
+	reg &= ~(CHAN_FILTER_CTRL_FILTER_PRESCALER_Msk | CHAN_FILTER_CTRL_FILTER_TAPS_Msk);
+	reg |= (prescaler | taps | CHAN_FILTER_CTRL_FILTER_EN);
+	REG(UTIMER_FILTER_CTRL_A(reg_base)) = reg;
+
+	reg = REG(UTIMER_FILTER_CTRL_B(reg_base));
+	reg &= ~(CHAN_FILTER_CTRL_FILTER_PRESCALER_Msk | CHAN_FILTER_CTRL_FILTER_TAPS_Msk);
+	reg |= (prescaler | taps | CHAN_FILTER_CTRL_FILTER_EN);
+	REG(UTIMER_FILTER_CTRL_B(reg_base)) = reg;
+}
+
+void alif_utimer_disable_filter(uint32_t reg_base)
+{
+	REG(UTIMER_FILTER_CTRL_A(reg_base)) &= ~CHAN_FILTER_CTRL_FILTER_EN;
+	REG(UTIMER_FILTER_CTRL_B(reg_base)) &= ~CHAN_FILTER_CTRL_FILTER_EN;
+}
