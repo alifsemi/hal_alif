@@ -122,8 +122,6 @@ int8_t take_es0_into_use(void)
 		int err;
 		uint32_t version;
 
-		/* Synch at boot allways */
-		se_service_sync();
 		err = se_service_get_toc_version(&version);
 		if (err) {
 			return err;
@@ -133,6 +131,10 @@ int8_t take_es0_into_use(void)
 			/* Shuttdown is needed if riscv was already active */
 			se_service_shutdown_es0();
 		}
+	} else {
+		/* Already started */
+		es0_user_counter++;
+		return 0;
 	}
 
 	static uint8_t ll_boot_params_buffer[LL_BOOT_PARAMS_MAX_SIZE];
@@ -207,6 +209,7 @@ int8_t take_es0_into_use(void)
 	uint32_t min_uart_clk_freq = CONFIG_ALIF_PM_LL_UART_BAUDRATE * 16;
 	uint32_t reg_uart_clk_cfg = LL_UART_CLK_SEL_CTRL_16MHZ;
 	uint32_t ll_uart_clk_freq = 16000000;
+	uint32_t es0_clock_select = CONFIG_SE_SERVICE_RF_CORE_FREQUENCY;
 
 	/* UART input clock can be configured as 16/24/48Mhz */
 	if (min_uart_clk_freq > 16000000) {
@@ -218,9 +221,10 @@ int8_t take_es0_into_use(void)
 			reg_uart_clk_cfg = LL_UART_CLK_SEL_CTRL_48MHZ;
 		}
 	}
+	/* Add UART clock slect */
+	es0_clock_select |= reg_uart_clk_cfg;
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_UART_INPUT_CLK_FREQ, ll_uart_clk_freq,
 			    BOOT_PARAM_LEN_UART_INPUT_CLK_FREQ);
-	*(uint32_t volatile *)LL_CLK_SEL_CTRL_REG_ADDR = reg_uart_clk_cfg;
 
 	if (total_length < (LL_BOOT_PARAMS_MAX_SIZE - 2)) {
 		ptr = write_tlv_int(ptr, BOOT_PARAM_ID_NO_PARAM, 0, 0);
@@ -231,11 +235,11 @@ int8_t take_es0_into_use(void)
 		return -3;
 	}
 
-	if (es0_user_counter || 0 == se_service_boot_es0(ll_boot_params_buffer, total_length)) {
-		es0_user_counter++;
-	} else {
+	if (se_service_boot_es0(ll_boot_params_buffer, total_length, es0_clock_select)) {
 		return -4;
 	}
+
+	es0_user_counter++;
 	return 0;
 }
 

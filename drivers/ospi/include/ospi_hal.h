@@ -19,18 +19,18 @@
 #define OSPI_DDR_DISABLE                   0x0     /* Disable DDR Mode */
 #define OSPI_DDR_ENABLE                    0x1     /* Enable DDR Mode */
 
-#define OSPI_FRF_STANDRAD                  0x0      /* 0x0 Standard OSPI Format */
+#define OSPI_FRF_STANDRAD                  0x0      /* 0x0 Std OSPI Format */
 #define OSPI_FRF_DUAL                      0x1      /* 0x1 Dual OSPI Format */
 #define OSPI_FRF_QUAD                      0x2      /* 0X2 Quad OSPI Format */
 #define OSPI_FRF_OCTAL                     0x3      /* 0X2 Octal OSPI Format */
 
 /*---- OSPI Slave Select Signal definitions ----*/
-#define OSPI_SS_INACTIVE                   0UL      /* OSPI Slave Select Signal Inactive */
-#define OSPI_SS_ACTIVE                     1UL      /* OSPI Slave Select Signal Active */
+#define OSPI_SS_INACTIVE                   0UL      /* Slave Select  Inactive */
+#define OSPI_SS_ACTIVE                     1UL      /* Slave Select  Active */
 
 /*---- OSPI Event ---------------------*/
-#define OSPI_EVENT_TRANSFER_COMPLETE (1UL << 0)     /* Data Transfer completed */
-#define OSPI_EVENT_DATA_LOST         (1UL << 1)     /* Data lost: Rx overflow / Tx underflow */
+#define OSPI_EVENT_TRANSFER_COMPLETE (1UL << 0)     /* Transfer completed */
+#define OSPI_EVENT_DATA_LOST         (1UL << 1)     /* Rx o-flow / Tx u-flow */
 #define OSPI_EVENT_MODE_FAULT        (1UL << 2)     /* Master Mode Fault */
 
 /*---- OSPI Event ---------------------*/
@@ -42,16 +42,16 @@
 
 /*---- OSPI Status ---------------------*/
 struct ospi_status {
-	uint32_t busy       : 1;              /* Transmitter/Receiver busy flag */
-	uint32_t data_lost  : 1;              /* Data lost: Rx overflow / Tx underflow */
-	uint32_t mode_fault : 1;              /* Mode fault detected; optional */
+	uint32_t busy       : 1;              /* Tx/Rx busy flag */
+	uint32_t data_lost  : 1;              /* Rx o-flow / Tx u-flow */
+	uint32_t mode_fault : 1;              /* Mode fault detected */
 	uint32_t reserved   : 29;
 };
 
 /*---- OSPI State ---------------------*/
 struct ospi_driver_state {
-	uint32_t initialized: 1;                /* SPI driver initialized status */
-	uint32_t powered    : 1;                /* SPI driver powered status */
+	uint32_t initialized: 1;                /* Initialized status */
+	uint32_t powered    : 1;                /* Powered status */
 	uint32_t reserved   : 30;               /* Reserved */
 };
 
@@ -59,6 +59,16 @@ struct ospi_driver_state {
 typedef int8_t HAL_OSPI_Handle_T;
 
 typedef void hal_event_notify_cb(uint32_t event, void *u_data);
+
+/**
+ * enum ospi_baud2_delay
+ * BAUD2 delay configuration
+ */
+enum ospi_baud2_delay {
+	OSPI_BAUD2_DELAY_DISABLE = 0,
+	OSPI_BAUD2_DELAY_ENABLE = 1,
+	OSPI_BAUD2_DELAY_AUTO = 2 /* Set BAUD2 delay based on calculated BAUDR divisor */
+};
 
 /*---- OSPI Event ---------------------*/
 struct ospi_init {
@@ -70,12 +80,20 @@ struct ospi_init {
 	uint32_t  core_clk;                     /* System Clock */
 	uint32_t  cs_pin;                       /* Slave Pin */
 	uint32_t  rx_ds_delay;                  /* Rx-DS Delay */
+	enum ospi_baud2_delay baud2_delay;      /* BAUD2 delay initial setting */
 
 	uint32_t  *base_regs;                   /* OSPI REG */
 	uint32_t  *aes_regs;                    /* AES REG */
 
 	void      *user_data;                   /* User data*/
 	hal_event_notify_cb *event_cb;          /* Event Callback*/
+
+	uint16_t  xip_wrap_cmd;			/* WRAP OpCode*/
+	uint16_t  xip_incr_cmd;			/* INCR mode OpCode*/
+	uint16_t  xip_cnt_time_out;		/* Timeout value*/
+	uint16_t  xip_aes_rxds_dly;		/* AES RxDS Delay*/
+	uint16_t  xip_wait_cycles;		/* XiP Wait Cycle*/
+	uint16_t  xip_rxds_vl_en;		/* XiP RxDS variable latency*/
 };
 
 /*---- OSPI Event ---------------------*/
@@ -89,6 +107,7 @@ struct ospi_trans_config {
 	uint8_t  ddr_enable;            /* Enable DDR Mode */
 	uint8_t  rx_ds_enable;          /* Read Data Strobe Enable */
 };
+
 
 /**
  * \fn          alif_hal_ospi_initialize
@@ -160,6 +179,24 @@ int32_t alif_hal_ospi_receive(HAL_OSPI_Handle_T handle,
  * \return      0 on Success, else error code.
  */
 int32_t alif_hal_ospi_irq_handler(HAL_OSPI_Handle_T handle);
+
+
+/**
+ * \fn          alif_hal_ospi_xip_enable
+ * \brief       Enable XiP.
+ * \param[in]   handle  Instance handlerd
+ * \return      0 on Success, else error code.
+ */
+int32_t alif_hal_ospi_xip_enable(HAL_OSPI_Handle_T handle);
+
+/**
+ * \fn          alif_hal_ospi_xip_enable
+ * \brief       Disable XiP.
+ * \param[in]   handle  Instance handlerd
+ * \return      0 on Success, else error code.
+ */
+int32_t alif_hal_ospi_xip_disable(HAL_OSPI_Handle_T handle);
+
 
 /**
  * \fn          alif_hal_ospi_deinit
