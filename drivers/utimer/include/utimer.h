@@ -67,17 +67,25 @@
 #define UTIMER_FAULT_CTRL(timer_addr)		(timer_addr + 0x0134U)
 
 /* Bit definition for TIMER_RegInfo:cntr_start_src_1 register */
+#define CNTR_SRC1_DRIVER_A_RISING_B_0		(1 << 0)
+#define CNTR_SRC1_DRIVER_A_RISING_B_1		(1 << 1)
+#define CNTR_SRC1_DRIVER_A_FALLING_B_0		(1 << 2)
+#define CNTR_SRC1_DRIVER_A_FALLING_B_1		(1 << 3)
+#define CNTR_SRC1_DRIVER_B_RISING_A_0		(1 << 4)
+#define CNTR_SRC1_DRIVER_B_RISING_A_1		(1 << 5)
+#define CNTR_SRC1_DRIVER_B_FALLING_A_0		(1 << 6)
+#define CNTR_SRC1_DRIVER_B_FALLING_A_1		(1 << 7)
 #define CNTR_SRC1_PGM_EN_BIT			31U
 #define CNTR_SRC1_PGM_EN			(1 << CNTR_SRC1_PGM_EN_BIT)
 
 /* Bit definition for TIMER_RegInfo:cntr_ctrl register */
 #define CNTR_CTRL_EN_BIT			0U
 #define CNTR_CTRL_EN				(1 << CNTR_CTRL_EN_BIT)
-#define CNTR_CTRL_RUNNING_BIT		1U
+#define CNTR_CTRL_RUNNING_BIT			1U
 #define CNTR_CTRL_RUNNING			(1 << CNTR_CTRL_RUNNING_BIT)
-#define CNTR_CTRL_SAWTOOTH_BIT		2U
+#define CNTR_CTRL_SAWTOOTH_BIT			2U
 #define CNTR_CTRL_SAWTOOTH			(0 << CNTR_CTRL_SAWTOOTH_BIT)
-#define CNTR_CTRL_SAWTOOTH_ONE_SHOT	(1 << CNTR_CTRL_SAWTOOTH_BIT)
+#define CNTR_CTRL_SAWTOOTH_ONE_SHOT		(1 << CNTR_CTRL_SAWTOOTH_BIT)
 #define CNTR_CTRL_TRIANGLE_BUF_TROUGH_BIT	4U
 #define CNTR_CTRL_TRIANGLE_BUF_TROUGH		\
 				(1 << CNTR_CTRL_TRIANGLE_BUF_TROUGH_BIT)
@@ -151,7 +159,16 @@
 				(1 << CHAN_INTERRUPT_OVER_FLOW_BIT)
 
 /* Bit definition for TIMER_RegInfo:chan_status register */
-#define CHAN_STATUS_INTERRUPT_MASK				0xC3U
+#define CHAN_STATUS_INTERRUPT_MASK			0xC3U
+
+/* Bit definition for TIMER_RegInfo:filter_ctrl register */
+#define CHAN_FILTER_CTRL_FILTER_EN_BIT			0U
+#define CHAN_FILTER_CTRL_FILTER_EN			\
+				(1 << CHAN_FILTER_CTRL_FILTER_EN_BIT)
+#define CHAN_FILTER_CTRL_FILTER_TAPS_BIT		8U
+#define CHAN_FILTER_CTRL_FILTER_TAPS_Msk		0xF
+#define CHAN_FILTER_CTRL_FILTER_PRESCALER_BIT		16U
+#define CHAN_FILTER_CTRL_FILTER_PRESCALER_Msk		0x3F
 
 /* Bit definition for TIMER_RegInfo:glb_cntr_start register */
 #define GLB_CNTR_START				((uint32_t)0x0000FFFF)
@@ -503,5 +520,65 @@ void alif_utimer_set_driver_disable_val_high(uint32_t reg_base,
 void alif_utimer_set_driver_disable_val_low(uint32_t reg_base,
 			uint8_t driver);
 
+/**
+ * \fn  void alif_utimer_config_src1_trig_up_count(uint32_t reg_base,
+ *                     uint32_t triggers)
+ * \brief     config source 1 triggers to increment the counter.
+ * \param[in] reg_base  register base address
+ * \param[in] triggers  triggers to be set
+ * \return    none
+ */
+void alif_utimer_config_src1_trig_up_count(uint32_t reg_base,
+			uint32_t triggers);
+
+/**
+ * \fn  void alif_utimer_config_src1_trig_down_count(uint32_t reg_base,
+ *                     uint32_t triggers)
+ * \brief     config source 1 triggers to decrement the counter.
+ * \param[in] reg_base  register base address
+ * \param[in] triggers  triggers to be set
+ * \return    none
+ */
+void alif_utimer_config_src1_trig_down_count(uint32_t reg_base,
+			uint32_t triggers);
+
+/**
+ * \fn  void alif_utimer_config_src1_trig_cntr_clear(uint32_t reg_base,
+ *                     uint32_t triggers)
+ * \brief     config source 1 triggers to clear the counter.
+ * \param[in] reg_base  register base address
+ * \param[in] triggers  triggers to be set
+ * \return    none
+ */
+void alif_utimer_config_src1_trig_cntr_clear(uint32_t reg_base,
+			uint32_t triggers);
+
+/**
+ * \fn  void alif_utimer_config_qdec_triggers(uint32_t reg_base)
+ * \brief     configure input triggers for QDEC.
+ * \param[in] reg_base  register base address
+ * \return    none
+ */
+void alif_utimer_config_qdec_triggers(uint32_t reg_base);
+
+/**
+ * \fn  void alif_utimer_enable_filter(uint32_t reg_base, uint8_t prescaler,
+ *                     uint8_t taps)
+ * \brief     enable input filters with provided configs.
+ * \param[in] reg_base  register base address
+ * \param[in] prescaler filter prescaler value
+ * \param[in] taps      number of filter taps
+ * \return    none
+ */
+void alif_utimer_enable_filter(uint32_t reg_base, uint8_t prescaler,
+			uint8_t taps);
+
+/**
+ * \fn  void alif_utimer_disable_filter(uint32_t reg_base)
+ * \brief     disable input filters.
+ * \param[in] reg_base  register base address
+ * \return    none
+ */
+void alif_utimer_disable_filter(uint32_t reg_base);
 
 #endif /* UTIMER_H_ */
