@@ -28,6 +28,7 @@ config ALIF_BLE_HOST
 	depends on HAS_ALIF_BLE_ROM_IMAGE
 	select FPU
 	select HAVE_CUSTOM_LINKER_SCRIPT
+	select USE_ALIF_HAL_UTIMER
 	help
 	  This option enables Alif Semiconductor's BLE Host Stack.
 
