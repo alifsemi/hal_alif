@@ -54,12 +54,6 @@ config ALIF_PM_RSSI_INTERF_THR
 	int "RSSI interference threshold"
 	default -70
 
-# TODO: change default to 3000000 in final product
-config ALIF_PM_LL_UART_BAUDRATE
-	int "UART baudrate between cores. Must match with application's baudrate"
-	range 115200 3000000
-	default 1000000
-
 config ALIF_EXT_WAKEUP_TIME
 	int "External wakeup time needed (us)"
 	default 25000

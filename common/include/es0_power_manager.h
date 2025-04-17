@@ -23,29 +23,33 @@ enum core_error_t {
 
 /**
  * @brief Register a user of a ES0
- * @return  -1 If too many users
- *          -2 If calculated size of boot params > 512
- *          -3 If calculated size of boot params differs from actual size.
- *          -4 Starting ES0 failed
+ * @param baudrate Baudrate used in host side will be passed to LL. All instances must
+ * 		   use same so once set it can only be changed by stopping all instances
+ * 		   first and then reinitialize with new value
+ * @retval  0 If successful
+ * @retval  -1 If too many users
+ * @retval  -2 If calculated size of boot params > 512
+ * @retval  -3 If calculated size of boot params differs from actual size.
+ * @retval  -4 Starting ES0 failed
+ * @retval  -5 Baudrate has not been set for HCI/AHI UARTs
+ * @retval  -6 Baudrate mismatch
  */
 int8_t take_es0_into_use(void);
 
 /**
  * @brief De-register a user of a ES0
- * @return  -1 If no active users
- *          -2 Shutdown of ES0 failed
+ * @retval  -1 If no active users
+ * @retval  -2 Shutdown of ES0 failed
  */
 int8_t stop_using_es0(void);
 
 /**
  * @brief wakeup ES0 using uart
- * 
+ *
  * ES0 needs to be woken once per boot and should then remain active
  * until ES1 is powered off.
- * 
+ *
  * This function can be called as many times during the boot.
- * 
- * @return 
  */
 void wake_es0(const struct device *uart_dev);
 

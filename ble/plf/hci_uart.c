@@ -167,3 +167,4 @@ bool hci_uart_flow_off(void)
 	/* TODO */
 	return true;
 }
+
