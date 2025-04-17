@@ -1,0 +1,7 @@
+zephyr_include_directories( include )
+zephyr_library()
+zephyr_library_sources(src/usbd_dwc3_bulk_transfer.c)
+zephyr_library_sources(src/usbd_dwc3_control_transfer.c)
+zephyr_library_sources(src/usbd_dwc3_endpoint_create.c)
+zephyr_library_sources(src/usbd_dwc3_initialize.c)
+zephyr_library_sources(src/usbd_dwc3_interrupt_handler.c)
