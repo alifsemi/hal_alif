@@ -18,4 +18,11 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 void hci_uart_flow_on(void);
 bool hci_uart_flow_off(void);
 
+/**
+ * @brief Get baudrate used by HCI UART
+ *
+ * @return the baudrate in use, e.g. 1000000
+ */
+uint32_t hci_uart_get_baudrate(void);
+
 #endif /* HCI_UART_H_ */

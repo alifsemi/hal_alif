@@ -167,3 +167,13 @@ bool hci_uart_flow_off(void)
 	/* TODO */
 	return true;
 }
+
+uint32_t hci_uart_get_baudrate(void)
+{
+	if (!IS_ENABLED(CONFIG_UART_USE_RUNTIME_CONFIGURE)) {
+		__ASSERT(0, "Baudrate must be readable from the UART driver");
+	}
+	struct uart_config cfg;
+	uart_config_get(uart_dev, &cfg);
+	return cfg.baudrate;
+}

@@ -174,7 +174,7 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 		__ASSERT(0 == ret, "Failed to initialise sync timer");
 
 		/* hci_open calls this so should not be called here */
-		if (0 != take_es0_into_use()) {
+		if (0 != take_es0_into_use(hci_uart_get_baudrate())) {
 			__ASSERT(0, "Failed to boot ESO");
 		}
 
