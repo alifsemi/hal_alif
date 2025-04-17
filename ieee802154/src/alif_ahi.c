@@ -10,6 +10,7 @@
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/__assert.h>
 
 #include "alif_ahi.h"
 #include "es0_power_manager.h"
@@ -97,6 +98,16 @@ int alif_ahi_msg_send(struct msg_buf *p_msg, const uint8_t *p_data, uint16_t dat
 		}
 	}
 	return 0;
+}
+
+uint32_t alif_ahi_get_baudrate(void)
+{
+	if (!IS_ENABLED(CONFIG_UART_USE_RUNTIME_CONFIGURE)) {
+		__ASSERT(0, "Baudrate must be readable from the UART driver");
+	}
+	struct uart_config cfg;
+	uart_config_get(uart_dev, &cfg);
+	return cfg.baudrate;
 }
 
 int alif_ahi_reset(void)

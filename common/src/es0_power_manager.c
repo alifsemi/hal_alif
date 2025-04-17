@@ -15,6 +15,8 @@
 static volatile uint8_t es0_user_counter;
 static uint32_t wakeup_count;
 
+static uint32_t baudrate_in_use = 0;
+
 #define LL_BOOT_PARAMS_MAX_SIZE (512)
 
 #define LL_CLK_SEL_CTRL_REG_ADDR   0x1A60201C
@@ -62,6 +64,13 @@ static uint32_t wakeup_count;
 #define BOOT_PARAM_LEN_OSC_WAKEUP_TIME           2
 #define BOOT_PARAM_LEN_RM_WAKEUP_TIME            2
 #define BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME  2
+
+#define ES0_PM_ERROR_NO_ERROR	 		 0
+#define ES0_PM_ERROR_TOO_MANY_USERS		 -1
+#define ES0_PM_ERROR_TOO_MANY_BOOT_PARAMS	 -2
+#define ES0_PM_ERROR_INVALID_BOOT_PARAMS	 -3
+#define ES0_PM_ERROR_START_FAILED		 -4
+#define ES0_PM_ERROR_BAUDRATE_MISMATCH		 -5
 
 static uint8_t *write_tlv_int(uint8_t *target, uint8_t tag, uint32_t value, uint8_t len)
 {
@@ -112,11 +121,16 @@ static void alif_eui48_read(uint8_t *eui48)
 	se_service_get_rnd_num(&eui48[3], 3);
 }
 
-int8_t take_es0_into_use(void)
+int8_t take_es0_into_use(uint32_t baudrate)
 {
 	if (255 == es0_user_counter) {
-		return -1;
+		return ES0_PM_ERROR_TOO_MANY_USERS;
 	}
+
+	if (baudrate_in_use && baudrate != baudrate_in_use) {
+		return ES0_PM_ERROR_BAUDRATE_MISMATCH;
+	}
+	baudrate_in_use = baudrate;
 
 	if (es0_user_counter == 0) {
 		int err;
@@ -134,7 +148,7 @@ int8_t take_es0_into_use(void)
 	} else {
 		/* Already started */
 		es0_user_counter++;
-		return 0;
+		return ES0_PM_ERROR_NO_ERROR;
 	}
 
 	static uint8_t ll_boot_params_buffer[LL_BOOT_PARAMS_MAX_SIZE];
@@ -162,7 +176,7 @@ int8_t take_es0_into_use(void)
 	total_length += (18 * 3); /* Each write_tlv_x call writes additional 3 bytes */
 
 	if (total_length > LL_BOOT_PARAMS_MAX_SIZE) {
-		return -2;
+		return ES0_PM_ERROR_TOO_MANY_BOOT_PARAMS;
 	}
 
 	uint8_t bd_address[BOOT_PARAM_LEN_BD_ADDRESS];
@@ -232,15 +246,15 @@ int8_t take_es0_into_use(void)
 	}
 
 	if (total_length != (ptr - ll_boot_params_buffer)) {
-		return -3;
+		return ES0_PM_ERROR_INVALID_BOOT_PARAMS;
 	}
 
 	if (se_service_boot_es0(ll_boot_params_buffer, total_length, es0_clock_select)) {
-		return -4;
+		return ES0_PM_ERROR_START_FAILED;
 	}
 
 	es0_user_counter++;
-	return 0;
+	return ES0_PM_ERROR_NO_ERROR;
 }
 
 int8_t stop_using_es0(void)
@@ -250,6 +264,7 @@ int8_t stop_using_es0(void)
 	}
 	es0_user_counter--;
 	if (!es0_user_counter) {
+		baudrate_in_use = 0;
 		if (se_service_shutdown_es0()) {
 			return -2;
 		}

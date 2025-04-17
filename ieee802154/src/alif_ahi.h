@@ -41,6 +41,13 @@ int alif_ahi_msg_send(struct msg_buf *p_msg, const uint8_t *p_data, uint16_t dat
 void alif_ahi_init(msg_received_callback callback);
 
 /**
+ * @brief Get baudrate used by AHI
+ *
+ * @return the baudrate in use, e.g. 1000000
+ */
+uint32_t alif_ahi_get_baudrate(void);
+
+/**
  * @brief Reset the AHI subsystem
  *
  */

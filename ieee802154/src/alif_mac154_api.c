@@ -140,7 +140,7 @@ void alif_mac154_init(struct alif_mac154_api_cb *p_api)
 	api_cb.rx_frame_recv_cb = p_api->rx_frame_recv_cb;
 	api_cb.rx_status_cb = p_api->rx_status_cb;
 	alif_ahi_init(ahi_msg_received_callback);
-	int ret = take_es0_into_use(); /* temporary direct stuff */
+	int ret = take_es0_into_use(alif_ahi_get_baudrate()); /* temporary direct stuff */
 
 	LOG_INF("boot SE0 ret:%d", ret);
 }

@@ -23,12 +23,17 @@ enum core_error_t {
 
 /**
  * @brief Register a user of a ES0
- * @return  -1 If too many users
+ * @param baudrate Baudrate used in host side will be passed to LL. All instances must
+ * 		   use same so once set it can only be changed by stopping all instances
+ * 		   first and then reinitialize with new value
+ * @return  0 If successful
+ * 	    -1 If too many users
  *          -2 If calculated size of boot params > 512
  *          -3 If calculated size of boot params differs from actual size.
  *          -4 Starting ES0 failed
+ * 	    -5 Baudrate mismatch
  */
-int8_t take_es0_into_use(void);
+int8_t take_es0_into_use(uint32_t baudrate);
 
 /**
  * @brief De-register a user of a ES0
@@ -39,13 +44,13 @@ int8_t stop_using_es0(void);
 
 /**
  * @brief wakeup ES0 using uart
- * 
+ *
  * ES0 needs to be woken once per boot and should then remain active
  * until ES1 is powered off.
- * 
+ *
  * This function can be called as many times during the boot.
- * 
- * @return 
+ *
+ * @return
  */
 void wake_es0(const struct device *uart_dev);
 
