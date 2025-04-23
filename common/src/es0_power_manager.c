@@ -94,6 +94,17 @@ static uint8_t *write_tlv_str(uint8_t *target, uint8_t tag, const void *value, u
 	return target;
 }
 
+static const void *bdaddr_reverse(const uint8_t src[6])
+{
+	static uint8_t rev[6];
+
+	for (int i = 0; i < 6; ++i) {
+		rev[i] = src[5 - i];
+	}
+
+	return rev;
+}
+
 static void alif_eui48_read(uint8_t *eui48)
 {
 #ifdef ALIF_IEEE_MA_L_IDENTIFIER
@@ -175,7 +186,8 @@ int8_t take_es0_into_use(void)
 			    BOOT_PARAM_LEN_DFT_SLAVE_MD);
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_CH_CLASS_REP_INTV, CONFIG_ALIF_PM_CH_CLASS_REP_INTV,
 			    BOOT_PARAM_LEN_CH_CLASS_REP_INTV);
-	ptr = write_tlv_str(ptr, BOOT_PARAM_ID_BD_ADDRESS, bd_address, BOOT_PARAM_LEN_BD_ADDRESS);
+	ptr = write_tlv_str(ptr, BOOT_PARAM_ID_BD_ADDRESS, bdaddr_reverse(bd_address),
+				BOOT_PARAM_LEN_BD_ADDRESS);
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_ACTIVITY_MOVE_CONFIG,
 			    CONFIG_ALIF_PM_ACTIVITY_MOVE_CONFIG,
 			    BOOT_PARAM_LEN_ACTIVITY_MOVE_CONFIG);
