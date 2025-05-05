@@ -90,16 +90,16 @@ static uint32_t se_service_recv_data;
  * received otherwise considered as failure to receive data.
  *
  * parameters,
- * @dev   - Driver instance.
- * @ptr   - pointer to received data.
- * @id    - channel number
- * @data  - data (unused)
+ * @dev         - Driver instance.
+ * @user_data   - pointer to user data.
+ * @id          - channel number
+ * @data        - data
  */
-static void callback_for_receive_msg(const struct device *dev, void *ptr,
+static void callback_for_receive_msg(const struct device *dev, void *user_data,
 					uint32_t id, volatile void *data)
 {
 	ARG_UNUSED(dev);
-	ARG_UNUSED(ptr);
+	ARG_UNUSED(user_data);
 	ARG_UNUSED(id);
 	ARG_UNUSED(data);
 	k_sem_give(&svc_recv_sem);
@@ -114,16 +114,16 @@ static void callback_for_receive_msg(const struct device *dev, void *ptr,
  * otherwise data sent is considered as failure.
  *
  * parameters,
- * @dev   - Driver instance
- * @ptr   - pointer to sent data.
- * @id    - channel number
- * @data  - data (unused)
+ * @dev         - Driver instance
+ * @user_data   - pointer to user data.
+ * @id          - channel number
+ * @data        - data
  */
-static void callback_for_send_msg(const struct device *dev, void *ptr,
+static void callback_for_send_msg(const struct device *dev, void *user_data,
 					uint32_t id, volatile void *data)
 {
 	ARG_UNUSED(dev);
-	ARG_UNUSED(ptr);
+	ARG_UNUSED(user_data);
 	ARG_UNUSED(id);
 	ARG_UNUSED(data);
 	k_sem_give(&svc_send_sem);
