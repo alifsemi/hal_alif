@@ -70,4 +70,14 @@ config ALIF_EXT_WARMBOOT_WAKEUP_TIME
 	int "Warmboot wakeup time. Time limit between light / deep sleep (us)"
 	default 32000
 
+config ALIF_MAX_SLEEP_CLOCK_DRIFT
+	int "Max drift of sleep clock in PPM"
+	default 20
+	range 0 65535
+
+config ALIF_MAX_ACTIVE_CLOCK_DRIFT
+	int "Max drift of active clock in PPM"
+	default 20
+	range 0 255
+
 endif # ALIF_PM_LINK_LAYER

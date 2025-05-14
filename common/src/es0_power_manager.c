@@ -45,6 +45,8 @@ static uint32_t wakeup_count;
 #define BOOT_PARAM_ID_OSC_WAKEUP_TIME           0x0E
 #define BOOT_PARAM_ID_RM_WAKEUP_TIME            0x0F
 #define BOOT_PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME  0xD0
+#define BOOT_PARAM_ID_LPCLK_DRIFT               0x07
+#define BOOT_PARAM_ID_ACTCLK_DRIFT              0x09
 
 #define BOOT_PARAM_LEN_LE_CODED_PHY_500          1
 #define BOOT_PARAM_LEN_DFT_SLAVE_MD              1
@@ -62,14 +64,16 @@ static uint32_t wakeup_count;
 #define BOOT_PARAM_LEN_OSC_WAKEUP_TIME           2
 #define BOOT_PARAM_LEN_RM_WAKEUP_TIME            2
 #define BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME  2
+#define BOOT_PARAM_LEN_LPCLK_DRIFT               2
+#define BOOT_PARAM_LEN_ACTCLK_DRIFT              1
 
-#define ES0_PM_ERROR_NO_ERROR	 		 0
-#define ES0_PM_ERROR_TOO_MANY_USERS		 -1
-#define ES0_PM_ERROR_TOO_MANY_BOOT_PARAMS	 -2
-#define ES0_PM_ERROR_INVALID_BOOT_PARAMS	 -3
-#define ES0_PM_ERROR_START_FAILED		 -4
-#define ES0_PM_ERROR_NO_BAUDRATE		 -5
-#define ES0_PM_ERROR_BAUDRATE_MISMATCH		 -6
+#define ES0_PM_ERROR_NO_ERROR             0
+#define ES0_PM_ERROR_TOO_MANY_USERS       -1
+#define ES0_PM_ERROR_TOO_MANY_BOOT_PARAMS -2
+#define ES0_PM_ERROR_INVALID_BOOT_PARAMS  -3
+#define ES0_PM_ERROR_START_FAILED         -4
+#define ES0_PM_ERROR_NO_BAUDRATE          -5
+#define ES0_PM_ERROR_BAUDRATE_MISMATCH    -6
 
 static uint8_t *write_tlv_int(uint8_t *target, uint8_t tag, uint32_t value, uint8_t len)
 {
@@ -191,7 +195,8 @@ int8_t take_es0_into_use(void)
 				BOOT_PARAM_LEN_UART_BAUDRATE + BOOT_PARAM_LEN_UART_INPUT_CLK_FREQ +
 				BOOT_PARAM_LEN_EXT_WAKEUP_TIME + BOOT_PARAM_LEN_OSC_WAKEUP_TIME +
 				BOOT_PARAM_LEN_RM_WAKEUP_TIME +
-				BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME;
+				BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME +
+				BOOT_PARAM_LEN_LPCLK_DRIFT + BOOT_PARAM_LEN_ACTCLK_DRIFT;
 
 	total_length += 4; /* N,V,D,S */
 
@@ -212,7 +217,7 @@ int8_t take_es0_into_use(void)
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_CH_CLASS_REP_INTV, CONFIG_ALIF_PM_CH_CLASS_REP_INTV,
 			    BOOT_PARAM_LEN_CH_CLASS_REP_INTV);
 	ptr = write_tlv_str(ptr, BOOT_PARAM_ID_BD_ADDRESS, bdaddr_reverse(bd_address),
-				BOOT_PARAM_LEN_BD_ADDRESS);
+			    BOOT_PARAM_LEN_BD_ADDRESS);
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_ACTIVITY_MOVE_CONFIG,
 			    CONFIG_ALIF_PM_ACTIVITY_MOVE_CONFIG,
 			    BOOT_PARAM_LEN_ACTIVITY_MOVE_CONFIG);
@@ -242,6 +247,10 @@ int8_t take_es0_into_use(void)
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME,
 			    CONFIG_ALIF_EXT_WARMBOOT_WAKEUP_TIME,
 			    BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME);
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_LPCLK_DRIFT, CONFIG_ALIF_MAX_SLEEP_CLOCK_DRIFT,
+			    BOOT_PARAM_LEN_LPCLK_DRIFT);
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_ACTCLK_DRIFT, CONFIG_ALIF_MAX_ACTIVE_CLOCK_DRIFT,
+			    BOOT_PARAM_LEN_ACTCLK_DRIFT);
 
 	uint32_t min_uart_clk_freq = used_baudrate * 16;
 	uint32_t reg_uart_clk_cfg = LL_UART_CLK_SEL_CTRL_16MHZ;
@@ -304,4 +313,3 @@ void wake_es0(const struct device *uart_dev)
 		wakeup_count++;
 	}
 }
-
