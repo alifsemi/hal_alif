@@ -48,16 +48,16 @@ struct uart_env_tag {
 };
 
 /* receive buffer used in UART ISR callback */
-static uint8_t *rx_buf_ptr  __attribute__ ((noinit));
-static uint32_t rx_buf_size  __attribute__ ((noinit));
-static uint32_t rx_buf_len  __attribute__ ((noinit));
+static uint8_t *rx_buf_ptr __noinit;
+static uint32_t rx_buf_size __noinit;
+static uint32_t rx_buf_len __noinit;
 
 /*
  * GLOBAL VARIABLE DEFINITIONS
  ****************************************************************************************
  */
 /* uart environment structure */
-static struct uart_env_tag uart_env   __attribute__ ((noinit));
+static struct uart_env_tag uart_env __noinit;
 
 void hci_uart_callback(const struct device *dev, void *user_data)
 {
