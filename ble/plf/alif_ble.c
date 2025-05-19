@@ -179,7 +179,11 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 
 		bool ble_success = ble_stack_init(&app_hooks, &rom_config);
 
-		__ASSERT_NO_MSG(ble_success);
+		if (!ble_success) {
+			__ASSERT(false, "Failed to initialise BLE stack");
+			LOG_ERR("Failed to initialise BLE stack");
+			return;
+		}
 
 		rwip_init(RWIP_INIT_NO_ERROR);
 		initialised = INITIALISED_MAGIC;
