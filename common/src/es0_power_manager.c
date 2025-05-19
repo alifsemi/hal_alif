@@ -135,6 +135,11 @@ static void alif_eui48_read(uint8_t *eui48)
 	se_service_get_rnd_num(&eui48[3], 3);
 }
 
+static uint16_t add_nvds_param_length(uint16_t added_len){
+	return (added_len +3); /* Each write_tlv_x call writes additional 3 bytes */
+
+}
+
 int8_t take_es0_into_use(void)
 {
 	if (255 == es0_user_counter) {
@@ -186,21 +191,28 @@ int8_t take_es0_into_use(void)
 	*ptr++ = 'D';
 	*ptr++ = 'S';
 
-	uint16_t total_length = BOOT_PARAM_LEN_LE_CODED_PHY_500 + BOOT_PARAM_LEN_DFT_SLAVE_MD +
-				BOOT_PARAM_LEN_CH_CLASS_REP_INTV + BOOT_PARAM_LEN_BD_ADDRESS +
-				BOOT_PARAM_LEN_ACTIVITY_MOVE_CONFIG + BOOT_PARAM_LEN_SCAN_EXT_ADV +
-				BOOT_PARAM_LEN_RSSI_THR + BOOT_PARAM_LEN_RSSI_THR +
-				BOOT_PARAM_LEN_SLEEP_ENABLE + BOOT_PARAM_LEN_EXT_WAKEUP_ENABLE +
-				BOOT_PARAM_LEN_ENABLE_CHANNEL_ASSESSMENT + BOOT_PARAM_LEN_RSSI_THR +
-				BOOT_PARAM_LEN_UART_BAUDRATE + BOOT_PARAM_LEN_UART_INPUT_CLK_FREQ +
-				BOOT_PARAM_LEN_EXT_WAKEUP_TIME + BOOT_PARAM_LEN_OSC_WAKEUP_TIME +
-				BOOT_PARAM_LEN_RM_WAKEUP_TIME +
-				BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME +
-				BOOT_PARAM_LEN_LPCLK_DRIFT + BOOT_PARAM_LEN_ACTCLK_DRIFT;
+	uint16_t total_length = 4; /* N,V,D,S */
 
-	total_length += 4; /* N,V,D,S */
-
-	total_length += (18 * 3); /* Each write_tlv_x call writes additional 3 bytes */
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_LE_CODED_PHY_500);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_DFT_SLAVE_MD);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_CH_CLASS_REP_INTV);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_BD_ADDRESS);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_ACTIVITY_MOVE_CONFIG);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_SCAN_EXT_ADV);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_RSSI_THR);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_RSSI_THR);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_SLEEP_ENABLE);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_EXT_WAKEUP_ENABLE);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_ENABLE_CHANNEL_ASSESSMENT);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_RSSI_THR);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_UART_BAUDRATE);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_UART_INPUT_CLK_FREQ);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_EXT_WAKEUP_TIME);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_OSC_WAKEUP_TIME);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_RM_WAKEUP_TIME);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_LPCLK_DRIFT);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_ACTCLK_DRIFT);
 
 	if (total_length > LL_BOOT_PARAMS_MAX_SIZE) {
 		return ES0_PM_ERROR_TOO_MANY_BOOT_PARAMS;
