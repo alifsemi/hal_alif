@@ -153,10 +153,11 @@ static void overflow_irq_handler(const void *context)
 {
 	(void)context;
 
-	LOG_DBG("ISO sync timer overflow IRQ handler");
+	/* LOG_DBG("ISO sync timer overflow IRQ handler"); */
 
 	/* Clear OVERFLOW IRQ */
 	UTIMER_CHAN(ISO_EVT_UTIMER_CHAN)->chan_interrupt |= UTIMER_OVERFLOW_BIT_MASK;
+	(void)UTIMER_CHAN(ISO_EVT_UTIMER_CHAN)->chan_interrupt;
 
 	if (sync_timer_ovf_cb) {
 		sync_timer_ovf_cb();
@@ -167,10 +168,11 @@ static void capture_irq_handler(const void *context)
 {
 	(void)context;
 
-	LOG_DBG("ISO sync timer capture IRQ handler");
+	/* LOG_DBG("ISO sync timer capture IRQ handler"); */
 
 	/* Clear CAPTURE A IRQ */
 	UTIMER_CHAN(ISO_EVT_UTIMER_CHAN)->chan_interrupt |= UTIMER_CAPTURE_A_BIT_MASK;
+	(void)UTIMER_CHAN(ISO_EVT_UTIMER_CHAN)->chan_interrupt;
 
 	if (sync_timer_cap_cb) {
 		sync_timer_cap_cb();
@@ -242,7 +244,7 @@ uint32_t sync_timer_start(void (*sync_timer_capture_evt_cb)(void),
 	/* Global timer channel enable */
 	((TIMER_RegInfo *)(UTIMER_BASE))->glb_cntr_start |= (1 << ISO_EVT_UTIMER_CHAN);
 
-	LOG_DBG("ISO sync timer started");
+	/* LOG_DBG("ISO sync timer started"); */
 
 	return CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC;
 }

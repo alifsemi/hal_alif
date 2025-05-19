@@ -111,6 +111,13 @@ static void *global_to_local_rtss_he(void *global)
 	return global;
 }
 
+static void temp_memcpy(uint8_t *restrict p_dst, uint8_t *restrict p_src, size_t len)
+{
+	while (len--) {
+		*p_dst++ = *p_src++;
+	}
+}
+
 int32_t copy_without_dma(void *p_dst, void *p_src, size_t len, void (*cb)(uint32_t err))
 {
 	__ASSERT_NO_MSG(p_dst);
@@ -119,7 +126,12 @@ int32_t copy_without_dma(void *p_dst, void *p_src, size_t len, void (*cb)(uint32
 	void *p_dst_loc = global_to_local_rtss_he(p_dst);
 	void *p_src_loc = global_to_local_rtss_he(p_src);
 
-	memcpy(p_dst_loc, p_src_loc, len);
+	/* BLE RAM is handled as a DEVICE memory which disallows unaligned
+	 * accesses so the memcpy is not possible if the SDU size is not properly
+	 * aligned (e.g. 155 bytes).
+	 * Use custom memcpy for now while the DMA is not implemented.
+	 */
+	temp_memcpy(p_dst_loc, p_src_loc, len);
 
 	if (cb) {
 		cb(0);
