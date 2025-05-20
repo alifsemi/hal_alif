@@ -1,8 +1,12 @@
-zephyr_include_directories(include)
+if(CONFIG_SOC_FAMILY_ENSEMBLE OR
+    CONFIG_SOC_FAMILY_BALLETTO)
 
-zephyr_library_sources(src/sau_tcm_ns_setup.c)
-zephyr_library_sources(src/tgu.c)
-zephyr_library_sources(src/system.c)
+  zephyr_include_directories(include)
+
+  zephyr_library_sources(src/sau_tcm_ns_setup.c)
+  zephyr_library_sources(src/tgu.c)
+  zephyr_library_sources(src/system.c)
+endif()
 
 zephyr_library_sources_ifdef(CONFIG_HAS_ALIF_POWER_MANAGER
     src/es0_power_manager.c
