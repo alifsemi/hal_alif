@@ -93,15 +93,31 @@ struct ospi_regs {
 
 
 struct ospi_aes_regs {
-	volatile uint32_t  AES_CTRL;        /*  0x00 AES Control             */
-	volatile uint32_t  AES_INTR;        /*  0x04 AES Interrupt Control   */
-	volatile uint32_t  AES_INTR_MASK;   /*  0x08 AES Interrupt Mask      */
-	volatile uint32_t  AES_RES_0;       /*  0x0C Reserved Register       */
-	volatile uint32_t  AES_RES_1;       /*  0x10 Reserved Register       */
-	volatile uint32_t  AES_RES_2;       /*  0x14 Reserved Register       */
-	volatile uint32_t  AES_RES_3;       /*  0x18 Reserved Register       */
-	volatile uint32_t  AES_RES_4;       /*  0x1C Reserved Register       */
-	volatile uint32_t  AES_RXDS_DLY;    /*  0x20 AES RXDS Delay Reg      */
+	volatile uint32_t  AES_CTRL;                     /*  0x00 AES Control             */
+	volatile uint32_t  AES_INTR;                     /*  0x04 AES Interrupt Control   */
+	volatile uint32_t  AES_INTR_MASK;                /*  0x08 AES Interrupt Mask      */
+	volatile uint32_t  AES_CLK_DIS;                  /*  0x0C AES clock Disable       */
+	volatile uint32_t  AES_ADDR_CONTROL;             /*  0x010 AES Address Control     */
+	volatile uint32_t  AES_RES_0;                    /*  0x14 Reserved Register       */
+	volatile uint32_t  AES_RES_1;                    /*  0x18 Reserved Register       */
+	volatile uint32_t  AES_RES_2;                    /*  0x1C Reserved Register       */
+	volatile uint32_t  AES_RXDS_DLY;                 /*  0x20 AES RXDS Delay Reg      */
+	uint32_t  RESERVED0[7];
+	volatile uint32_t  AES_RXD_DELAY_0;              /*!< 0x40 RXD[3:0] Delay Reg      */
+	volatile uint32_t  AES_RXD_DELAY_1;              /*!< 0x44 RXD[7:4] Delay Reg      */
+	volatile uint32_t  AES_RXD_DELAY_2;              /*!< 0x48 RXD[11:8] Delay Reg     */
+	volatile uint32_t  AES_RXD_DELAY_3;              /*!< 0x4C RXD[15:12] Delay Reg    */
+	volatile uint32_t  AES_TXD_DELAY_0;              /*!< 0x50 TXD[3:0] Delay Reg      */
+	volatile uint32_t  AES_TXD_DELAY_1;              /*!< 0x54 TXD[7:4] Delay Reg      */
+	volatile uint32_t  AES_TXD_DELAY_2;              /*!< 0x58 TXD[11:8] Delay Reg     */
+	volatile uint32_t  AES_TXD_DELAY_3;              /*!< 0x5C TXD[15:12] Delay Reg    */
+	volatile uint32_t  AES_SSI_OE_N_DELAY_0;         /*!< 0x60 SSI_OE_N[3:0] Delay Reg */
+	volatile uint32_t  AES_SSI_OE_N_DELAY_1;         /*!< 0x64 SSI_OE_N[7:4] Delay Reg */
+	volatile uint32_t  AES_SSI_OE_N_DELAY_2;         /*!< 0x68 SSI_OE_N[11:8] Delay Reg*/
+	volatile uint32_t  AES_SSI_OE_N_DELAY_3;         /*!< 0x6C SSI_OE_N[15:12] Delay Reg*/
+	volatile uint32_t  AES_SS_N_DELAY;               /*!< 0x70 SS_N Delay Reg          */
+	volatile uint32_t  AES_TXD_DM_DELAY;             /*!< 0x74 TXD_DM Delay Reg        */
+	volatile uint32_t  AES_SCLK_DELAY;               /*!< 0x78 SLCK Delay Reg          */
 };
 
 /* Bit fields for SPI FRF */
@@ -164,6 +180,10 @@ struct ospi_aes_regs {
 #define SPI_CTRLR0_CFS                  16U
 #define SPI_CTRLR0_CFS_MASK             (0xFU << SPI_CTRLR0_CFS)
 
+#define SPI_FRF_DUAL                    0x1
+#define SPI_FRF_QUAD                    0x2
+#define SPI_FRF_OCTAL                   0x3
+
 /* SPI Frame Format SPI_FRF bit[23:22]*/
 #define SPI_CTRLR0_SPI_FRF              22U
 #define SPI_CTRLR0_SPI_FRF_MASK         (0x3U << SPI_CTRLR0_SPI_FRF)
@@ -175,8 +195,8 @@ struct ospi_aes_regs {
 /* SPI Hyperbus Frame format enable SPI_HYPERBUS_EN bit[24] */
 #define SPI_CTRLR0_SPI_HYPERBUS_EN              24
 #define SPI_CTRLR0_SPI_HYPERBUS_EN_SSTE_MASK    (1 << SPI_CTRLR0_SPI_HYPERBUS_EN)
-#define SPI_CTRLR0_SPI_HYPERBUS_ENABLE          0x4000   /* SPI Hyperbus Frame format enable */
-#define SPI_CTRLR0_SPI_HYPERBUS_DISABLE         0x0000   /* sPI Hyperbus Frame format disable */
+#define SPI_CTRLR0_SPI_HYPERBUS_ENABLE          0x1000000U   /* 0x1 SPI Hyperbus enable */
+#define SPI_CTRLR0_SPI_HYPERBUS_DISABLE         0x0000000U   /* 0x0 SPI Hyperbus disable */
 
 /* SPI is working in Master or Slave SSI_IS_MST bit[31] */
 #define SPI_CTRLR0_SSI_IS_MST                           31U
@@ -208,7 +228,7 @@ struct ospi_aes_regs {
 #define SPI_TXFTLR_TXFTHR_MASK                          (0xFFFFU << SPI_TXFTLR_TXFTHR_SHIFT)
 
 /* Bit fields in OSPI_CTRLR0 */
-#define OSPI_CTRLR0_IS_MST		        (1U << 31)
+#define OSPI_CTRLR0_IS_MST                      (1U << 31)
 #define OSPI_CTRLR0_HE_OFFSET                   24U
 #define OSPI_CTRLR0_SPI_FRF_OFFSET              22U
 #define OSPI_CTRLR0_SSTE_OFFSET                 14U
@@ -240,6 +260,7 @@ struct ospi_aes_regs {
 #define SPI_CTRLR0_TRANS_TYPE_MASK              3U
 #define SPI_TRANS_TYPE_STANDARD                 0U
 #define SPI_TRANS_TYPE_FRF_DEFINED              2U  /* CTRLR0.SPI_FRF :Standard/Dual/Quad/Octal */
+#define SPI_TRANS_TYPE_FRF_DUAL_OCTAL           3U
 
 #define SPI_CTRLR0_SPI_RXDS_ENABLE              1U
 #define SPI_CTRLR0_SPI_RXDS_DISABLE             0U
@@ -284,6 +305,7 @@ struct ospi_aes_regs {
 #define XIP_WRITE_CTRL_WR_FRF_OFFSET            0U
 
 #define SPI_SR_TX_FIFO_EMPTY                    0x4U
+#define SPI_SR_TFNF                             0x2U
 #define SPI_SR_BUSY                             0x1U
 
 #define SPI_TX_FIFO_EMPTY_EVENT                 0x01U  /* Tx fifo empty interrupt mask*/
@@ -390,6 +412,7 @@ struct ospi_transfer {
 	uint32_t            tx_default_val;     /* Default value to Transfer */
 	uint32_t            spi_frf;            /* Standard/Dual/Quad/Octal  */
 	uint32_t            addr_len;           /* Address length  */
+	uint32_t            inst_len;           /* Instruction length */
 	uint32_t            dummy_cycle;        /* Dummy cycles    */
 	uint32_t            ddr;                /* DDR / SDR mode  */
 	bool                tx_default_enable;  /* Enable Tx default */
@@ -503,6 +526,152 @@ static inline void ospi_aes_set_baud2_delay(struct ospi_aes_regs *aes,
 	(void)aes;
 	(void)baud2_delay_en;
 #endif
+}
+
+#if defined(CONFIG_SOC_SERIES_ENSEMBLE_E8)
+#define AES_SIGNAL_0_DELAY_POS                 (0)
+#define AES_SIGNAL_1_DELAY_POS                 (8)
+#define AES_SIGNAL_2_DELAY_POS                 (16)
+#define AES_SIGNAL_3_DELAY_POS                 (24)
+#define AES_SIGNAL_4_DELAY_POS                 (0)
+#define AES_SIGNAL_5_DELAY_POS                 (8)
+#define AES_SIGNAL_6_DELAY_POS                 (16)
+#define AES_SIGNAL_7_DELAY_POS                 (24)
+#define AES_SIGNAL_8_DELAY_POS                 (0)
+#define AES_SIGNAL_9_DELAY_POS                 (8)
+#define AES_SIGNAL_10_DELAY_POS                (16)
+#define AES_SIGNAL_11_DELAY_POS                (24)
+#define AES_SIGNAL_12_DELAY_POS                (0)
+#define AES_SIGNAL_13_DELAY_POS                (8)
+#define AES_SIGNAL_14_DELAY_POS                (16)
+#define AES_SIGNAL_15_DELAY_POS                (24)
+#define AES_TXD_DM_0_DELAY_POS                 (0)
+#define AES_TXD_DM_1_DELAY_POS                 (8)
+#define AES_DM_OE_N_DELAY_0_POS                (16)
+#define AES_DM_OE_N_DELAY_1_POS                (24)
+#define AES_SCLK_DELAY_POS                     (0)
+#define AES_SCLK_N_DELAY_POS                   (8)
+
+/***
+ * \fn          static inline void aes_set_rxds_delay
+ *                   (struct ospi_aes_regs *aes, uint8_t rxds_delay)
+ * \brief       Set OSPI RXDS Delay
+ * \param[in]   aes        Pointer to the AES register map
+ * \param[in]   rxds_delay rxds value
+ * \return      none
+ */
+static inline void aes_set_rxds_delay(struct ospi_aes_regs *aes, uint8_t delay)
+{
+	aes->AES_RXDS_DLY = ((delay << AES_SIGNAL_0_DELAY_POS) | (delay << AES_SIGNAL_1_DELAY_POS));
+}
+
+/***
+ * \fn          static inline void aes_set_signal_delay
+ *                   (struct ospi_aes_regs *aes, uint8_t delay)
+ * \brief       Set OSPI Signal Delay for BAUD2 speed
+ * \param[in]   aes        Pointer to the AES register map
+ * \param[in]   delay      Delay value for signals
+ * \return      none
+ */
+static inline void aes_set_signal_delay(struct ospi_aes_regs *aes, uint8_t delay)
+{
+	aes->AES_RXD_DELAY_0 = ((delay << AES_SIGNAL_0_DELAY_POS)
+				| (delay << AES_SIGNAL_1_DELAY_POS)
+				| (delay << AES_SIGNAL_2_DELAY_POS)
+				| (delay << AES_SIGNAL_3_DELAY_POS));
+	aes->AES_RXD_DELAY_1 = ((delay << AES_SIGNAL_4_DELAY_POS)
+				| (delay << AES_SIGNAL_5_DELAY_POS)
+				| (delay << AES_SIGNAL_6_DELAY_POS)
+				| (delay << AES_SIGNAL_7_DELAY_POS));
+	aes->AES_RXD_DELAY_2 = ((delay << AES_SIGNAL_8_DELAY_POS)
+				| (delay << AES_SIGNAL_9_DELAY_POS)
+				| (delay << AES_SIGNAL_10_DELAY_POS)
+				| (delay << AES_SIGNAL_11_DELAY_POS));
+	aes->AES_RXD_DELAY_3 = ((delay << AES_SIGNAL_12_DELAY_POS)
+				| (delay << AES_SIGNAL_13_DELAY_POS)
+				| (delay << AES_SIGNAL_14_DELAY_POS)
+				| (delay << AES_SIGNAL_15_DELAY_POS));
+
+	aes->AES_TXD_DELAY_0 = ((delay << AES_SIGNAL_0_DELAY_POS)
+				| (delay << AES_SIGNAL_1_DELAY_POS)
+				| (delay << AES_SIGNAL_2_DELAY_POS)
+				| (delay << AES_SIGNAL_3_DELAY_POS));
+	aes->AES_TXD_DELAY_1 = ((delay << AES_SIGNAL_4_DELAY_POS)
+				| (delay << AES_SIGNAL_5_DELAY_POS)
+				| (delay << AES_SIGNAL_6_DELAY_POS)
+				| (delay << AES_SIGNAL_7_DELAY_POS));
+	aes->AES_TXD_DELAY_2 = ((delay << AES_SIGNAL_8_DELAY_POS)
+				| (delay << AES_SIGNAL_9_DELAY_POS)
+				| (delay << AES_SIGNAL_10_DELAY_POS)
+				| (delay << AES_SIGNAL_11_DELAY_POS));
+	aes->AES_TXD_DELAY_3 = ((delay << AES_SIGNAL_12_DELAY_POS)
+				| (delay << AES_SIGNAL_13_DELAY_POS)
+				| (delay << AES_SIGNAL_14_DELAY_POS)
+				| (delay << AES_SIGNAL_15_DELAY_POS));
+
+	aes->AES_SSI_OE_N_DELAY_0 = ((delay << AES_SIGNAL_0_DELAY_POS)
+				   | (delay << AES_SIGNAL_1_DELAY_POS)
+				   | (delay << AES_SIGNAL_2_DELAY_POS)
+				   | (delay << AES_SIGNAL_3_DELAY_POS));
+	aes->AES_SSI_OE_N_DELAY_1 = ((delay << AES_SIGNAL_4_DELAY_POS)
+				   | (delay << AES_SIGNAL_5_DELAY_POS)
+				   | (delay << AES_SIGNAL_6_DELAY_POS)
+				   | (delay << AES_SIGNAL_7_DELAY_POS));
+	aes->AES_SSI_OE_N_DELAY_2 = ((delay << AES_SIGNAL_8_DELAY_POS)
+				   | (delay << AES_SIGNAL_9_DELAY_POS)
+				   | (delay << AES_SIGNAL_10_DELAY_POS)
+				   | (delay << AES_SIGNAL_11_DELAY_POS));
+	aes->AES_SSI_OE_N_DELAY_3 = ((delay << AES_SIGNAL_12_DELAY_POS)
+				   | (delay << AES_SIGNAL_13_DELAY_POS)
+				   | (delay << AES_SIGNAL_14_DELAY_POS)
+				   | (delay << AES_SIGNAL_15_DELAY_POS));
+
+	aes->AES_SS_N_DELAY = ((delay << AES_SIGNAL_0_DELAY_POS)
+				| (delay << AES_SIGNAL_1_DELAY_POS));
+
+	aes->AES_TXD_DM_DELAY = ((delay << AES_TXD_DM_0_DELAY_POS)
+				| (delay << AES_TXD_DM_1_DELAY_POS)
+				|(delay << AES_DM_OE_N_DELAY_0_POS)
+				| (delay << AES_DM_OE_N_DELAY_1_POS));
+
+	aes->AES_SCLK_DELAY = ((delay << AES_SCLK_DELAY_POS) | (delay << AES_SCLK_N_DELAY_POS));
+}
+#else
+
+/***
+ * \fn          static inline void aes_set_rxds_delay
+ *                   (struct ospi_aes_regs *aes, uint8_t rxds_delay)
+ * \brief       Set OSPI RXDS Delay
+ * \param[in]   aes        Pointer to the AES register map
+ * \param[in]   rxds_delay RXDS delay value
+ * \return      none
+ */
+static inline void aes_set_rxds_delay(struct ospi_aes_regs *aes, uint8_t rxds_delay)
+{
+	aes->AES_RXDS_DLY = rxds_delay;
+}
+#endif
+
+/***
+ * \fn          static inline void aes_enable_xip(struct ospi_aes_regs *aes)
+ * \brief       Enable OSPI XIP
+ * \param[in]   aes     Pointer to the AES register map
+ * \return      none
+ */
+static inline void aes_enable_xip(struct ospi_aes_regs *aes)
+{
+	aes->AES_CTRL |= AES_CONTROL_XIP_EN;
+}
+
+/***
+ * \fn          static inline void aes_disable_xip(struct ospi_aes_regs *aes)
+ * \brief       Disable OSPI XIP
+ * \param[in]   aes     Pointer to the AES register map
+ * \return      none
+ */
+static inline void aes_disable_xip(struct ospi_aes_regs *aes)
+{
+	aes->AES_CTRL &= ~AES_CONTROL_XIP_EN;
 }
 
 /***
@@ -791,14 +960,25 @@ void ospi_dma_send(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 void ospi_dma_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 /**
- * \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi,
- *                                          uint8_t wait_cycles)
- * \brief       Initialize hyperbus XIP configuration for the OSPI instance
- * \param[in]   ospi        Pointer to the OSPI register map
- * \param[in]   wait_cycles Wait cycles needed by the hyperbus device
- * \return      none
- */
-void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles);
+  \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles,
+						bool is_dual_octal)
+  \brief       Initialize hyperbus XIP configuration for the OSPI instance
+  \param[in]   ospi        Pointer to the OSPI register map
+  \param[in]   wait_cycles Wait cycles needed by the hyperbus device
+  \param[in]   is_dual_octal OSPI transfer type is Dual Octal
+  \return      none
+*/
+void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is_dual_octal);
+
+/**
+  \fn          void ospi_hyperbus_send(struct ospi_regs *spi, ospi_transfer *transfer)
+  \brief       Prepare the OSPI instance for transmission
+  \param[in]   ospi       Pointer to the OSPI register map
+  \param[in]   transfer   Transfer parameters
+  \return      none
+*/
+void ospi_hyperbus_send(struct ospi_regs *ospi, struct ospi_transfer *transfer);
+
 
 /**
  * \fn          void ospi_irq_handler(struct ospi_regs *ospi,
