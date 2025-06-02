@@ -1,3 +1,3 @@
 zephyr_include_directories(include)
 
-zephyr_link_libraries_ifdef(CONFIG_ALIF_BLE_HOST_PATCHING rom_ble_stack.patch.elf)
+zephyr_link_libraries_ifdef(CONFIG_ALIF_BLE_HOST_PATCHING ${CMAKE_CURRENT_SOURCE_DIR}/rom_ble_stack.patch.elf)
