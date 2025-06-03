@@ -16,8 +16,8 @@ extern "C" {
 #define ITCM_SIZE (DT_REG_SIZE(DT_NODELABEL(itcm)))
 #define DTCM_BASE (DT_REG_ADDR(DT_NODELABEL(dtcm)))
 #define DTCM_SIZE (DT_REG_SIZE(DT_NODELABEL(dtcm)))
-#define ITCM_GLOBAL_BASE DT_PROP(DT_NODELABEL(itcm), itcm_global_base)
-#define DTCM_GLOBAL_BASE DT_PROP(DT_NODELABEL(dtcm), dtcm_global_base)
+#define ITCM_GLOBAL_BASE DT_PROP(DT_NODELABEL(itcm), global_base)
+#define DTCM_GLOBAL_BASE DT_PROP(DT_NODELABEL(dtcm), global_base)
 
 static inline uint32_t local_to_global(const volatile void *local_addr)
 {
