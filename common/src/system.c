@@ -43,6 +43,10 @@ void System_HandleSpuriousWakeup(void)
  */
 void SystemInit(void)
 {
+	__set_FAULTMASK(0);
+
+	/* Disable the MPU */
+	ARM_MPU_Disable();
 
 	/* Enable UsageFault, BusFault, MemFault and SecurityFault exceptions */
 	/* Otherwise all you see is HardFault, even in the debugger */
