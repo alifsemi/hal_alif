@@ -1,8 +1,10 @@
 # CODEOWNERS for autoreview assigning in github
 #
-/automation/                       @HemanthKumar-AlifSemi
-/.checkpatch.conf/                 @HemanthKumar-AlifSemi
-/driver/include/                   @HemanthKumar-AlifSemi
+/automation/                       @rajranjan-alifsemi
+/.checkpatch.conf/                 @rajranjan-alifsemi
+/driver/include/                   @RupeshKumar-AlifSemi
 /ble/                              @AnttiKauppila-AlifSemi @VeijoPesonen
 /lc3/                              @AnttiKauppila-AlifSemi @VeijoPesonen
 /ieee802154/                       @mikter @jheiskan81
+/se_services/                      @sudhir-alifsemi
+LICENSE                            @RupeshKumar-AlifSemi
