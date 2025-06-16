@@ -8,7 +8,6 @@
 #include <se_service.h>
 #include <soc_memory_map.h>
 #include <zephyr/logging/log.h>
-#include <errno.h>
 LOG_MODULE_REGISTER(se_service, CONFIG_IPM_LOG_LEVEL);
 
 #define DT_DRV_COMPAT alif_secure_enclave_services
@@ -219,10 +218,13 @@ int se_service_sync(void)
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.service_header.hdr_service_id = SERVICE_MAINTENANCE_HEARTBEAT_ID;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
 				     sizeof(se_service_all_svc_d.service_header), SYNC_TIMEOUT);
@@ -250,16 +252,18 @@ int se_service_sync(void)
  * returns,
  * 0      - success.
  * err    - if unable to send service request.
- * errno  - Unable to unlock mutex.
  */
 int se_service_heartbeat(void)
 {
 	int err;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.service_header.hdr_service_id = SERVICE_MAINTENANCE_HEARTBEAT_ID;
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
@@ -287,7 +291,6 @@ int se_service_heartbeat(void)
  * returns,
  * 0        - success, buffer contains random numbers of length 'length'.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - error in service response for the requested service.
  */
 int se_service_get_rnd_num(uint8_t *buffer, uint16_t length)
@@ -299,10 +302,13 @@ int se_service_get_rnd_num(uint8_t *buffer, uint16_t length)
 		return -EINVAL;
 	}
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_rnd_svc_d.header.hdr_service_id = SERVICE_CRYPTOCELL_GET_RND;
 	se_service_all_svc_d.get_rnd_svc_d.send_rnd_length = length;
@@ -337,7 +343,6 @@ int se_service_get_rnd_num(uint8_t *buffer, uint16_t length)
  * returns,
  * 0        - success, ptoc contains number of TOC.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - error in service response for the requested service.
  */
 int se_service_get_toc_number(uint32_t *ptoc)
@@ -349,10 +354,13 @@ int se_service_get_toc_number(uint32_t *ptoc)
 		return -EINVAL;
 	}
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_toc_number_svc_d.header.hdr_service_id =
 		SERVICE_SYSTEM_MGMT_GET_TOC_NUMBER;
@@ -388,7 +396,6 @@ int se_service_get_toc_number(uint32_t *ptoc)
  * returns,
  * 0        - success, ptoc contains the TOC version.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - error in service response for the requested service.
  */
 int se_service_get_toc_version(uint32_t *pversion)
@@ -406,10 +413,12 @@ int se_service_get_toc_version(uint32_t *pversion)
 	}
 
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
 	if (err) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", err);
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
 		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_toc_version_svc_d.header.hdr_service_id =
 		SERVICE_SYSTEM_MGMT_GET_TOC_VERSION;
@@ -447,7 +456,6 @@ int se_service_get_toc_version(uint32_t *pversion)
  * returns,
  * 0        - success, prev contains SE firmware string.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - error in service response for the requested service.
  */
 int se_service_get_se_revision(uint8_t *prev)
@@ -459,10 +467,13 @@ int se_service_get_se_revision(uint8_t *prev)
 		return -EINVAL;
 	}
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_se_revision_svc_d.header.hdr_service_id =
 		SERVICE_APPLICATION_FIRMWARE_VERSION_ID;
@@ -498,7 +509,6 @@ int se_service_get_se_revision(uint8_t *prev)
  * returns,
  * 0        - success, pdev_part contains device part number.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - error in service response for the requested service.
  */
 int se_service_get_device_part_number(uint32_t *pdev_part)
@@ -510,10 +520,13 @@ int se_service_get_device_part_number(uint32_t *pdev_part)
 		return -EINVAL;
 	}
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_device_part_svc_d.header.hdr_service_id =
 		SERVICE_SYSTEM_MGMT_GET_DEVICE_PART_NUMBER;
@@ -549,7 +562,6 @@ int se_service_get_device_part_number(uint32_t *pdev_part)
  * returns,
  * 0        - success, potp_data contains 8 bytes unique serial number.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - Error in service response for the requested service.
  */
 int se_service_read_otp(uint32_t *potp_data)
@@ -562,10 +574,13 @@ int se_service_read_otp(uint32_t *potp_data)
 		return -EINVAL;
 	}
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.read_otp_svc_d.header.hdr_service_id = SERVICE_SYSTEM_MGMT_READ_OTP;
 
@@ -606,7 +621,6 @@ int se_service_read_otp(uint32_t *potp_data)
  *            firmware version, wounding data, DCU settings,
  *            manufacturing data, serial number, SoC lifecycle state.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - Error in service response for the requested service.
  */
 int se_service_system_get_device_data(get_device_revision_data_t *pdev_data)
@@ -618,10 +632,13 @@ int se_service_system_get_device_data(get_device_revision_data_t *pdev_data)
 		return -EINVAL;
 	}
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_device_revision_data_d.header.hdr_service_id =
 		SERVICE_SYSTEM_MGMT_GET_DEVICE_REVISION_DATA;
@@ -795,7 +812,6 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
  * returns,
  * 0        - success.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - Error in service response for the requested service.
  */
 int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select)
@@ -809,10 +825,12 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_s
 	}
 
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
 	if (err) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", err);
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
 		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 
 	se_service_all_svc_d.boot_svc_d.header.hdr_service_id = SERVICE_EXTSYS0_BOOT_SET_ARGS;
@@ -862,17 +880,19 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_s
  * returns,
  * 0        - success.
  * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
  * resp_err - Error in service response for the requested service.
  */
 int se_service_shutdown_es0(void)
 {
 	int err, resp_err = -1;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.shutdown_svc_d.header.hdr_service_id = SERVICE_EXTSYS0_SHUTDOWN;
 
@@ -896,9 +916,11 @@ int se_service_get_run_cfg(run_profile_t *pp)
 {
 	int err, resp_err = -1;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
 
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
@@ -939,10 +961,13 @@ int se_service_set_run_cfg(run_profile_t *pp)
 {
 	int err, resp_err = -1;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 
 	se_service_all_svc_d.set_run_d.header.hdr_service_id = SERVICE_POWER_SET_RUN_REQ_ID;
@@ -978,10 +1003,13 @@ int se_service_get_off_cfg(off_profile_t *wp)
 {
 	int err, resp_err = -1;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_off_d.header.hdr_service_id = SERVICE_POWER_GET_OFF_REQ_ID;
 
@@ -1021,10 +1049,13 @@ int se_service_set_off_cfg(off_profile_t *wp)
 {
 	int err, resp_err = -1;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.set_off_d.header.hdr_service_id = SERVICE_POWER_SET_OFF_REQ_ID;
 	se_service_all_svc_d.set_off_d.send_dcdc_voltage = wp->dcdc_voltage;
@@ -1061,10 +1092,13 @@ int se_service_se_sleep_req(uint32_t param)
 {
 	int err, resp_err = -1;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 
 	se_service_all_svc_d.se_sleep_d.send_param = param;
@@ -1090,10 +1124,13 @@ int se_service_system_set_services_debug(bool debug_enable)
 {
 	int err, resp_err = -1;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 
 	se_service_all_svc_d.set_services_capabilities_d.header.hdr_service_id =
@@ -1124,11 +1161,13 @@ int se_service_boot_reset_soc(void)
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.service_header.hdr_service_id =
 					SERVICE_BOOT_RESET_SOC;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)
 			&se_service_all_svc_d.service_header,
@@ -1157,10 +1196,13 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 
 	se_service_all_svc_d.cpu_reboot_d.send_cpu_id = cpu_id;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
 	}
+
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)
 			&se_service_all_svc_d.service_header,
