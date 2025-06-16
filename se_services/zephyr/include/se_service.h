@@ -304,6 +304,18 @@ int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size);
  * @return Positive error code returned by SE for a failed service request.
  */
 int se_service_clock_set_divider(clock_divider_t divider, uint32_t value);
+
+/**
+ * @brief Send service request to SE to process TOC entry.
+ *
+ * @param image_id ID that matches the TOC entry field image identifier.
+ * @retval 0 Success.
+ * @retval -EINVAL Invalid argument.
+ * @retval -EAGAIN Operation timed out. Retry after a delay.
+ * @return Positive error code returned by SE for a failed service request.
+ */
+int se_service_process_toc_entry(const char *image_id);
+
 #ifdef __cplusplus
 }
 #endif
