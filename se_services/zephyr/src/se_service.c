@@ -215,15 +215,15 @@ int se_service_sync(void)
 {
 	int err, i = 0;
 
-	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.service_header.hdr_service_id = SERVICE_MAINTENANCE_HEARTBEAT_ID;
-
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 
 	if (err) {
 		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
 		return err;
 	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.service_header.hdr_service_id = SERVICE_MAINTENANCE_HEARTBEAT_ID;
 
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
@@ -1158,9 +1158,6 @@ int se_service_boot_reset_soc(void)
 {
 	int err, i = 0;
 
-	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.service_header.hdr_service_id =
-					SERVICE_BOOT_RESET_SOC;
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 
 	if (err) {
@@ -1168,6 +1165,9 @@ int se_service_boot_reset_soc(void)
 		return err;
 	}
 
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.service_header.hdr_service_id =
+					SERVICE_BOOT_RESET_SOC;
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)
 			&se_service_all_svc_d.service_header,
@@ -1190,18 +1190,18 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 {
 	int err, i = 0, resp_err = -1;
 
-	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.cpu_reboot_d.header.hdr_service_id =
-					SERVICE_BOOT_RESET_CPU;
-
-	se_service_all_svc_d.cpu_reboot_d.send_cpu_id = cpu_id;
-
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 
 	if (err) {
 		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
 		return err;
 	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.cpu_reboot_d.header.hdr_service_id =
+					SERVICE_BOOT_RESET_CPU;
+
+	se_service_all_svc_d.cpu_reboot_d.send_cpu_id = cpu_id;
 
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)
