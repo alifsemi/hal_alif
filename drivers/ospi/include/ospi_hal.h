@@ -40,6 +40,14 @@
 #define OSPI_ERR_CTRL_BUSY          -102            /* Controller Busy */
 #define OSPI_ERR_INVALID_HANDLE     -103            /* Handler not valid */
 
+
+/*---- OSPI DFS BITS ------------------*/
+#define OSPI_DFS_BITS_8        8              /* 8-bit DFS */
+#define OSPI_DFS_BITS_16       16             /* 16-bit DFS */
+#define OSPI_DFS_BITS_24       24             /* 24-bit DFS */
+#define OSPI_DFS_BITS_32       32             /* 32-bit DFS */
+
+
 /*---- OSPI Status ---------------------*/
 struct ospi_status {
 	uint32_t busy       : 1;              /* Tx/Rx busy flag */
