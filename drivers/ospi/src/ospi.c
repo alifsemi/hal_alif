@@ -467,6 +467,75 @@ void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is
 }
 
 /**
+ * \fn          void ospi_psram_xip_init(struct ospi_regs *ospi,
+ *                    struct ospi_xip_config *xip_cfg, bool is_dual_octal)
+ * \brief       Initialize XIP configuration for the OSPI instance
+ * \param[in]   ospi     Pointer to the OSPI register map
+ * \param[in]   xip_cfg  Pointer to the xip config structure
+ * \param[in]   is_dual_octal OSPI transfer type is Dual Octal
+ * \return      none
+ */
+void ospi_psram_xip_init(struct ospi_regs *ospi,
+		struct ospi_xip_config *xip_cfg, bool is_dual_octal)
+{
+	uint8_t trans_type;
+	uint32_t val;
+
+	if (is_dual_octal) {
+		trans_type = SPI_TRANS_TYPE_FRF_DUAL_OCTAL;
+	} else {
+		trans_type = SPI_TRANS_TYPE_FRF_DEFINED;
+	}
+
+	ospi_disable(ospi);
+
+	val = (SPI_FRAME_FORMAT_OCTAL << XIP_CTRL_FRF_OFFSET)
+			| (trans_type << XIP_CTRL_TRANS_TYPE_OFFSET)
+			| (0x8 << XIP_CTRL_ADDR_L_OFFSET)
+			| (0x2 << XIP_CTRL_INST_L_OFFSET)
+			| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
+			| (xip_cfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+			| (0x1 << XIP_CTRL_DFS_HC_OFFSET)
+			| (0x1 << XIP_CTRL_DDR_EN_OFFSET)
+			| (0x0 << XIP_CTRL_INST_DDR_EN_OFFSET)
+			| (0x1 << XIP_CTRL_RXDS_EN_OFFSET)
+			| (0x1 << XIP_CTRL_INST_EN_OFFSET)
+			| (0x0 << XIP_CTRL_CONT_XFER_EN_OFFSET)
+			| (0x0 << XIP_CTRL_XIP_HYPERBUS_EN_OFFSET)
+			| (0x0 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
+			| (0x0 << XIP_CTRL_XIP_MBL_OFFSET)
+			| (0x0 << XIP_CTRL_XIP_PREFETCH_EN_OFFSET)
+			| (0x1 << XIP_CTRL_RXDS_VL_EN_OFFSET);
+
+	ospi->OSPI_XIP_CTRL = val;
+
+	val = (SPI_FRAME_FORMAT_OCTAL << XIP_WRITE_CTRL_WR_FRF_OFFSET)
+			| (0x2 << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
+			| (0x8 << XIP_WRITE_CTRL_WR_ADDR_L_OFFSET)
+			| (0x2 << XIP_WRITE_CTRL_WR_INST_L_OFFSET)
+			| (0x1 << XIP_WRITE_CTRL_WR_SPI_DDR_EN_OFFSET)
+			| (0x0 << XIP_WRITE_CTRL_WR_INST_DDR_EN_OFFSET)
+			| (0x0 << XIP_WRITE_CTRL_XIPWR_HYPERBUS_EN_OFFSET)
+			| (0x0 << XIP_WRITE_CTRL_XIPWR_RXDS_SIG_EN_OFFSET)
+			| (0x1 << XIP_WRITE_CTRL_XIPWR_DM_EN_OFFSET)
+			| (xip_cfg->xip_wait_cycles << XIP_WRITE_CTRL_XIPWR_WAIT_CYCLES)
+			| (0x1 << XIP_WRITE_CTRL_XIPWR_DFS_HC_OFFSET);
+
+	ospi->OSPI_XIP_WRITE_CTRL = val;
+
+	ospi->OSPI_RX_SAMPLE_DELAY = 0;
+
+	ospi->OSPI_XIP_MODE_BITS = xip_cfg->xip_mod_bits;
+	ospi->OSPI_XIP_INCR_INST = xip_cfg->incr_cmd;
+	ospi->OSPI_XIP_WRAP_INST = xip_cfg->wrap_cmd;
+	ospi->OSPI_XIP_WRITE_INCR_INST = xip_cfg->write_incr_cmd;
+	ospi->OSPI_XIP_WRITE_WRAP_INST = xip_cfg->write_wrap_cmd;
+	ospi->OSPI_XIP_CNT_TIME_OUT = xip_cfg->xip_cnt_time_out;
+
+	ospi_enable(ospi);
+}
+
+/**
   \fn          void ospi_hyperbus_send(struct ospi_regs *spi, struct ospi_transfer *transfer)
   \brief       Prepare the OSPI Hyperbus for transmission
   \param[in]   ospi       Pointer to the OSPI register map
