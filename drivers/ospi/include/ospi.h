@@ -432,6 +432,8 @@ struct ospi_xip_config {
 	int16_t                 xip_cs_pin;          /* CS PIN   */
 	uint16_t                wrap_cmd;            /* WRAP cmd */
 	uint16_t                incr_cmd;            /* INCR cmd */
+	uint16_t                write_wrap_cmd;      /* Write WRAP cmd */
+	uint16_t                write_incr_cmd;      /* Write INCR cmd */
 	uint16_t                rx_smpl_dlay;        /* Delay on Sampling */
 	uint16_t                aes_rx_ds_dlay;      /* AES Dly */
 	uint16_t                xip_mod_bits;        /* XIP Mod */
@@ -1018,6 +1020,18 @@ void ospi_xip_enable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
  */
 void ospi_xip_disable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
 		struct ospi_transfer *transfer, struct ospi_xip_config *xfg);
+
+/**
+ * \fn          void ospi_psram_xip_init(struct ospi_regs *ospi,
+ *                    struct ospi_xip_config *xip_cfg, bool is_dual_octal)
+ * \brief       Initialize XIP configuration for the OSPI instance
+ * \param[in]   ospi     Pointer to the OSPI register map
+ * \param[in]   xip_cfg  Pointer to the xip config structure
+ * \param[in]   is_dual_octal OSPI transfer type is Dual Octal
+ * \return      none
+ */
+void ospi_psram_xip_init(struct ospi_regs *ospi,
+		struct ospi_xip_config *xip_cfg, bool is_dual_octal);
 
 #ifdef __cplusplus
 }
