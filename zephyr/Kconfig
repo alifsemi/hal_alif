@@ -29,6 +29,7 @@ config ALIF_BLE_HOST
 	select FPU
 	select HAVE_CUSTOM_LINKER_SCRIPT
 	select USE_ALIF_HAL_UTIMER
+	select RING_BUFFER
 	help
 	  This option enables Alif Semiconductor's BLE Host Stack.
 
