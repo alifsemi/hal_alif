@@ -16,8 +16,14 @@
 #define OSPI_ADDR_LENGTH_24_BITS           0x6     /* Address Length 24 bits */
 #define OSPI_ADDR_LENGTH_32_BITS           0x8     /* Address Length 32 bits */
 
+#define OSPI_INST_LENGTH_0_BITS            0x0     /* Instruction Length 0 bits */
+#define OSPI_INST_LENGTH_4_BITS            0x1     /* Instruction Length 4 bits */
+#define OSPI_INST_LENGTH_8_BITS            0x2     /* Instruction Length 8 bits */
+#define OSPI_INST_LENGTH_16_BITS           0x3     /* Instruction Length 16 bits */
+
 #define OSPI_DDR_DISABLE                   0x0     /* Disable DDR Mode */
 #define OSPI_DDR_ENABLE                    0x1     /* Enable DDR Mode */
+#define OSPI_INST_DDR_ENABLE               0x2     /* Enable DDR Mode for Instruction */
 
 #define OSPI_FRF_STANDRAD                  0x0      /* 0x0 Std OSPI Format */
 #define OSPI_FRF_DUAL                      0x1      /* 0x1 Dual OSPI Format */
