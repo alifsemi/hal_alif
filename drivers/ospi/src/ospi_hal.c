@@ -220,6 +220,7 @@ int32_t alif_hal_ospi_prepare_transfer(HAL_OSPI_Handle_T handle,
 	ospi_set_dfs(ospi_regs, trans_conf->frame_size);
 
 	ospi_inst->transfer.addr_len = trans_conf->addr_len;
+	ospi_inst->transfer.inst_len = trans_conf->inst_len;
 	ospi_inst->transfer.dummy_cycle = trans_conf->wait_cycles;
 	ospi_inst->transfer.spi_frf = trans_conf->frame_format;
 	ospi_inst->transfer.ddr = trans_conf->ddr_enable;
