@@ -295,7 +295,7 @@ void ospi_send(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 	ospi->OSPI_CTRLR1 = 0;
 
 	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
-						SPI_CTRLR0_INST_L_8bit);
+			transfer->inst_len);
 
 	//Unmask Tx interrupts.
 	ospi->OSPI_IMR = TX_INTR_MASK;
@@ -322,7 +322,7 @@ void ospi_receive(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 	ospi->OSPI_CTRLR1 = transfer->rx_total_cnt - 1;
 
 	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
-						SPI_CTRLR0_INST_L_0bit);
+			transfer->inst_len);
 
 	//Unmask Tx and Rx interrupts.
 	ospi->OSPI_IMR = TX_INTR_MASK | RX_INTR_MASK;
@@ -349,7 +349,7 @@ void ospi_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 	ospi->OSPI_CTRLR1 = transfer->rx_total_cnt - 1;
 
 	ospi->OSPI_SPI_CTRLR0 = set_spi_ctrlr0_reg(transfer,
-						SPI_CTRLR0_INST_L_8bit);
+			transfer->inst_len);
 
 	ospi->OSPI_IMR = TX_INTR_MASK | RX_INTR_MASK;
 
@@ -489,15 +489,23 @@ void ospi_psram_xip_init(struct ospi_regs *ospi,
 
 	ospi_disable(ospi);
 
+	val = (1 << SPI_CTRLR0_SSI_IS_MST)
+			| (SPI_FRAME_FORMAT_OCTAL << SPI_CTRLR0_SPI_FRF)
+			| SPI_CTRLR0_SCPOL_LOW
+			| SPI_CTRLR0_SCPH_LOW
+			| (0 << SPI_CTRLR0_SSTE)
+			| (SPI_TMOD_RX << SPI_CTRLR0_TMOD)
+			| (SPI_CTRLR0_DFS_16bit << SPI_CTRLR0_DFS);
+
 	val = (SPI_FRAME_FORMAT_OCTAL << XIP_CTRL_FRF_OFFSET)
 			| (trans_type << XIP_CTRL_TRANS_TYPE_OFFSET)
 			| (0x8 << XIP_CTRL_ADDR_L_OFFSET)
-			| (0x2 << XIP_CTRL_INST_L_OFFSET)
+			| (0x3 << XIP_CTRL_INST_L_OFFSET)
 			| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
 			| (xip_cfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
 			| (0x1 << XIP_CTRL_DFS_HC_OFFSET)
 			| (0x1 << XIP_CTRL_DDR_EN_OFFSET)
-			| (0x0 << XIP_CTRL_INST_DDR_EN_OFFSET)
+			| (0x1 << XIP_CTRL_INST_DDR_EN_OFFSET)
 			| (0x1 << XIP_CTRL_RXDS_EN_OFFSET)
 			| (0x1 << XIP_CTRL_INST_EN_OFFSET)
 			| (0x0 << XIP_CTRL_CONT_XFER_EN_OFFSET)
@@ -512,9 +520,9 @@ void ospi_psram_xip_init(struct ospi_regs *ospi,
 	val = (SPI_FRAME_FORMAT_OCTAL << XIP_WRITE_CTRL_WR_FRF_OFFSET)
 			| (0x2 << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
 			| (0x8 << XIP_WRITE_CTRL_WR_ADDR_L_OFFSET)
-			| (0x2 << XIP_WRITE_CTRL_WR_INST_L_OFFSET)
+			| (0x3 << XIP_WRITE_CTRL_WR_INST_L_OFFSET)
 			| (0x1 << XIP_WRITE_CTRL_WR_SPI_DDR_EN_OFFSET)
-			| (0x0 << XIP_WRITE_CTRL_WR_INST_DDR_EN_OFFSET)
+			| (0x1 << XIP_WRITE_CTRL_WR_INST_DDR_EN_OFFSET)
 			| (0x0 << XIP_WRITE_CTRL_XIPWR_HYPERBUS_EN_OFFSET)
 			| (0x0 << XIP_WRITE_CTRL_XIPWR_RXDS_SIG_EN_OFFSET)
 			| (0x1 << XIP_WRITE_CTRL_XIPWR_DM_EN_OFFSET)
