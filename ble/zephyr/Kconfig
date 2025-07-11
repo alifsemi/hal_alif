@@ -6,13 +6,6 @@ if ALIF_BLE_HOST
 
 menu "Alif BLE host stack"
 
-config ALIF_BLE_HOST_PATCHING
-	bool "Apply a patch to the Alif BLE host stack"
-	default n
-	help
-	  Apply a patch to the BLE host stack in ROM. This enables ROM functions to be overridden
-	  using a patched version.
-
 config ALIF_BLE_HOST_THREAD_PRIORITY
 	int "Priority for thread running the BLE host stack"
 	default 5
