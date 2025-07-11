@@ -34,9 +34,7 @@ static uint32_t ble_heap_non_ret[RWIP_CALC_HEAP_LEN(1000)] __noinit;
 static uint32_t initialised __noinit;
 #define INITIALISED_MAGIC 0x45454545
 
-#ifdef CONFIG_ALIF_BLE_HOST_PATCHING
-extern uint32_t __ble_patch_info_start;
-#endif
+extern __weak uint32_t __ble_patch_info_start;
 
 static ble_rom_config_t rom_config = {
 	.p_ble_heap_env_mem = ble_heap_env,
@@ -48,11 +46,7 @@ static ble_rom_config_t rom_config = {
 	.p_ble_heap_non_ret_mem = ble_heap_non_ret,
 	.ble_heap_non_ret_mem_size = ARRAY_SIZE(ble_heap_non_ret),
 	.ble_app_main_task = TASK_APP,
-#ifdef CONFIG_ALIF_BLE_HOST_PATCHING
 	.patch = &__ble_patch_info_start,
-#else
-	.patch = NULL,
-#endif
 };
 
 static K_THREAD_STACK_DEFINE(ble_stack_area, CONFIG_ALIF_BLE_HOST_THREAD_STACKSIZE);
