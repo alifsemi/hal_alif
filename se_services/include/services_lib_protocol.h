@@ -29,13 +29,26 @@ extern "C" {
 /*******************************************************************************
  *  M A C R O   D E F I N E S
  ******************************************************************************/
-#define SE_SERVICES_VERSION_STRING                 "0.50.1"
+/* See SERVICES documentation for change log */
+#define SE_SERVICES_VERSION_STRING                 "0.50.6"
 #define SE_SERVICES_VERSION_MAJOR                  0
 #define SE_SERVICES_VERSION_MINOR                  50
-#define SE_SERVICES_VERSION_PATCH                  1
+#define SE_SERVICES_VERSION_PATCH                  6
 
 #define IMAGE_NAME_LENGTH                          8
 #define VERSION_RESPONSE_LENGTH                    80
+
+/**
+ * @brief Flag positions with the SERVICES_toc_data_t flag string
+ */
+#define FLAG_STRING_COMPRESSED                     0
+#define FLAG_STRING_LOAD_IMAGE                     1
+#define FLAG_STRING_VERIFY                         2
+#define FLAG_STRING_CPU_BOOTED                     3
+#define FLAG_STRING_ENCRYPTED                      4
+#define FLAG_STRING_DEFERRED                       5
+#define FLAG_STRING_END                            6
+#define FLAG_STRING_SIZE                           8
 
 /**
  * Transport layer error codes
@@ -159,8 +172,9 @@ typedef struct {
 	volatile uint32_t send_nvds_copy_len;
 	volatile uint32_t send_trng_dst_addr;
 	volatile uint32_t send_trng_len;
+	volatile uint32_t send_internal_clock_select;
 	volatile int      resp_error_code;
-} net_proc_boot_svc_1_101_t;
+} net_proc_boot_svc_t;
 
 #if defined(CONFIG_SOC_SERIES_BALLETTO_B1)
 
@@ -169,17 +183,6 @@ typedef struct {
 #define ES0_CLOCK_24MHZ   4
 #define ES0_CLOCK_48MHZ   0xC
 #endif
-
-typedef struct {
-	service_header_t header;
-	volatile uint32_t send_nvds_src_addr;
-	volatile uint32_t send_nvds_dst_addr;
-	volatile uint32_t send_nvds_copy_len;
-	volatile uint32_t send_trng_dst_addr;
-	volatile uint32_t send_trng_len;
-	volatile uint32_t send_es0_clock_select;
-	volatile int      resp_error_code;
-} net_proc_boot_svc_t;
 
 typedef struct {
 	service_header_t header;
@@ -252,6 +255,20 @@ typedef struct {
 	volatile uint32_t resp_error_code;
 } mbedtls_aes_crypt_svc_t;
 
+/* MBEDTLS AES */
+typedef struct {
+	service_header_t header;
+	volatile uint32_t send_key_addr;
+	volatile uint32_t send_key_bits;
+	volatile uint32_t send_direction;  /* Encrypt, Decrypt */
+	volatile uint32_t send_crypt_type; /* ECB, CBC, CTR, OFB */
+	volatile uint32_t send_iv_addr;
+	volatile uint32_t send_length;
+	volatile uint32_t send_input_addr;
+	volatile uint32_t send_output_addr;
+	volatile uint32_t resp_error_code;
+} mbedtls_aes_svc_t;
+
 /* MBEDTLS SHA */
 typedef struct {
 	service_header_t header;
@@ -261,6 +278,15 @@ typedef struct {
 	volatile uint32_t send_data_length;
 	volatile uint32_t resp_error_code;
 } mbedtls_sha_svc_t;
+
+typedef struct {
+	service_header_t header;
+	volatile uint32_t send_sha_type;  /* SHA1, SHA224, SHA256 */
+	volatile uint32_t send_data_addr;
+	volatile uint32_t send_data_length;
+	volatile uint32_t send_shasum_addr;
+	volatile uint32_t resp_error_code;
+} mbedtls_sha_single_svc_t;
 
 /* MBEDTLS CCM/GCM SET KEY */
 typedef struct {
@@ -289,6 +315,24 @@ typedef struct {
 	volatile uint32_t send_tag_length;
 	volatile uint32_t resp_error_code;
 } mbedtls_ccm_gcm_crypt_svc_t;
+
+/* MBEDTLS CCM/GCM */
+typedef struct {
+	service_header_t header;
+	volatile uint32_t send_crypt_type;
+	volatile uint32_t send_key_addr;
+	volatile uint32_t send_key_bits;
+	volatile uint32_t send_length;
+	volatile uint32_t send_iv_addr;
+	volatile uint32_t send_iv_length;
+	volatile uint32_t send_add_addr;
+	volatile uint32_t send_add_length;
+	volatile uint32_t send_input_addr;
+	volatile uint32_t send_output_addr;
+	volatile uint32_t send_tag_addr;
+	volatile uint32_t send_tag_length;
+	volatile uint32_t resp_error_code;
+} mbedtls_ccm_gcm_svc_t;
 
 /* MBEDTLS CHACHA20 CRYPT */
 typedef struct {
@@ -360,6 +404,16 @@ typedef struct {
 	volatile uint32_t resp_error_code;
 } mbedtls_cmac_reset_svc_t;
 
+/* MBEDTLS CMAC */
+typedef struct {
+	service_header_t header;
+	volatile uint32_t send_key_addr;
+	volatile uint32_t send_key_bits;
+	volatile uint32_t send_input_addr;
+	volatile uint32_t send_input_length;
+	volatile uint32_t send_output_addr;
+	volatile uint32_t resp_error_code;
+} mbedtls_cmac_svc_t;
 
 /* Boot Services */
 
@@ -490,14 +544,16 @@ typedef struct {
  * @brief  one toc record
  */
 typedef struct {
-	volatile  uint8_t  image_identifier[IMAGE_NAME_LENGTH];
-	volatile uint32_t  version;
-	volatile uint32_t  cpu;
-	volatile uint32_t  store_address;
-	volatile uint32_t  load_address;
-	volatile uint32_t  boot_address;
-	volatile uint32_t  image_size;
-	volatile uint32_t  flags;
+	volatile uint8_t   resp_image_identifier[IMAGE_NAME_LENGTH];
+	volatile uint32_t  resp_version;
+	volatile uint32_t  resp_cpu;
+	volatile uint32_t  resp_store_address;
+	volatile uint32_t  resp_load_address;
+	volatile uint32_t  resp_boot_address;
+	volatile uint32_t  resp_image_size;
+	volatile uint32_t  resp_processing_time;
+	volatile uint32_t  resp_flags;
+	volatile uint8_t   resp_flags_string[FLAG_STRING_SIZE];
 } get_toc_entry_t;
 
 /**
@@ -526,6 +582,16 @@ typedef struct {
 	volatile uint32_t  otp_alif_firmware_version_dcu[10];
 	volatile uint32_t resp_error_code;
 } get_otp_data_t;
+
+/**
+ * @struct get_ecc_pubkey_t
+ * @brief  Get the device's ECC public key
+ */
+typedef struct {
+	service_header_t header;
+	volatile uint8_t  resp_ecc_pubkey[64];
+	volatile uint32_t resp_error_code;
+} get_ecc_pubkey_t;
 
 /**
  * @struct  otp_data_t
@@ -565,7 +631,10 @@ typedef struct {
 	volatile uint8_t MfgData[32];
 	volatile uint8_t SerialN[8];
 	volatile uint8_t LCS;
-	volatile uint32_t  resp_error_code;
+	volatile uint8_t padding[3];
+	volatile uint32_t external_config[4];
+	volatile uint32_t flags2;
+	volatile uint32_t resp_error_code;
 } get_device_revision_data_t;
 
 /**
@@ -684,6 +753,36 @@ typedef struct {
 	uint32_t power_profile;
 	uint32_t resp_error_code;
 } m55_vtor_save_request_svc_t;
+
+typedef struct {
+	service_header_t header;
+	uint32_t value;
+} stop_mode_raw_request_svc_t;
+
+typedef struct {
+	service_header_t header;
+	uint32_t send_ewic_source;
+	uint32_t resp_error_code;
+} ewic_config_raw_request_svc_t;
+
+typedef struct {
+	service_header_t header;
+	uint32_t send_vbat_wakeup_source;
+	uint32_t resp_error_code;
+} vbat_wakeup_config_raw_req_svc_t;
+
+typedef struct {
+	service_header_t header;
+	uint32_t send_mem_retention;
+	uint32_t resp_error_code;
+} mem_ret_config_raw_request_svc_t;
+
+typedef struct {
+	service_header_t header;
+	uint32_t ns_vtor_addr;
+	uint32_t se_vtor_addr;
+	uint32_t resp_error_code;
+} m55_vtor_save_request_raw_svc_t;
 
 /**
  * DCDC voltage control Request
