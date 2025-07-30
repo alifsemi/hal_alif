@@ -27,7 +27,7 @@ int dma_event_router_configure(const uint32_t dma_group, const uint32_t dma_requ
 	regdata = EVTRTR2_DMA_CTRL_ENA | EVTRTR2_DMA_CTRL_ACK_PERIPH | dma_group;
 	sys_write32(regdata, EVTRTRLOCAL_DMA_CTRL0 + (dma_request * 0x4));
 
-	/* DMA Handshake disable */
+	/* DMA Handshake enable */
 	regdata = sys_read32(EVTRTRLOCAL_DMA_ACK_TYPE0 + (dma_group * 0x4));
 	if (enable_handshake) {
 		regdata |= (0x1 << dma_request);
