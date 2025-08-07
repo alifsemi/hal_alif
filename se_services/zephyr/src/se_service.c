@@ -159,6 +159,9 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	if (k_can_yield()) {
 		int wait = 0;
 
+		k_sem_reset(&svc_send_sem);
+		k_sem_reset(&svc_recv_sem);
+
 		/* Perform transaction in interrupt mode */
 		err = ipm_send(send_dev, wait, CH_ID, &global_address, (int)size);
 		if (err) {
@@ -168,12 +171,10 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 
 		if (k_sem_take(&svc_send_sem, K_MSEC(timeout)) != 0) {
 			LOG_ERR("service %d send is timed out!\n", service_id);
-			k_sem_reset(&svc_send_sem);
 			return -ETIME;
 		}
 		if (k_sem_take(&svc_recv_sem, K_MSEC(timeout)) != 0) {
 			LOG_ERR("service %d response is timed out!\n", service_id);
-			k_sem_reset(&svc_recv_sem);
 			return -ETIME;
 		}
 	} else {
