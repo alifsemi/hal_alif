@@ -14,7 +14,7 @@ LOG_MODULE_REGISTER(se_service, CONFIG_IPM_LOG_LEVEL);
 
 #define CH_ID           0
 #define SERVICE_TIMEOUT 10000
-#define SYNC_TIMEOUT    100
+#define SYNC_TIMEOUT    500
 /* MUTEX_TIMEOUT must be higher than SERVICE_TIMEOUT */
 #define MUTEX_TIMEOUT   15000
 #define MAX_TRIES       100
