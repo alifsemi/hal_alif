@@ -21,7 +21,7 @@
 LOG_MODULE_REGISTER(hci_uart, CONFIG_UART_LOG_LEVEL);
 
 /* Define appropriate timeouts */
-#define TX_TIMEOUT_US 10 /* 10us */
+#define TX_TIMEOUT_US 400 /* 400us */
 #define RX_TIMEOUT_US 10 /* 10us */
 
 /* UART DMA request numbers from board-specific overlay */
@@ -34,16 +34,19 @@ LOG_MODULE_REGISTER(hci_uart, CONFIG_UART_LOG_LEVEL);
 #define UART_DEVICE_NODE DT_CHOSEN(zephyr_hci_uart)
 static const struct device *uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 
-#define BUFF_SIZE 32
-
-static bool pingpong;
-static uint8_t rx_buffer[2][BUFF_SIZE];
 /* Wait for specific message from HCI */
 static K_SEM_DEFINE(hci_tx_sem, 0, 1);
-static K_SEM_DEFINE(hci_rx_sem, 0, 1);
 
+/* RX DMA is not optimal so it is disabled by default */
+#define HCI_RX_DMA_ENABLED 0
+
+#if HCI_RX_DMA_ENABLED
+#define BUFF_SIZE 32
 #define MY_RING_BUF_BYTES 256
 RING_BUF_DECLARE(hci_ring_buf, MY_RING_BUF_BYTES);
+static K_SEM_DEFINE(hci_rx_sem, 0, 1);
+static bool pingpong;
+static uint8_t rx_buffer[2][BUFF_SIZE];
 
 struct hci_rx_job {
 	struct k_work work;
@@ -85,6 +88,7 @@ static void hci_rx_handle_func(struct k_work *work)
 static struct hci_rx_job hci_rx_job = {
 	.work = Z_WORK_INITIALIZER(hci_rx_handle_func),
 };
+#endif
 
 
 /*
@@ -155,12 +159,13 @@ static void hci_uart_async_callback(const struct device *dev, struct uart_event 
 		data = uart_env.tx.dummy;
 		k_sem_give(&hci_tx_sem);
 		break;
-
+#if HCI_RX_DMA_ENABLED
 	case UART_RX_RDY:
 		/* Data received and ready for processing */
 		char *p_start = evt->data.rx.buf + evt->data.rx.offset;
 		/* Push To ring buffer */
 		ring_buf_put(&hci_ring_buf, p_start, evt->data.rx.len);
+		LOG_DBG("Rxd %d , offset %d", evt->data.rx.len, evt->data.rx.offset);
 		k_sem_give(&hci_rx_sem);
 		break;
 
@@ -184,7 +189,7 @@ static void hci_uart_async_callback(const struct device *dev, struct uart_event 
 		LOG_ERR("UART RX stopped due to error: %d", evt->data.rx_stop.reason);
 		uart_env.rx_enabled = false;
 		break;
-
+#endif
 	default:
 		LOG_ERR("Unknown UART event: %d", evt->type);
 		break;
@@ -225,6 +230,61 @@ void hci_uart_callback(const struct device *dev, void *user_data)
 	/* TODO error/overflow handling */
 }
 
+static bool hci_uart_rx_dma_driver_check(void)
+{
+/* RX DMA is disabled until we find a proper solution */
+#if CONFIG_UART_ASYNC_API && HCI_RX_DMA_ENABLED
+
+	/* RX DMA is disabled because it not give great value yet */
+#if DT_NODE_HAS_STATUS(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), rx), okay)
+	const struct device *rxdma =
+		DEVICE_DT_GET_OR_NULL(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), rx));
+
+	if (rxdma) {
+
+		if (device_is_ready(rxdma)) {
+			int rx_config = DT_DMAS_CELL_BY_NAME(DT_NODELABEL(uart_hci), rx, periph);
+
+			LOG_DBG("DMA RX event enable %d", rx_config);
+			dma_event_router_configure(DMA_UART_RX_GROUP, rx_config, false);
+			uart_callback_set(uart_dev, hci_uart_async_callback, NULL);
+
+			return true;
+		}
+	}
+#else
+	LOG_ERR("NO RX DMA");
+#endif
+#endif
+	uart_irq_rx_enable(uart_dev);
+	uart_irq_callback_user_data_set(uart_dev, hci_uart_callback, NULL);
+	return false;
+}
+
+static bool hci_uart_tx_dma_driver_check(void)
+{
+#ifdef CONFIG_UART_ASYNC_API
+#if DT_NODE_HAS_STATUS(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), rx), okay)
+	const struct device *txdma =
+		DEVICE_DT_GET_OR_NULL(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), tx));
+
+	if (txdma) {
+
+		if (device_is_ready(txdma)) {
+			int tx_config = DT_DMAS_CELL_BY_NAME(DT_NODELABEL(uart_hci), tx, periph);
+
+			LOG_DBG("DMA TX event enable %d", tx_config);
+			dma_event_router_configure(DMA_UART_RX_GROUP, tx_config, false);
+			uart_callback_set(uart_dev, hci_uart_async_callback, NULL);
+			return true;
+		}
+	}
+#endif
+#endif
+	uart_irq_callback_user_data_set(uart_dev, hci_uart_callback, NULL);
+	return false;
+}
+
 /**
  * @brief Initialize the HCI UART interface
  *
@@ -232,8 +292,6 @@ void hci_uart_callback(const struct device *dev, void *user_data)
  */
 int32_t hci_uart_init(void)
 {
-	int ret;
-
 	/* Get the UART device */
 	uart_dev = DEVICE_DT_GET_OR_NULL(DT_ALIAS(uart_hci));
 
@@ -248,42 +306,10 @@ int32_t hci_uart_init(void)
 	}
 
 	/* Set the UART callback for async operations */
-	uart_env.rx.dma_enabled = false;
-	uart_env.tx.dma_enabled = false;
-#ifdef CONFIG_UART_ASYNC_API
-	const struct device *rxdma =
-		DEVICE_DT_GET_OR_NULL(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), rx));
-	const struct device *txdma =
-		DEVICE_DT_GET_OR_NULL(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), tx));
-	if (rxdma) {
-		if (DT_NODE_HAS_STATUS(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), rx), okay)) {
-			if (device_is_ready(rxdma)) {
-				uart_env.rx.dma_enabled = true;
-			}
-		}
-	}
-
-	if (txdma) {
-		if (DT_NODE_HAS_STATUS(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), tx), okay)) {
-			if (device_is_ready(txdma)) {
-				uart_env.tx.dma_enabled = true;
-			}
-		}
-	}
-#endif
-
-	if (uart_env.rx.dma_enabled || uart_env.tx.dma_enabled) {
-
-		ret = uart_callback_set(uart_dev, hci_uart_async_callback, NULL);
-
-		if (ret < 0) {
-			LOG_ERR("Failed to set UART callback: %d", ret);
-			return ret;
-		}
-	}
-
+	uart_env.rx.dma_enabled = hci_uart_rx_dma_driver_check();
+	uart_env.tx.dma_enabled = hci_uart_tx_dma_driver_check();
+#if HCI_RX_DMA_ENABLED
 	if (uart_env.rx.dma_enabled) {
-		int rx_config = DT_DMAS_CELL_BY_NAME(DT_NODELABEL(uart_hci), rx, periph);
 
 		/* Create Receiver worker */
 		k_work_queue_start(&hci_worker_queue, hci_worker_stack,
@@ -291,30 +317,18 @@ int32_t hci_uart_init(void)
 				   CONFIG_ALIF_BLE_HOST_THREAD_PRIORITY - 1, NULL);
 		k_thread_name_set(&hci_worker_queue.thread, "hci_worker");
 
-		LOG_DBG("DMA RX event enable %d", rx_config);
-		dma_event_router_configure(DMA_UART_RX_GROUP, rx_config);
-
 		uart_rx_disable(uart_dev);
 		uart_irq_rx_disable(uart_dev);
-		ret = uart_rx_enable(uart_dev, rx_buffer[pingpong], BUFF_SIZE, RX_TIMEOUT_US);
+		
+		int ret = uart_rx_enable(uart_dev, rx_buffer[pingpong], BUFF_SIZE, RX_TIMEOUT_US);
+		
 		if (ret < 0) {
 			LOG_ERR("Failed to enable UART: %d", ret);
 			return ret;
 		}
 		uart_env.rx_enabled = true;
-	} else {
-		uart_irq_rx_enable(uart_dev);
-		uart_irq_callback_user_data_set(uart_dev, hci_uart_callback, NULL);
 	}
-
-	if (uart_env.tx.dma_enabled) {
-		int tx_config = DT_DMAS_CELL_BY_NAME(DT_NODELABEL(uart_hci), tx, periph);
-		LOG_DBG("DMA tX event enable %d", tx_config);
-
-		dma_event_router_configure(DMA_UART_RX_GROUP, tx_config);
-	} else {
-		uart_irq_callback_user_data_set(uart_dev, hci_uart_callback, NULL);
-	}
+#endif
 
 	/* We cannot initialize RX transfer callback here
 	 * as that might be kept in retention and also when
@@ -341,6 +355,7 @@ void hci_uart_read(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint
 	wake_es0(uart_dev);
 
 	if (uart_env.rx.dma_enabled) {
+#if HCI_RX_DMA_ENABLED
 		/* Enable RX with DMA and timeout */
 		if (!uart_env.rx_enabled) {
 			int ret = uart_rx_enable(uart_dev, rx_buffer[pingpong], BUFF_SIZE,
@@ -364,6 +379,7 @@ void hci_uart_read(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint
 		hci_rx_job.callback = callback;
 		hci_rx_job.metadata = dummy;
 		k_work_submit_to_queue(&hci_worker_queue, &hci_rx_job.work);
+#endif
 	} else {
 		rx_buf_ptr = bufptr;
 		rx_buf_size = size;
