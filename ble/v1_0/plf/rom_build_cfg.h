@@ -20,11 +20,11 @@
 #define CFG_EATT_SUPPORT
 #define CFG_GATT_CACHING_SUPPORT
 #define CFG_BLE_HOST
-#define CFG_MAX_LE_MTU                517
-#define CFG_ATT_VAL_MAX               512
-#define CFG_GAPI_INTF_NB              2
+#define CFG_MAX_LE_MTU 517
+#define CFG_ATT_VAL_MAX 512
+#define CFG_GAPI_INTF_NB 2
 #define CFG_L2CAP_COC_CHAN_PER_CON_NB 10
-#define CFG_L2CAP_CHAN_IN_ENV_NB      20
+#define CFG_L2CAP_CHAN_IN_ENV_NB 20
 #define CFG_BLE_HOST_ISO
 #define CFG_BLE_GAF
 #define CFG_GAF_DBG
@@ -160,4 +160,4 @@
 #define CFG_ACT 12
 #define CFG_RTOS
 
-#endif /* ROM_BUILD_CFG_H_ */
+#endif // ROM_BUILD_CFG_H_

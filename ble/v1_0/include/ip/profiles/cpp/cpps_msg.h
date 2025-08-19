@@ -102,7 +102,6 @@ struct cpps_db_cfg
      * CP Feature Value - Not supposed to be modified during the lifetime of the device
      * This bit field is set in order to decide which features are supported:
      *   Supported features (specification) ---------------- Bits 0 to 18
-     *   See enum #cpp_feat_flags_bf
      */
     uint32_t cp_feature;
     /// Initial count for wheel revolutions

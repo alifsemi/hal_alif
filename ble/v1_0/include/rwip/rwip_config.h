@@ -1004,6 +1004,8 @@
 #include "rwhl_config.h"  // ble Host stack configuration
 #endif //HOST_PRESENT
 
+// rwapp_config.h inclusion removed by Alif
+
 /******************************************************************************************/
 /* -------------------------   KERNEL SETUP          -------------------------------------*/
 /******************************************************************************************/
@@ -1153,10 +1155,10 @@ enum KE_TASK_TYPE
 enum KE_MEM_HEAP
 {
     /* For SPARK_EXTSYS0 platform, re-order the heap memory identifiers. The non-retention heap is
-       not protected by the firewall, so should only be used for data intended to be shared.
-       Stack's heap allocation algorithm will allocate memory in a heap with a higher index if the
-       desired heap is full, so placing the non-retention heap at index 0 prevents any "overflow"
-       of data from the other heaps into this heap. */
+       not protected by the firewall, so should only be used for data intended to be shared. CEVA's
+       heap allocation algorithm will allocate memory in a heap with a higher index if the desired
+       heap is full, so placing the non-retention heap at index 0 prevents any "overflow" of data
+       from the other heaps into this heap. */
     #if defined(CFG_SPARK_EXTSYS0)
     /// Non Retention memory block
     KE_MEM_NON_RETENTION,
