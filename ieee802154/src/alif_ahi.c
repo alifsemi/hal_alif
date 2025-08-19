@@ -13,6 +13,7 @@
 
 #include "alif_ahi.h"
 #include "es0_power_manager.h"
+#include "dma_event_router.h"
 
 #define LOG_MODULE_NAME alif_ahi
 
@@ -32,10 +33,61 @@ static const struct device *uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 struct msg_buf rx_msg;
 
 static msg_received_callback receive_cb;
+static bool ahi_tx_dma_enabled;
+static K_SEM_DEFINE(ahi_tx_sem, 0, 1);
 K_MUTEX_DEFINE(receive_mutex);
 
 /*AHI Protocol defines*/
 #define AHI_KE_MSG_TYPE 0x10
+
+/**
+ * @brief UART async event callback
+ *
+ * This function handles UART async events for both TX and RX operations
+ * when using DMA-based transfers with the async UART API
+ *
+ * @param dev UART device
+ * @param evt UART event
+ * @param user_data User data pointer
+ */
+static void ahi_uart_async_callback(const struct device *dev, struct uart_event *evt,
+				    void *user_data)
+{
+
+	switch (evt->type) {
+	case UART_TX_DONE:
+		/* TX completed successfully */
+		LOG_ERR("UART TX completed successfully");
+		k_sem_give(&ahi_tx_sem);
+		break;
+
+	case UART_TX_ABORTED:
+		/* TX was aborted */
+		LOG_ERR("UART TX was aborted, sent %d bytes", evt->data.tx.len);
+		k_sem_give(&ahi_tx_sem);
+		break;
+
+	case UART_RX_RDY:
+		break;
+
+	case UART_RX_BUF_REQUEST:
+		break;
+
+	case UART_RX_BUF_RELEASED:
+		break;
+
+	case UART_RX_DISABLED:
+
+		break;
+
+	case UART_RX_STOPPED:
+		break;
+
+	default:
+		LOG_ERR("Unknown UART event: %d", evt->type);
+		break;
+	}
+}
 
 void ahi_uart_callback(const struct device *dev, void *user_data)
 {
@@ -79,6 +131,29 @@ void ahi_uart_callback(const struct device *dev, void *user_data)
 	}
 }
 
+static int alif_send_with_dma(const uint8_t data_ptr, uint16_t length)
+{
+#ifdef CONFIG_UART_ASYNC_API
+	/* Start TX with DMA and timeout */
+	LOG_ERR("Send %u", length);
+	int ret = uart_tx(uart_dev, data_ptr, length, 200);
+
+	if (ret < 0) {
+		/* If starting TX fails, call the callback with error */
+		LOG_ERR("TX send fail");
+		return ret;
+	}
+	if (k_sem_take(&ahi_tx_sem, K_USEC(200)) != 0) {
+
+		LOG_ERR("TX SEM TO");
+		return -ETIME;
+	}
+	return 0;
+#else
+	return -EIO;
+#endif
+}
+
 int alif_ahi_msg_send(struct msg_buf *p_msg, const uint8_t *p_data, uint16_t data_length)
 {
 	if (p_msg == NULL) {
@@ -86,17 +161,56 @@ int alif_ahi_msg_send(struct msg_buf *p_msg, const uint8_t *p_data, uint16_t dat
 	}
 
 	/* Deassert&assert rts_n, falling edge triggers wake up the RF core */
- 	wake_es0(uart_dev);
+	wake_es0(uart_dev);
 
-	for (int i = 0; i < p_msg->msg_len; i++) {
-		uart_poll_out(uart_dev, p_msg->msg[i]);
-	}
-	if (p_data && data_length) {
-		for (int i = 0; i < data_length; i++) {
-			uart_poll_out(uart_dev, p_data[i]);
+	if (ahi_tx_dma_enabled) {
+		int ret = alif_send_with_dma(p_msg->msg, p_msg->msg_len);
+
+		if (ret) {
+			return ret;
+		}
+		if (p_data && data_length) {
+			ret = alif_send_with_dma(p_msg->msg, p_msg->msg_len);
+			if (ret) {
+				return ret;
+			}
+		}
+	} else {
+		for (int i = 0; i < p_msg->msg_len; i++) {
+			uart_poll_out(uart_dev, p_msg->msg[i]);
+		}
+		if (p_data && data_length) {
+			for (int i = 0; i < data_length; i++) {
+				uart_poll_out(uart_dev, p_data[i]);
+			}
 		}
 	}
+
 	return 0;
+}
+
+static bool ahi_uart_tx_dma_driver_check(void)
+{
+#ifdef CONFIG_UART_ASYNC_API
+#if DT_NODE_HAS_STATUS(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_ahi), tx), okay)
+	const struct device *txdma =
+		DEVICE_DT_GET_OR_NULL(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_ahi), tx));
+
+	if (txdma && device_is_ready(txdma)) {
+		/* Register DMA callback */
+		int tx_config = DT_DMAS_CELL_BY_NAME(DT_NODELABEL(uart_ahi), tx, periph);
+
+		uart_callback_set(uart_dev, ahi_uart_async_callback, NULL);
+
+		LOG_DBG("DMA tX event enable %d", tx_config);
+
+		dma_event_router_configure(0, tx_config, false);
+
+		return true;
+	}
+#endif
+	uart_irq_tx_enable(uart_dev);
+	return false;
 }
 
 int alif_ahi_reset(void)
@@ -106,9 +220,15 @@ int alif_ahi_reset(void)
 		return -1;
 	}
 
+	uart_rx_disable(uart_dev);
+	uart_irq_rx_disable(uart_dev);
+	uart_irq_tx_disable(uart_dev);
+
+	ahi_tx_dma_enabled = ahi_uart_tx_dma_driver_check();
+	/* Register UART imterrupt handler */
 	uart_irq_callback_user_data_set(uart_dev, ahi_uart_callback, NULL);
+
 	uart_irq_rx_enable(uart_dev);
-	uart_irq_tx_enable(uart_dev);
 	/* Clear receive buffers */
 	rx_msg.msg_len = 0;
 	return 0;
