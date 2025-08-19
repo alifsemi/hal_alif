@@ -12,6 +12,6 @@
 #define EVTRTR2_DMA_CTRL_ACK_PERIPH (0x0 << 16)
 #define EVTRTR2_DMA_CTRL_ACK_ROUTER (0x1 << 16)
 
-int dma_event_router_configure(const uint32_t dma_group, const uint32_t dma_request);
+int dma_event_router_configure(const uint32_t dma_group, const uint32_t dma_request, bool enable_handshake);
 
 #endif /* ALIF_DMA_EVENT_ROUTER_H */
