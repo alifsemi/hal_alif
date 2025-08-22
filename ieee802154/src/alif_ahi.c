@@ -57,7 +57,7 @@ static void ahi_uart_async_callback(const struct device *dev, struct uart_event 
 	switch (evt->type) {
 	case UART_TX_DONE:
 		/* TX completed successfully */
-		LOG_ERR("UART TX completed successfully");
+		LOG_DBG("UART TX completed successfully");
 		k_sem_give(&ahi_tx_sem);
 		break;
 
@@ -131,11 +131,11 @@ void ahi_uart_callback(const struct device *dev, void *user_data)
 	}
 }
 
-static int alif_send_with_dma(const uint8_t data_ptr, uint16_t length)
+static int alif_send_with_dma(const uint8_t *data_ptr, uint16_t length)
 {
 #ifdef CONFIG_UART_ASYNC_API
 	/* Start TX with DMA and timeout */
-	LOG_ERR("Send %u", length);
+	LOG_DBG("Send %u", length);
 	int ret = uart_tx(uart_dev, data_ptr, length, 200);
 
 	if (ret < 0) {
@@ -208,6 +208,7 @@ static bool ahi_uart_tx_dma_driver_check(void)
 
 		return true;
 	}
+#endif
 #endif
 	uart_irq_tx_enable(uart_dev);
 	return false;
