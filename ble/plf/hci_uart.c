@@ -335,7 +335,6 @@ int32_t hci_uart_init(void)
 	 * read operation is started a (new) callback is always set.
 	 */
 	uart_env.tx.callback = NULL;
-	uart_env.rx.callback = NULL;
 	return 0;
 }
 
