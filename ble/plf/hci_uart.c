@@ -21,7 +21,7 @@
 LOG_MODULE_REGISTER(hci_uart, CONFIG_UART_LOG_LEVEL);
 
 /* Define appropriate timeouts */
-#define TX_TIMEOUT_US 400 /* 400us */
+#define TX_TIMEOUT_US 1000 /* 1000us */
 #define RX_TIMEOUT_US 10 /* 10us */
 
 /* UART DMA request numbers from board-specific overlay */
@@ -38,7 +38,9 @@ static const struct device *uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 static K_SEM_DEFINE(hci_tx_sem, 0, 1);
 
 /* RX DMA is not optimal so it is disabled by default */
+/* TX DMA doesn't work in high load, disabled by default */
 #define HCI_RX_DMA_ENABLED 0
+#define HCI_TX_DMA_ENABLED 0
 
 #if HCI_RX_DMA_ENABLED
 #define BUFF_SIZE 32
@@ -139,6 +141,8 @@ static struct uart_env_tag uart_env __noinit;
  * @param evt UART event
  * @param user_data User data pointer
  */
+
+ #if HCI_RX_DMA_ENABLED || HCI_TX_DMA_ENABLED
 static void hci_uart_async_callback(const struct device *dev, struct uart_event *evt,
 				    void *user_data)
 {
@@ -146,6 +150,7 @@ static void hci_uart_async_callback(const struct device *dev, struct uart_event 
 	void *data = NULL;
 
 	switch (evt->type) {
+#if HCI_TX_DMA_ENABLED
 	case UART_TX_DONE:
 		/* TX completed successfully */
 		LOG_DBG("UART TX completed successfully");
@@ -159,6 +164,7 @@ static void hci_uart_async_callback(const struct device *dev, struct uart_event 
 		data = uart_env.tx.dummy;
 		k_sem_give(&hci_tx_sem);
 		break;
+#endif
 #if HCI_RX_DMA_ENABLED
 	case UART_RX_RDY:
 		/* Data received and ready for processing */
@@ -195,6 +201,7 @@ static void hci_uart_async_callback(const struct device *dev, struct uart_event 
 		break;
 	}
 }
+#endif
 
 void hci_uart_callback(const struct device *dev, void *user_data)
 {
@@ -263,7 +270,7 @@ static bool hci_uart_rx_dma_driver_check(void)
 
 static bool hci_uart_tx_dma_driver_check(void)
 {
-#ifdef CONFIG_UART_ASYNC_API
+#if CONFIG_UART_ASYNC_API && HCI_TX_DMA_ENABLED
 #if DT_NODE_HAS_STATUS(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), rx), okay)
 	const struct device *txdma =
 		DEVICE_DT_GET_OR_NULL(DT_DMAS_CTLR_BY_NAME(DT_NODELABEL(uart_hci), tx));
@@ -402,7 +409,7 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 	uart_env.tx.callback = callback;
 	uart_env.tx.dummy = dummy;
 	if (uart_env.tx.dma_enabled) {
-
+#if HCI_TX_DMA_ENABLED
 		/* Start TX with DMA and timeout */
 		int ret = uart_tx(uart_dev, bufptr, size, TX_TIMEOUT_US);
 
@@ -425,6 +432,7 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 			}
 			return;
 		}
+#endif
 	} else {
 
 		for (int i = 0; i < size; i++) {
