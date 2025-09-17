@@ -319,9 +319,24 @@ int8_t stop_using_es0(void)
 void wake_es0(const struct device *uart_dev)
 {
 	if (wakeup_count == 0) {
-		uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 0);
-		k_usleep(100);
-		uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 1);
-		wakeup_count++;
+		uint32_t rts, cts;
+
+		/* Read RTS and CTS line */
+		uart_line_ctrl_get(uart_dev, UART_LINE_CTRL_RTS, &rts);
+		uart_line_ctrl_get(uart_dev, UART_LINE_MODEM_CTS, &cts);
+
+		if (cts == 0) {
+			if (rts) {
+				uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 0);
+				k_usleep(100);
+			}
+			uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 1);
+			uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_AFCE, 1);
+			wakeup_count++;
+		} else if (rts == 0) {
+			uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 1);
+			uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_AFCE, 1);
+			wakeup_count++;
+		}
 	}
 }

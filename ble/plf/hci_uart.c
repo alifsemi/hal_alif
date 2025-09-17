@@ -16,12 +16,15 @@
 #include <zephyr/sys/__assert.h>
 #include <zephyr/logging/log.h>
 #include "dma_event_router.h"
+#include <zephyr/pm/pm.h>
+#include <zephyr/pm/policy.h>
+#include <zephyr/sys/poweroff.h>
 
 /* Register HCI UART log module with standard UART log level */
 LOG_MODULE_REGISTER(hci_uart, CONFIG_UART_LOG_LEVEL);
 
 /* Define appropriate timeouts */
-#define TX_TIMEOUT_US 1000 /* 1000us */
+#define TX_TIMEOUT_US 10000 /* 10000us */
 #define RX_TIMEOUT_US 10 /* 10us */
 
 /* UART DMA request numbers from board-specific overlay */
@@ -342,7 +345,6 @@ int32_t hci_uart_init(void)
 	 * read operation is started a (new) callback is always set.
 	 */
 	uart_env.tx.callback = NULL;
-	uart_env.rx.callback = NULL;
 	return 0;
 }
 
@@ -357,9 +359,6 @@ void hci_uart_read(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint
 	/* Store callback and user data */
 	uart_env.rx.callback = callback;
 	uart_env.rx.dummy = dummy;
-
-	/* Deassert&assert rts_n, falling edge triggers wake up the RF core */
-	wake_es0(uart_dev);
 
 	if (uart_env.rx.dma_enabled) {
 #if HCI_RX_DMA_ENABLED
@@ -402,12 +401,17 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 	__ASSERT(bufptr != NULL, "Invalid buffer pointer");
 	__ASSERT(size != 0, "Invalid size");
 	__ASSERT(callback != NULL, "Invalid callback");
+	enum itf_status if_status = ITF_STATUS_OK;
 
 	/* Deassert&assert rts_n, falling edge triggers wake up the RF core */
 	wake_es0(uart_dev);
 
 	uart_env.tx.callback = callback;
 	uart_env.tx.dummy = dummy;
+	if (IS_ENABLED(CONFIG_PM)) {
+		pm_policy_state_lock_get(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
+	}
+
 	if (uart_env.tx.dma_enabled) {
 #if HCI_TX_DMA_ENABLED
 		/* Start TX with DMA and timeout */
@@ -415,22 +419,14 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 
 		if (ret < 0) {
 			/* If starting TX fails, call the callback with error */
-			if (callback != NULL) {
-				callback(dummy, ITF_STATUS_ERROR);
-				uart_env.tx.callback = NULL;
-				uart_env.tx.dummy = NULL;
-			}
-			return;
+			if_status = ITF_STATUS_ERROR;
+			goto end;
 		}
 		if (k_sem_take(&hci_tx_sem, K_USEC(TX_TIMEOUT_US)) != 0) {
 
 			LOG_ERR("TX SEM TO");
-			if (callback != NULL) {
-				callback(dummy, ITF_STATUS_ERROR);
-				uart_env.tx.callback = NULL;
-				uart_env.tx.dummy = NULL;
-			}
-			return;
+			if_status = ITF_STATUS_ERROR;
+			goto end;
 		}
 #endif
 	} else {
@@ -439,13 +435,19 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 			uart_poll_out(uart_dev, bufptr[i]);
 		}
 	}
+#if HCI_TX_DMA_ENABLED
+end:
+#endif
+	if (IS_ENABLED(CONFIG_PM)) {
+		pm_policy_state_lock_put(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
+	}
 
 	if (callback != NULL) {
 		/* Clear callback pointer */
 		uart_env.tx.callback = NULL;
 		uart_env.tx.dummy = NULL;
 		/* Call handler */
-		callback(dummy, ITF_STATUS_OK);
+		callback(dummy, if_status);
 	}
 }
 
