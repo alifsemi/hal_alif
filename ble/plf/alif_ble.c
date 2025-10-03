@@ -16,6 +16,11 @@
 #include "es0_power_manager.h"
 #include "soc_memory_map.h"
 #include "alif_ble.h"
+#include "gapm.h"
+
+static k_tid_t ble_tid;
+
+static atomic_t stop_flag = ATOMIC_INIT(0);
 
 #define RWIP_INIT_NO_ERROR   0
 #define RESET_MEM_ALLOC_FAIL 0xF2F2F2F2
@@ -55,6 +60,7 @@ static struct k_thread ble_thread;
 static K_SEM_DEFINE(rwip_schedule_sem, 0, 1);
 static K_SEM_DEFINE(rwip_init_sem, 0, 1);
 static K_MUTEX_DEFINE(rwip_process_mutex);
+static K_SEM_DEFINE(reset_sem, 0, 1);
 
 static int irq_key;
 
@@ -165,6 +171,12 @@ void alif_ble_mutex_unlock(void)
 	k_mutex_unlock(&rwip_process_mutex);
 }
 
+static void gapm_reset_cb(uint32_t metainfo, uint16_t status)
+{
+	LOG_DBG("GAPM RESET status: 0x%02x", status);
+	k_sem_give(&reset_sem);
+}
+
 static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 {
 	int ret = 0;
@@ -202,14 +214,15 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 
 	LOG_DBG("task starting event loop");
 
-	while (1) {
+	while (!atomic_get(&stop_flag)) {
 		k_sem_take(&rwip_schedule_sem, K_FOREVER);
-		LOG_DBG("task received event");
 
 		alif_ble_mutex_lock(K_FOREVER);
 		rwip_process();
 		alif_ble_mutex_unlock();
 	}
+
+	LOG_DBG("Ending BLE thread");
 }
 
 int alif_ble_enable(void (*cb)(void))
@@ -220,13 +233,17 @@ int alif_ble_enable(void (*cb)(void))
 	 */
 	int ret = (initialised == INITIALISED_MAGIC) ? -EALREADY : 0;
 
+	/* Clear the stop_flag to allow entering the ble_thread loop */
+	atomic_clear(&stop_flag);
+
 	if (cb != NULL) {
 		app_hooks.p_app_init = cb;
 	} else {
 		app_hooks.p_app_init = cb_on_stack_initialised;
 	}
 
-	k_thread_create(&ble_thread, ble_stack_area, K_THREAD_STACK_SIZEOF(ble_stack_area),
+	ble_tid = k_thread_create(&ble_thread, ble_stack_area,
+			K_THREAD_STACK_SIZEOF(ble_stack_area),
 			ble_task, NULL, NULL, NULL, CONFIG_ALIF_BLE_HOST_THREAD_PRIORITY, 0,
 			K_FOREVER);
 	k_thread_start(&ble_thread);
@@ -239,4 +256,50 @@ int alif_ble_enable(void (*cb)(void))
 	}
 
 	return ret;
+}
+int alif_ble_disable(void)
+{
+	int err;
+
+	LOG_DBG("Stopping BLE");
+
+	/* Clear initialised thread indicator */
+	initialised = 0;
+
+	/* Reset stack to clean processes and queues*/
+	gapm_reset(0, gapm_reset_cb);
+
+	k_sem_take(&reset_sem, K_FOREVER);
+
+	/* Signal the BLE thread to exit the loop */
+	atomic_set(&stop_flag, 1);
+
+	/* Pass the semaphore to exit the BLE thread loop */
+	k_sem_give(&rwip_schedule_sem);
+
+	/* Call k_thread_join() to ensure the ble_thread is fully terminated */
+	err = k_thread_join(&ble_thread, K_MSEC(500));
+
+	if (err) {
+		LOG_ERR("Terminating BLE thread error 0x%02x", err);
+
+		LOG_WRN("Aborting BLE thread");
+
+		k_thread_abort(ble_tid);
+
+		err = k_thread_join(&ble_thread, K_FOREVER);
+		if (err) {
+			LOG_ERR("Error aborting BLE thread");
+			return err;
+		}
+	}
+
+	/* Request es0 stop */
+	err = (int)stop_using_es0();
+	if (err) {
+		LOG_ERR("Error stopping es0: %02x", err);
+		return err;
+	}
+
+	return 0;
 }

@@ -20,6 +20,15 @@
 int alif_ble_enable(void (*cb)(void));
 
 /**
+ ****************************************************************************************
+ * @brief Stop BLE zephyr thread and es0.
+ *
+ * @return 0 on success, or negative error code
+ ****************************************************************************************
+ */
+int alif_ble_disable(void);
+
+/**
  * @brief Acquire mutex lock to BLE stack processing. This must be called before using any
  * Alif BLE APIs outside the callbacks provided by the stack. Corresponding call to
  * alif_ble_mutex_unlock must be done to unlock the mutex and to let the BLE stack continue
