@@ -80,4 +80,7 @@ config ALIF_MAX_ACTIVE_CLOCK_DRIFT
 	default 20
 	range 0 255
 
+config ALIF_HPA_MODE
+	bool "High Power Amplifier for Alif controller"
+
 endif # ALIF_PM_LINK_LAYER

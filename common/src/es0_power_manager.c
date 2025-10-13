@@ -46,6 +46,7 @@ static volatile uint8_t es0_user_counter;
 #define BOOT_PARAM_ID_EXT_WARMBOOT_WAKEUP_TIME  0xD0
 #define BOOT_PARAM_ID_LPCLK_DRIFT               0x07
 #define BOOT_PARAM_ID_ACTCLK_DRIFT              0x09
+#define BOOT_PARAM_ID_CONFIGURATION             0xD1
 
 #define BOOT_PARAM_LEN_LE_CODED_PHY_500          1
 #define BOOT_PARAM_LEN_DFT_SLAVE_MD              1
@@ -65,6 +66,7 @@ static volatile uint8_t es0_user_counter;
 #define BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME  2
 #define BOOT_PARAM_LEN_LPCLK_DRIFT               2
 #define BOOT_PARAM_LEN_ACTCLK_DRIFT              1
+#define BOOT_PARAM_LEN_CONFIGURATION             4
 
 #define ES0_PM_ERROR_NO_ERROR             0
 #define ES0_PM_ERROR_TOO_MANY_USERS       -1
@@ -139,11 +141,23 @@ static uint16_t add_nvds_param_length(uint16_t added_len){
 
 }
 
-int8_t take_es0_into_use(void)
+int8_t take_es0_into_use_with_params(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select)
 {
 	if (255 == es0_user_counter) {
 		return ES0_PM_ERROR_TOO_MANY_USERS;
+	} else if (es0_user_counter == 0) {
+		/* Start */
+		if (se_service_boot_es0(nvds_buff, nvds_size, clock_select)) {
+			return ES0_PM_ERROR_START_FAILED;
+		}
 	}
+
+	es0_user_counter++;
+	return ES0_PM_ERROR_NO_ERROR;
+}
+
+int8_t take_es0_into_use(void)
+{
 
 	uint32_t hci_baudrate;
 	uint32_t ahi_baudrate;
@@ -162,20 +176,7 @@ int8_t take_es0_into_use(void)
 
 	used_baudrate = hci_baudrate ? hci_baudrate : ahi_baudrate;
 
-	if (es0_user_counter == 0) {
-		int err;
-		uint32_t version;
-
-		err = se_service_get_toc_version(&version);
-		if (err) {
-			return err;
-		}
-		/* v1.103. not need shuttdown */
-		if (version < 0x01670000) {
-			/* Shuttdown is needed if riscv was already active */
-			se_service_shutdown_es0();
-		}
-	} else {
+	if (es0_user_counter) {
 		/* Already started */
 		es0_user_counter++;
 		return ES0_PM_ERROR_NO_ERROR;
@@ -212,6 +213,7 @@ int8_t take_es0_into_use(void)
 	total_length += add_nvds_param_length(BOOT_PARAM_LEN_EXT_WARMBOOT_WAKEUP_TIME);
 	total_length += add_nvds_param_length(BOOT_PARAM_LEN_LPCLK_DRIFT);
 	total_length += add_nvds_param_length(BOOT_PARAM_LEN_ACTCLK_DRIFT);
+	total_length += add_nvds_param_length(BOOT_PARAM_LEN_CONFIGURATION);
 
 	if (total_length > LL_BOOT_PARAMS_MAX_SIZE) {
 		return ES0_PM_ERROR_TOO_MANY_BOOT_PARAMS;
@@ -262,6 +264,9 @@ int8_t take_es0_into_use(void)
 			    BOOT_PARAM_LEN_LPCLK_DRIFT);
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_ACTCLK_DRIFT, CONFIG_ALIF_MAX_ACTIVE_CLOCK_DRIFT,
 			    BOOT_PARAM_LEN_ACTCLK_DRIFT);
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_CONFIGURATION,
+			    (IS_ENABLED(CONFIG_ALIF_HPA_MODE) ? 1 : 0),
+			    BOOT_PARAM_LEN_CONFIGURATION);
 
 	uint32_t min_uart_clk_freq = used_baudrate * 16;
 	uint32_t reg_uart_clk_cfg = LL_UART_CLK_SEL_CTRL_16MHZ;
@@ -292,13 +297,10 @@ int8_t take_es0_into_use(void)
 		return ES0_PM_ERROR_INVALID_BOOT_PARAMS;
 	}
 
-	if (se_service_boot_es0(ll_boot_params_buffer, total_length, es0_clock_select)) {
-		return ES0_PM_ERROR_START_FAILED;
-	}
-
-	es0_user_counter++;
-	return ES0_PM_ERROR_NO_ERROR;
+	return take_es0_into_use_with_params(ll_boot_params_buffer, total_length, es0_clock_select);
 }
+
+
 
 int8_t stop_using_es0(void)
 {

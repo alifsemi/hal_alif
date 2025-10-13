@@ -37,6 +37,18 @@ enum core_error_t {
 int8_t take_es0_into_use(void);
 
 /**
+ * @brief Register a user of a ES0 with dynamic parameters
+ * @param nvds_buff NVDS configuration defined by user
+ * @param nvds_size Length of nvds data
+ * @param clock_select ES0 clock select
+ *
+ * @retval  0 If successful
+ * @retval  -1 If too many users
+ * @retval  -4 Starting ES0 failed
+ */
+int8_t take_es0_into_use_with_params(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select);
+
+/**
  * @brief De-register a user of a ES0
  * @retval  -1 If no active users
  * @retval  -2 Shutdown of ES0 failed
