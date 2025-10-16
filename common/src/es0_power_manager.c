@@ -319,7 +319,8 @@ int8_t stop_using_es0(void)
 void wake_es0(const struct device *uart_dev)
 {
 	if (wakeup_count == 0) {
-		uint32_t rts, cts;
+		uint32_t rts = 0;
+		uint32_t cts = 0;
 
 		/* Read RTS and CTS line */
 		uart_line_ctrl_get(uart_dev, UART_LINE_CTRL_RTS, &rts);
