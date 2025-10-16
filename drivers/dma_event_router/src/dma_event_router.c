@@ -8,6 +8,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/arch/cpu.h>
 #include <zephyr/types.h>
+#include <soc_common.h>
 #include "dma_event_router.h"
 #include "soc.h"
 
