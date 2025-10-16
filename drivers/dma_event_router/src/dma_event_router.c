@@ -8,6 +8,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/arch/cpu.h>
 #include <zephyr/types.h>
+#include <soc_common.h>
 #include "dma_event_router.h"
 
 int dma_event_router_configure(const uint32_t dma_group, const uint32_t dma_request, bool enable_handshake)
