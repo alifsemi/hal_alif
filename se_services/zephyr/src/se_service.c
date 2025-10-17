@@ -28,6 +28,9 @@ const struct device *send_dev;
 const struct device *recv_dev;
 static uint32_t se_toc_version;
 
+/* SE ready state - used for lazy initialization */
+static atomic_t se_ready = ATOMIC_INIT(0);
+
 /* Manufacturing data for older Ensemble Family revision <= REV_B2 */
 typedef struct {
 	uint8_t x_loc: 7;
@@ -205,6 +208,37 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 }
 
 /**
+ * @brief Internal: Synchronize with SE (assumes svc_mutex is held)
+ *
+ * This internal function performs the actual SE synchronization work.
+ * The caller must hold svc_mutex before calling this function.
+ *
+ * returns,
+ * 0     - On success. SE is woken up to service SE service requests.
+ * errno - Unable to get an valid response from SE.
+ */
+static int se_service_sync_locked(void)
+{
+	int err, i = 0;
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.service_header.hdr_service_id = SERVICE_MAINTENANCE_HEARTBEAT_ID;
+
+	while (i < MAX_TRIES) {
+		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
+				     sizeof(se_service_all_svc_d.service_header), SYNC_TIMEOUT);
+		if (!err) {
+			return 0;
+		}
+		/* SE service timed out. Increment count */
+		++i;
+	}
+
+	LOG_ERR("Failed to synchronize with SE (errno = %d)", err);
+	return err;
+}
+
+/**
  * @brief Synchronize with SE or wait until SE wakes up by sending
  * multiple SE heartbeat service requests.
  *
@@ -214,30 +248,65 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
  */
 int se_service_sync(void)
 {
-	int err, i = 0;
-
-	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.service_header.hdr_service_id = SERVICE_MAINTENANCE_HEARTBEAT_ID;
+	int ret;
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		LOG_ERR("Unable to lock mutex (errno = %d)", errno);
 		return errno;
 	}
-	while (i < MAX_TRIES) {
-		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
-				     sizeof(se_service_all_svc_d.service_header), SYNC_TIMEOUT);
-		if (!err) {
-			break;
-		}
-		/* SE service timed out. Increment count */
-		++i;
-	}
+
+	ret = se_service_sync_locked();
+
 	k_mutex_unlock(&svc_mutex);
-	if (i >= MAX_TRIES) {
-		LOG_ERR("Failed to synchronize with SE (errno =%d)\n", err);
-		return err;
+	return ret;
+}
+
+/**
+ * @brief Ensure SE is ready to receive service calls
+ *
+ * This function ensures the Secure Enclave is awake and synchronized,
+ * ready to process service requests. Uses lazy initialization - only
+ * syncs on first call or after SE has been put to sleep.
+ *
+ * Safe to call from multiple threads - uses mutex for serialization.
+ * The atomic flag provides fast-path optimization for subsequent calls.
+ *
+ * returns,
+ * 0     - On success. SE is ready to receive service calls.
+ * errno - Unable to synchronize with SE.
+ */
+static int se_service_ensure_ready(void)
+{
+	int ret;
+
+	/* Fast path: SE already ready (lock-free atomic read) */
+	if (atomic_get(&se_ready)) {
+		return 0;
 	}
-	return 0;
+
+	/* Slow path: Need to synchronize with SE */
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Timeout acquiring mutex to ensure SE ready");
+		return -ETIMEDOUT;
+	}
+
+	/* Double-check inside mutex - another thread may have already synced */
+	if (atomic_get(&se_ready)) {
+		k_mutex_unlock(&svc_mutex);
+		return 0;
+	}
+
+	/* Perform SE sync while holding mutex */
+	ret = se_service_sync_locked();
+	if (ret == 0) {
+		atomic_set(&se_ready, 1);
+		LOG_DBG("SE now ready to receive service calls");
+	} else {
+		LOG_ERR("Failed to sync with SE: %d", ret);
+	}
+
+	k_mutex_unlock(&svc_mutex);
+	return ret;
 }
 
 /**
@@ -255,6 +324,12 @@ int se_service_sync(void)
 int se_service_heartbeat(void)
 {
 	int err;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
@@ -297,6 +372,12 @@ int se_service_get_rnd_num(uint8_t *buffer, uint16_t length)
 	if (!buffer) {
 		LOG_ERR("Invalid argument\n");
 		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
 	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
@@ -347,6 +428,12 @@ int se_service_get_toc_number(uint32_t *ptoc)
 	if (!ptoc) {
 		LOG_ERR("Invalid argument\n");
 		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
 	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
@@ -405,6 +492,12 @@ int se_service_get_toc_version(uint32_t *pversion)
 		return 0;
 	}
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 	if (err) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", err);
@@ -459,6 +552,12 @@ int se_service_get_se_revision(uint8_t *prev)
 		return -EINVAL;
 	}
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
 		return errno;
@@ -508,6 +607,12 @@ int se_service_get_device_part_number(uint32_t *pdev_part)
 	if (!pdev_part) {
 		LOG_ERR("Invalid argument\n");
 		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
 	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
@@ -561,6 +666,12 @@ int se_service_system_get_device_data(get_device_revision_data_t *pdev_data)
 	if (!pdev_data) {
 		LOG_ERR("Invalid argument\n");
 		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
 	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
@@ -752,6 +863,12 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_s
 	int err, resp_err;
 	uint32_t version;
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	err = se_service_get_toc_version(&version);
 	if (err) {
 		return err;
@@ -814,6 +931,12 @@ int se_service_shutdown_es0(void)
 {
 	int err, resp_err = -1;
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
 		return errno;
@@ -840,6 +963,12 @@ int se_service_shutdown_es0(void)
 int se_service_get_run_cfg(run_profile_t *pp)
 {
 	int err, resp_err = -1;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
@@ -884,6 +1013,12 @@ int se_service_set_run_cfg(run_profile_t *pp)
 {
 	int err, resp_err = -1;
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
 		return errno;
@@ -922,6 +1057,12 @@ int se_service_set_run_cfg(run_profile_t *pp)
 int se_service_get_off_cfg(off_profile_t *wp)
 {
 	int err, resp_err = -1;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
@@ -966,6 +1107,12 @@ int se_service_set_off_cfg(off_profile_t *wp)
 {
 	int err, resp_err = -1;
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
 		return errno;
@@ -1006,6 +1153,12 @@ int se_service_se_sleep_req(uint32_t param)
 {
 	int err, resp_err = -1;
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
 		return errno;
@@ -1019,21 +1172,37 @@ int se_service_se_sleep_req(uint32_t param)
 				sizeof(se_service_all_svc_d.se_sleep_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.se_sleep_d.resp_error_code;
 
-	k_mutex_unlock(&svc_mutex);
 	if (err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s failed with %d\n", __func__, err);
 		return err;
 	}
 	if (resp_err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
+
+	/*
+	 * SE is now asleep. Reset the ready flag so the next SE service call
+	 * will re-sync (wake up) the SE before processing the request.
+	 */
+	atomic_set(&se_ready, 0);
+	LOG_DBG("SE put to sleep - ready flag cleared");
+
+	k_mutex_unlock(&svc_mutex);
 	return 0;
 }
 
 int se_service_system_set_services_debug(bool debug_enable)
 {
 	int err, resp_err = -1;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
 
 	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
@@ -1066,6 +1235,12 @@ int se_service_boot_reset_soc(void)
 {
 	int err, i = 0;
 
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.service_header.hdr_service_id =
 					SERVICE_BOOT_RESET_SOC;
@@ -1095,6 +1270,12 @@ int se_service_boot_reset_soc(void)
 int se_service_boot_reset_cpu(uint32_t cpu_id)
 {
 	int err, i = 0, resp_err = -1;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
 
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.cpu_reboot_d.header.hdr_service_id =
