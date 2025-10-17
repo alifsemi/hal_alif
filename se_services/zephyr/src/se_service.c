@@ -5,6 +5,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/cache.h>
 #include <zephyr/drivers/ipm.h>
+#include <zephyr/pm/pm.h>
 #include <se_service.h>
 #include <soc_memory_map.h>
 #include <zephyr/logging/log.h>
@@ -1311,6 +1312,36 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 }
 
 /**
+ * @brief PM notifier callback for SE service state entry
+ *
+ * Clears the se_ready flag when entering suspend states to ensure the SE
+ * is re-synchronized after system resume.
+ *
+ * parameters,
+ * @state - Target power state
+ */
+static void se_service_pm_notify_entry(enum pm_state state)
+{
+	switch (state) {
+	case PM_STATE_SUSPEND_TO_RAM:
+	case PM_STATE_SOFT_OFF:
+		/*
+		 * System is entering suspend. Clear the ready flag so SE will
+		 * be re-synchronized when system resumes and SE services are
+		 * called again.
+		 */
+		atomic_set(&se_ready, 0);
+		LOG_DBG("SE ready flag cleared for suspend (state=%d)", state);
+		break;
+	default:
+		/* No action needed for other states */
+		break;
+	}
+}
+
+static struct pm_notifier se_pm_notifier;
+
+/**
  * @brief Check the MHUv2 devices are ready and initialize callbacks for
  * the received and send data.
  *
@@ -1332,6 +1363,10 @@ static int se_service_mhuv2_nodes_init(void)
 	ipm_register_callback(send_dev, callback_for_send_msg, NULL);
 
 	ipm_set_enabled(recv_dev, true);
+
+	/* Register PM notifier to handle suspend/resume */
+	se_pm_notifier.state_entry = se_service_pm_notify_entry;
+	pm_notifier_register(&se_pm_notifier);
 
 	return 0;
 }
