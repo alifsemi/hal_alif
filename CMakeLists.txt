@@ -1,6 +1,7 @@
-
+if (CONFIG_SOC_FAMILY_ENSEMBLE OR CONFIG_SOC_FAMILY_BALLETTO)
 add_subdirectory(common)
 add_subdirectory(drivers)
+endif()
 
 add_subdirectory_ifdef(CONFIG_HAS_ALIF_SE_SERVICES se_services)
 
