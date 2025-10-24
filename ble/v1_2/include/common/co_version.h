@@ -32,7 +32,7 @@
 #include "co_bt.h"           // BT standard definitions
 
 /// RWBT SW Major Version
-#define RWBT_SW_VERSION_MAJOR                   BT60_VERSION
+#define RWBT_SW_VERSION_MAJOR                   BT_VERSION(CFG_BT_VERSION)
 /// RWBT SW Minor Version
 #define RWBT_SW_VERSION_MINOR                   1
 /// RWBT SW Build Version
