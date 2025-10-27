@@ -9,12 +9,8 @@
 #include <se_service.h>
 #include <soc_memory_map.h>
 #include <zephyr/logging/log.h>
-<<<<<<< HEAD
 #include <zephyr/pm/policy.h>
-
-=======
 #include <errno.h>
->>>>>>> aa03477 (se_services: update to SE FW 106)
 LOG_MODULE_REGISTER(se_service, CONFIG_IPM_LOG_LEVEL);
 
 #define DT_DRV_COMPAT alif_secure_enclave_services
@@ -85,10 +81,14 @@ typedef union {
 	control_cpu_svc_t cpu_reboot_d;
 	se_sleep_svc_t se_sleep_d;
 <<<<<<< HEAD
+<<<<<<< HEAD
 	process_toc_entry_svc_t process_toc_entry_svc_d;
 	update_stoc_svc_t update_stoc_svc_d;
 =======
 >>>>>>> aa03477 (se_services: update to SE FW 106)
+=======
+	update_stoc_svc_t update_stoc_svc_d;
+>>>>>>> 835ae4d (se_service: zephyr: src: add se_service_update_stoc)
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -224,6 +224,10 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	return 0;
 }
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 835ae4d (se_service: zephyr: src: add se_service_update_stoc)
 int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
 {
 	int err, resp_err;
