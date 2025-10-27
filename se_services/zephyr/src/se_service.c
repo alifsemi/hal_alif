@@ -79,6 +79,7 @@ typedef union {
 	aipm_get_off_profile_svc_t get_off_d;
 	control_cpu_svc_t cpu_reboot_d;
 	se_sleep_svc_t se_sleep_d;
+	update_stoc_svc_t update_stoc_svc_d;
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -205,6 +206,40 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	}
 
 	sys_cache_data_invd_range(ptr, size);
+	return 0;
+}
+
+
+int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
+{
+	int err, resp_err;
+
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.update_stoc_svc_d.header.hdr_service_id = SERVICE_UPDATE_STOC;
+	se_service_all_svc_d.update_stoc_svc_d.send_image_address = local_to_global(img_addr);
+	se_service_all_svc_d.update_stoc_svc_d.send_image_size = img_size;
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.update_stoc_svc_d,
+			     sizeof(se_service_all_svc_d.update_stoc_svc_d), SERVICE_TIMEOUT);
+	resp_err = se_service_all_svc_d.update_stoc_svc_d.resp_error_code;
+
+	k_mutex_unlock(&svc_mutex);
+
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		return resp_err;
+	}
+
 	return 0;
 }
 
