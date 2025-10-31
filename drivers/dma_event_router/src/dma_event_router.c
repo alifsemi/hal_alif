@@ -30,12 +30,13 @@ int dma_event_router_configure(const uint32_t dma_group, const uint32_t dma_requ
 
 	/* DMA Handshake enable */
 	regdata = sys_read32(EVTRTRLOCAL_DMA_ACK_TYPE0 + (dma_group * 0x4));
+
 	if (enable_handshake) {
 		regdata |= (0x1 << dma_request);
 	} else {
 		regdata &= ~(0x1 << dma_request);
 	}
-	regdata &= ~(0x1 << dma_request);
+
 	sys_write32(regdata, EVTRTRLOCAL_DMA_ACK_TYPE0 + (dma_group * 0x4));
 
 	return 0;
