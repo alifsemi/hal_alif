@@ -23,6 +23,7 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension);
 int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select);
 int se_service_shutdown_es0(void);
 int se_service_get_run_cfg(run_profile_t *pp);
+int se_service_get_last_set_run_cfg(run_profile_t *pp);
 int se_service_set_run_cfg(run_profile_t *pp);
 int se_service_get_off_cfg(off_profile_t *wp);
 int se_service_set_off_cfg(off_profile_t *wp);
