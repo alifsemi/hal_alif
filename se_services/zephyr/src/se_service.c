@@ -32,6 +32,14 @@ static uint32_t se_toc_version;
 /* SE ready state - used for lazy initialization */
 static atomic_t se_ready = ATOMIC_INIT(0);
 
+/*
+ * Local run profile cache to reduce SE service calls.
+ * The cached profile represents the last configuration sent to SE.
+ * Used for read-modify-write operations and to skip redundant SE calls.
+ */
+static run_profile_t cached_run_profile;
+static bool run_profile_initialized;
+
 /* Manufacturing data for older Ensemble Family revision <= REV_B2 */
 typedef struct {
 	uint8_t x_loc: 7;
@@ -1011,6 +1019,7 @@ int se_service_get_run_cfg(run_profile_t *pp)
 		return errno;
 	}
 
+	/* Always query SE firmware for current state */
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_run_d.header.hdr_service_id = SERVICE_POWER_GET_RUN_REQ_ID;
 
@@ -1045,6 +1054,72 @@ int se_service_get_run_cfg(run_profile_t *pp)
 	return 0;
 }
 
+/**
+ * @brief Get the last run configuration that was set via se_service_set_run_cfg()
+ *
+ * Returns the locally cached run profile that was set by this core via
+ * se_service_set_run_cfg(). This is much faster than querying SE firmware
+ * and suitable for callers that need to read-modify-write the profile.
+ *
+ * Note: The cached profile reflects what THIS core has set, not the actual
+ * SE firmware state. The actual state may differ if:
+ * - Other cores have made changes
+ * - System has been suspended/resumed
+ * - Profile has never been initialized on this core
+ *
+ * @param pp Pointer to run_profile_t to receive cached data
+ * @return 0 on success
+ *         -ENODATA if profile cache is not initialized
+ */
+int se_service_get_last_set_run_cfg(run_profile_t *pp)
+{
+	int ret = 0;
+
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		return errno;
+	}
+
+	/*
+	 * Return cached profile if initialized.
+	 * This returns what THIS core has set, not the current system state.
+	 */
+	if (run_profile_initialized) {
+		memcpy(pp, &cached_run_profile, sizeof(run_profile_t));
+	} else {
+		LOG_WRN("Profile cache not initialized - use se_service_get_run_cfg()");
+		ret = -ENODATA;
+	}
+
+	k_mutex_unlock(&svc_mutex);
+	return ret;
+}
+
+/**
+ * @brief Check if run profile has changed
+ *
+ * @param pp Requested profile
+ * @return true if profile changed, false otherwise
+ */
+static bool se_service_profile_changed(const run_profile_t *pp)
+{
+	if (!run_profile_initialized) {
+		return true;
+	}
+
+	return pp->aon_clk_src != cached_run_profile.aon_clk_src ||
+	       pp->run_clk_src != cached_run_profile.run_clk_src ||
+	       pp->cpu_clk_freq != cached_run_profile.cpu_clk_freq ||
+	       pp->scaled_clk_freq != cached_run_profile.scaled_clk_freq ||
+	       pp->dcdc_mode != cached_run_profile.dcdc_mode ||
+	       pp->dcdc_voltage != cached_run_profile.dcdc_voltage ||
+	       pp->memory_blocks != cached_run_profile.memory_blocks ||
+	       pp->ip_clock_gating != cached_run_profile.ip_clock_gating ||
+	       pp->phy_pwr_gating != cached_run_profile.phy_pwr_gating ||
+	       pp->power_domains != cached_run_profile.power_domains ||
+	       pp->vdd_ioflex_3V3 != cached_run_profile.vdd_ioflex_3V3;
+}
+
 int se_service_set_run_cfg(run_profile_t *pp)
 {
 	int err, resp_err = -1;
@@ -1059,6 +1134,14 @@ int se_service_set_run_cfg(run_profile_t *pp)
 		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
 		return errno;
 	}
+
+	/* Check if profile changed - skip SE call if unchanged */
+	if (!se_service_profile_changed(pp)) {
+		k_mutex_unlock(&svc_mutex);
+		return 0;
+	}
+
+	/* Profile changed - update SE */
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 
 	se_service_all_svc_d.set_run_d.header.hdr_service_id = SERVICE_POWER_SET_RUN_REQ_ID;
@@ -1078,15 +1161,22 @@ int se_service_set_run_cfg(run_profile_t *pp)
 			     sizeof(se_service_all_svc_d.set_run_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.set_run_d.resp_error_code;
 
-	k_mutex_unlock(&svc_mutex);
 	if (err) {
 		LOG_ERR("%s failed with %d\n", __func__, err);
+		k_mutex_unlock(&svc_mutex);
 		return err;
 	}
 	if (resp_err) {
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		k_mutex_unlock(&svc_mutex);
 		return resp_err;
 	}
+
+	/* Update cache on success */
+	memcpy(&cached_run_profile, pp, sizeof(run_profile_t));
+	run_profile_initialized = true;
+
+	k_mutex_unlock(&svc_mutex);
 	return 0;
 }
 
@@ -1349,8 +1439,9 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 /**
  * @brief PM notifier callback for SE service state entry
  *
- * Clears the se_ready flag when entering suspend states to ensure the SE
- * is re-synchronized after system resume.
+ * Clears the se_ready flag and run profile cache when entering suspend states
+ * to ensure the SE is re-synchronized and application reinitializes the profile
+ * after system resume.
  *
  * parameters,
  * @state - Target power state
@@ -1361,12 +1452,16 @@ static void se_service_pm_notify_entry(enum pm_state state)
 	case PM_STATE_SUSPEND_TO_RAM:
 	case PM_STATE_SOFT_OFF:
 		/*
-		 * System is entering suspend. Clear the ready flag so SE will
-		 * be re-synchronized when system resumes and SE services are
-		 * called again.
+		 * System is entering suspend/off. Clear:
+		 * 1. SE ready flag - will re-sync on resume
+		 * 2. Run profile cache - application must reinitialize
+		 *
+		 * This ensures clean state after waking from low-power modes.
+		 * Power domain refcounting is managed by the power domain driver.
 		 */
 		atomic_set(&se_ready, 0);
-		LOG_DBG("SE ready flag cleared for suspend (state=%d)", state);
+		run_profile_initialized = false;
+
 		break;
 	default:
 		/* No action needed for other states */
