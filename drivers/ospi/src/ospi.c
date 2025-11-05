@@ -456,8 +456,8 @@ void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is
 	ospi->OSPI_XIP_WRITE_CTRL = (1 << XIP_WRITE_CTRL_XIPWR_HYPERBUS_EN_OFFSET)
 			| (1 << XIP_WRITE_CTRL_XIPWR_DM_EN_OFFSET)
 			| (1 << XIP_WRITE_CTRL_XIPWR_RXDS_SIG_EN_OFFSET)
-#if (defined(CONFIG_SOC_SERIES_ENSEMBLE_E1C) || defined(CONFIG_SOC_SERIES_BALLETTO_B1) \
-		|| defined(CONFIG_SOC_SERIES_ENSEMBLE_E8))
+#if (defined(CONFIG_SOC_SERIES_E1C) || defined(CONFIG_SOC_SERIES_B1) \
+		|| defined(CONFIG_ENSEMBLE_GEN2))
 			| (1 << XIP_WRITE_CTRL_XIPWR_DFS_HC_OFFSET)
 #endif
 			| (trans_type << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)

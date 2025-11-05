@@ -176,7 +176,7 @@ typedef struct {
 	volatile int      resp_error_code;
 } net_proc_boot_svc_t;
 
-#if defined(CONFIG_SOC_SERIES_BALLETTO_B1)
+#if defined(CONFIG_SOC_SERIES_B1)
 
 /* ES0 CPU clock frequencies */
 #define ES0_CLOCK_16MHZ   0

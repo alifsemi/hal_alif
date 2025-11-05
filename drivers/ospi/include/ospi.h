@@ -518,7 +518,7 @@ static inline void ospi_set_bus_speed(struct ospi_regs *ospi,
 static inline void ospi_aes_set_baud2_delay(struct ospi_aes_regs *aes,
 	bool baud2_delay_en)
 {
-#if defined(CONFIG_SOC_SERIES_ENSEMBLE_E1C) || defined(CONFIG_SOC_SERIES_BALLETTO_B1)
+#if defined(CONFIG_SOC_SERIES_E1C) || defined(CONFIG_SOC_SERIES_B1)
 	if (baud2_delay_en) {
 		aes->AES_INTR_MASK |= AES_INTR_MASK_BAUD2_DELAY_MASK;
 	} else {
@@ -530,7 +530,7 @@ static inline void ospi_aes_set_baud2_delay(struct ospi_aes_regs *aes,
 #endif
 }
 
-#if defined(CONFIG_SOC_SERIES_ENSEMBLE_E8)
+#if defined(CONFIG_ENSEMBLE_GEN2)
 #define AES_SIGNAL_0_DELAY_POS                 (0)
 #define AES_SIGNAL_1_DELAY_POS                 (8)
 #define AES_SIGNAL_2_DELAY_POS                 (16)

@@ -143,7 +143,7 @@ typedef enum {
 	SCALED_FREQ_NONE
 } scaled_clk_freq_t;
 
-#if defined(CONFIG_SOC_SERIES_ENSEMBLE_E1C) || defined(CONFIG_SOC_SERIES_BALLETTO_B1)
+#if defined(CONFIG_SOC_SERIES_E1C) || defined(CONFIG_SOC_SERIES_B1)
 /* Memory Blocks */
 typedef enum {
 	MB_SRAM2,
@@ -302,7 +302,7 @@ typedef enum {
 #define SERAM_MASK      (1 << MB_SERAM)          /* bit18 */
 #define FWRAM_MASK      (1 << MB_FWRAM)          /* bit19 */
 #define BACKUP4K_MASK   (1 << MB_BACKUP4K)       /* bit20 */
-#endif /* (CONFIG_SOC_SERIES_ENSEMBLE_E1C) || (CONFIG_SOC_SERIES_BALLETTO_B1) */
+#endif /* (CONFIG_SOC_SERIES_E1C) || (CONFIG_SOC_SERIES_B1) */
 
 /* PD0 Wakeup events */
 #define WE_SERTC    (1 << 4)     /* bit4 */
@@ -326,7 +326,7 @@ typedef enum {
 #define WE_LPGPIO   0XFF0000  /* bit23:16 */
 
 /* EWIC */
-#if defined(CONFIG_SOC_SERIES_ENSEMBLE_E1C) || defined(CONFIG_SOC_SERIES_BALLETTO_B1)
+#if defined(CONFIG_SOC_SERIES_E1C) || defined(CONFIG_SOC_SERIES_B1)
 #define EWIC_RTC_SE                  (1)         /* bit0 */
 #define EWIC_ES0_WAKEUP              (1 << 1)    /* bit1 */
 #define EWIC_ES0_OSC_EN              (1 << 2)    /* bit2 */
@@ -340,7 +340,7 @@ typedef enum {
 #define EWIC_BROWN_OUT               (1 << 20)   /* bit20 */
 #define EWIC_RTC_B                   (1 << 21)   /* bit21 */
 
-#elif defined(CONFIG_ENSEMBLE_SOC_GEN2)
+#elif defined(CONFIG_ENSEMBLE_GEN2)
 #define EWIC_RTC_SE                  (1)         /* bit0     */
 #define EWIC_UNUSED_1                (7 << 1)    /* bit3:1   */
 #define EWIC_LPGPIO                  (3 << 4)    /* bit5:4   */
@@ -361,7 +361,7 @@ typedef enum {
 #define EWIC_ES1_LP_I2C_IRQ          0x00100000UL  /* bit20 */
 #define EWIC_ES1_LP_UART_IRQ         0x00200000UL  /* bit21 */
 #define EWIC_BROWN_OUT               0x00400000UL  /* bit22 */
-#endif /* (CONFIG_SOC_SERIES_ENSEMBLE_E1C) || (CONFIG_SOC_SERIES_BALLETTO_B1) */
+#endif /* (CONFIG_SOC_SERIES_E1C) || (CONFIG_SOC_SERIES_B1) */
 
 typedef enum {
 	DCDC_VOUT_0800 = 1,
