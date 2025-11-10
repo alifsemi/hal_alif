@@ -217,40 +217,6 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	return 0;
 }
 
-
-int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
-{
-	int err, resp_err;
-
-	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
-
-	if (err) {
-		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
-		return err;
-	}
-
-	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.update_stoc_svc_d.header.hdr_service_id = SERVICE_UPDATE_STOC;
-	se_service_all_svc_d.update_stoc_svc_d.send_image_address = local_to_global(img_addr);
-	se_service_all_svc_d.update_stoc_svc_d.send_image_size = img_size;
-	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.update_stoc_svc_d,
-			     sizeof(se_service_all_svc_d.update_stoc_svc_d), SERVICE_TIMEOUT);
-	resp_err = se_service_all_svc_d.update_stoc_svc_d.resp_error_code;
-
-	k_mutex_unlock(&svc_mutex);
-
-	if (err) {
-		LOG_ERR("%s failed with %d\n", __func__, err);
-		return err;
-	}
-	if (resp_err) {
-		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
-		return resp_err;
-	}
-
-	return 0;
-}
-
 /**
  * @brief Internal: Synchronize with SE (assumes svc_mutex is held)
  *
@@ -391,6 +357,50 @@ int se_service_heartbeat(void)
 	return 0;
 }
 
+int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
+{
+	int err, resp_err;
+
+	if (img_size == 0) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.update_stoc_svc_d.header.hdr_service_id = SERVICE_UPDATE_STOC;
+	se_service_all_svc_d.update_stoc_svc_d.send_image_address = local_to_global(img_addr);
+	se_service_all_svc_d.update_stoc_svc_d.send_image_size = img_size;
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.update_stoc_svc_d,
+			     sizeof(se_service_all_svc_d.update_stoc_svc_d), SERVICE_TIMEOUT);
+	resp_err = se_service_all_svc_d.update_stoc_svc_d.resp_error_code;
+
+	k_mutex_unlock(&svc_mutex);
+
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		return resp_err;
+	}
+
+	return 0;
+}
+
 /**
  * @brief Send service request to SE to get random number.
 
@@ -435,16 +445,20 @@ int se_service_get_rnd_num(uint8_t *buffer, uint16_t length)
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.get_rnd_svc_d,
 			     sizeof(se_service_all_svc_d.get_rnd_svc_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.get_rnd_svc_d.resp_error_code;
-	k_mutex_unlock(&svc_mutex);
+
 	if (err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s failed with %d\n", __func__, err);
 		return err;
 	}
 	if (resp_err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
+
 	memcpy(buffer, (uint8_t *)se_service_all_svc_d.get_rnd_svc_d.resp_rnd, length);
+	k_mutex_unlock(&svc_mutex);
 
 	return 0;
 }
@@ -491,17 +505,20 @@ int se_service_get_toc_number(uint32_t *ptoc)
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.get_toc_number_svc_d,
 			     sizeof(se_service_all_svc_d.get_toc_number_svc_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.get_toc_number_svc_d.resp_error_code;
-	k_mutex_unlock(&svc_mutex);
+
 	if (err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s failed with %d\n", __func__, err);
 		return err;
 	}
 	if (resp_err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
 
 	*ptoc = se_service_all_svc_d.get_toc_number_svc_d.resp_number_of_toc;
+	k_mutex_unlock(&svc_mutex);
 
 	return 0;
 }
@@ -555,19 +572,23 @@ int se_service_get_toc_version(uint32_t *pversion)
 			     sizeof(se_service_all_svc_d.get_toc_version_svc_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.get_toc_version_svc_d.resp_error_code;
 
-	*pversion = se_service_all_svc_d.get_toc_version_svc_d.resp_version;
-	k_mutex_unlock(&svc_mutex);
 	if (err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s failed with %d\n", __func__, err);
 		return err;
 	}
 	if (resp_err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
-	/* Save Toc Version */
+
+	*pversion = se_service_all_svc_d.get_toc_version_svc_d.resp_version;
+	/* Save TOC version in static variable for caching */
 	se_toc_version = se_service_all_svc_d.get_toc_version_svc_d.resp_version;
 	LOG_DBG("toc version: %x", se_toc_version);
+
+	k_mutex_unlock(&svc_mutex);
 	return 0;
 }
 /**
@@ -613,17 +634,21 @@ int se_service_get_se_revision(uint8_t *prev)
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.get_se_revision_svc_d,
 			     sizeof(se_service_all_svc_d.get_se_revision_svc_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.get_se_revision_svc_d.resp_error_code;
-	k_mutex_unlock(&svc_mutex);
+
 	if (err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s failed with %d\n", __func__, err);
 		return err;
 	}
 	if (resp_err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
+
 	memcpy(prev, (uint8_t *)se_service_all_svc_d.get_se_revision_svc_d.resp_se_revision,
 	       se_service_all_svc_d.get_se_revision_svc_d.resp_se_revision_length);
+	k_mutex_unlock(&svc_mutex);
 
 	return 0;
 }
@@ -670,16 +695,20 @@ int se_service_get_device_part_number(uint32_t *pdev_part)
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.get_device_part_svc_d,
 			     sizeof(se_service_all_svc_d.get_device_part_svc_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.get_device_part_svc_d.resp_error_code;
-	k_mutex_unlock(&svc_mutex);
+
 	if (err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s failed with %d\n", __func__, err);
 		return err;
 	}
 	if (resp_err) {
+		k_mutex_unlock(&svc_mutex);
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
+
 	*pdev_part = se_service_all_svc_d.get_device_part_svc_d.resp_device_string;
+	k_mutex_unlock(&svc_mutex);
 
 	return 0;
 }
