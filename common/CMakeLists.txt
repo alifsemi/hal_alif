@@ -1,5 +1,4 @@
-if(CONFIG_SOC_FAMILY_ENSEMBLE OR
-    CONFIG_SOC_FAMILY_BALLETTO)
+if(CONFIG_RTSS_HE OR CONFIG_RTSS_HP)
 
   zephyr_include_directories(include)
 
