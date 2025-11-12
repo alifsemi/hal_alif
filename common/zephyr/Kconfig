@@ -56,28 +56,28 @@ config ALIF_PM_RSSI_INTERF_THR
 
 config ALIF_EXT_WAKEUP_TIME
 	int "External wakeup time needed (us)"
-	default 25000
+	default 0
 
 config ALIF_OSC_WAKEUP_TIME
 	int "Oscilator enable wakeup time needed (us)"
-	default 25000
+	default 1700
 
 config ALIF_RM_WAKEUP_TIME
 	int "Radio wakeup time needed (us)"
-	default 625
+	default 0
 
 config ALIF_EXT_WARMBOOT_WAKEUP_TIME
 	int "Warmboot wakeup time. Time limit between light / deep sleep (us)"
-	default 32000
+	default 1700
 
 config ALIF_MAX_SLEEP_CLOCK_DRIFT
 	int "Max drift of sleep clock in PPM"
-	default 20
+	default 253
 	range 0 65535
 
 config ALIF_MAX_ACTIVE_CLOCK_DRIFT
 	int "Max drift of active clock in PPM"
-	default 20
+	default 253
 	range 0 255
 
 config ALIF_HPA_MODE
