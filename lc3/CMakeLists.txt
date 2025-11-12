@@ -1,5 +1,1 @@
-zephyr_linker_sources_ifdef(CONFIG_ALIF_LC3_CODEC_PATCHING SECTIONS lc3_patch_info.ld)
-zephyr_linker_sources_ifdef(CONFIG_ALIF_LC3_CODEC_PATCHING RAM_SECTIONS lc3_patch_ramable.ld)
-
-add_subdirectory_ifdef(CONFIG_ALIF_BLE_ROM_IMAGE_V1_0 v1_0)
 add_subdirectory_ifdef(CONFIG_ALIF_BLE_ROM_IMAGE_V1_2 v1_2)

@@ -7,13 +7,3 @@ menuconfig ALIF_ROM_LC3_CODEC
 	select FPU
 	help
 	  Allow the LC3 codec in ROM to be used.
-
-if ALIF_ROM_LC3_CODEC
-
-config ALIF_LC3_CODEC_PATCHING
-	bool "Apply a patch to the Alif ROM LC3 codec"
-	help
-	  Apply a patch to the LC3 codec in ROM. This enables ROM functions to be overridden
-	  using a patched version.
-
-endif # ALIF_ROM_LC3_CODEC

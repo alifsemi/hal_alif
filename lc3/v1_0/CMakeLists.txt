@@ -1,3 +1,0 @@
-zephyr_include_directories(include)
-
-zephyr_link_libraries_ifdef(CONFIG_ALIF_LC3_CODEC_PATCHING rom_codec.patch.elf)
