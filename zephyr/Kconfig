@@ -33,13 +33,16 @@ config ALIF_BLE_HOST
 	help
 	  This option enables Alif Semiconductor's BLE Host Stack.
 
-if ALIF_BLE_HOST
+endif # BT
+
+if HAVE_CUSTOM_LINKER_SCRIPT
+
 config CUSTOM_LINKER_SCRIPT
+	depends on HAS_ALIF_BLE_ROM_IMAGE
 	string
 	default "${ZEPHYR_ALIF_MODULE_DIR}/linker_add_rom_symbols.ld"
-endif # ALIF_BLE_HOST
 
-endif # BT
+endif # HAVE_CUSTOM_LINKER_SCRIPT
 
 rsource "../se_services/zephyr/Kconfig"
 rsource "../common/zephyr/Kconfig"
