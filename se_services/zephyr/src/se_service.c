@@ -9,8 +9,9 @@
 #include <se_service.h>
 #include <soc_memory_map.h>
 #include <zephyr/logging/log.h>
-#include <zephyr/pm/policy.h>
 #include <errno.h>
+#include <zephyr/pm/policy.h>
+
 LOG_MODULE_REGISTER(se_service, CONFIG_IPM_LOG_LEVEL);
 
 #define DT_DRV_COMPAT alif_secure_enclave_services
@@ -88,7 +89,6 @@ typedef union {
 	aipm_get_off_profile_svc_t get_off_d;
 	control_cpu_svc_t cpu_reboot_d;
 	se_sleep_svc_t se_sleep_d;
-	process_toc_entry_svc_t process_toc_entry_svc_d;
 	update_stoc_svc_t update_stoc_svc_d;
 } se_service_all_svc_t;
 
@@ -225,46 +225,6 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	return 0;
 }
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-
->>>>>>> 835ae4d (se_service: zephyr: src: add se_service_update_stoc)
-int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
-{
-	int err, resp_err;
-
-	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
-
-	if (err) {
-		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
-		return err;
-	}
-
-	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.update_stoc_svc_d.header.hdr_service_id = SERVICE_UPDATE_STOC;
-	se_service_all_svc_d.update_stoc_svc_d.send_image_address = local_to_global(img_addr);
-	se_service_all_svc_d.update_stoc_svc_d.send_image_size = img_size;
-	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.update_stoc_svc_d,
-			     sizeof(se_service_all_svc_d.update_stoc_svc_d), SERVICE_TIMEOUT);
-	resp_err = se_service_all_svc_d.update_stoc_svc_d.resp_error_code;
-
-	k_mutex_unlock(&svc_mutex);
-
-	if (err) {
-		LOG_ERR("%s failed with %d\n", __func__, err);
-		return err;
-	}
-	if (resp_err) {
-		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
-		return resp_err;
-	}
-
-	return 0;
-}
-
-=======
->>>>>>> aa8d2ac (se_services: Fix race conditions in response data handling)
 /**
  * @brief Internal: Synchronize with SE (assumes svc_mutex is held)
  *
@@ -1522,49 +1482,6 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 	return 0;
 }
 
-<<<<<<< HEAD
-int se_service_process_toc_entry(const char *image_id)
-{
-	int err, resp_err = -1;
-
-	if (!image_id) {
-		LOG_ERR("Invalid argument\n");
-		return -EINVAL;
-	}
-
-	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
-
-	if (err) {
-		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
-		return err;
-	}
-
-	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.get_rnd_svc_d.header.hdr_service_id = SERVICE_BOOT_PROCESS_TOC_ENTRY;
-	strncpy((char *)se_service_all_svc_d.process_toc_entry_svc_d.send_entry_id, image_id,
-		IMAGE_NAME_LENGTH);
-
-	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.process_toc_entry_svc_d,
-			     sizeof(se_service_all_svc_d.process_toc_entry_svc_d), SERVICE_TIMEOUT);
-
-	resp_err = se_service_all_svc_d.process_toc_entry_svc_d.resp_error_code;
-	k_mutex_unlock(&svc_mutex);
-
-	if (err) {
-		LOG_ERR("%s failed with %d\n", __func__, err);
-		return err;
-	}
-
-	if (resp_err) {
-		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
-		return resp_err;
-	}
-
-	return 0;
-}
-
-=======
->>>>>>> aa03477 (se_services: update to SE FW 106)
 /**
  * @brief PM notifier callback for SE service state entry
  *
