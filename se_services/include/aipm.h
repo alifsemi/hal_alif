@@ -192,16 +192,13 @@ typedef enum {
 
 #define SERAM_MASK      (SERAM_1_MASK | SERAM_2_MASK | SERAM_3_MASK | SERAM_4_MASK)
 
-#elif defined(ENSEMBLE_SOC_GEN2)
+#elif defined(CONFIG_ENSEMBLE_GEN2)
 /**
  * @enum memory_block_t
  * @brief Memory Blocks
  */
 typedef enum {
-	MB_SRAM0_1 = 0,
-	MB_SRAM0_2 = 0,
-	MB_SRAM0_3 = 0,
-	MB_SRAM0_4 = 0,
+	MB_SRAM0 = 0,
 	MB_SRAM1,
 	MB_SRAM2,
 	MB_SRAM3,
@@ -222,35 +219,42 @@ typedef enum {
 	MB_SERAM_1,
 	MB_SERAM_2,
 	MB_FWRAM,
-	MB_BACKUP4K
+	MB_BACKUP4K,
+	MB_SRAM0_1_RET,
+	MB_SRAM0_2_RET,
+	MB_SRAM0_3_RET,
+	MB_SRAM0_4_RET,
+	MB_SRAM1_RET,
 } memory_block_t;
 
 /* Memory block bit mask */
-#define SRAM0_1_MASK    (1 << MB_SRAM0_1)     /* bit0 */
-#define SRAM0_2_MASK    (1 << MB_SRAM0_2)     /* bit1 */
-#define SRAM0_3_MASK    (1 << MB_SRAM0_3)     /* bit2 */
-#define SRAM0_4_MASK    (1 << MB_SRAM0_4)     /* bit3 */
-#define SRAM1_MASK      (1 << MB_SRAM1)       /* bit4 */
-#define SRAM2_MASK      (1 << MB_SRAM2)       /* bit5 */
-#define SRAM3_MASK      (1 << MB_SRAM3)       /* bit6 */
-#define SRAM4_1_MASK    (1 << MB_SRAM4_1)     /* bit7 */
-#define SRAM4_2_MASK    (1 << MB_SRAM4_2)     /* bit8 */
-#define SRAM5_1_MASK    (1 << MB_SRAM5_1)     /* bit9 */
-#define SRAM5_2_MASK    (1 << MB_SRAM5_2)     /* bit10 */
-#define SRAM6A_MASK     (1 << MB_SRAM6A)      /* bit11 */
-#define SRAM6B_MASK     (1 << MB_SRAM6B)      /* bit12 */
-#define SRAM7_1_MASK    (1 << MB_SRAM7_1)     /* bit13 */
-#define SRAM7_2_MASK    (1 << MB_SRAM7_2)     /* bit14 */
-#define SRAM7_3_MASK    (1 << MB_SRAM7_3)     /* bit15 */
-#define SRAM8_MASK      (1 << MB_SRAM8)       /* bit16 */
-#define SRAM9_MASK      (1 << MB_SRAM9)       /* bit17 */
-#define MRAM_MASK       (1 << MB_MRAM)        /* bit18 */
-#define OSPI0_MASK      (1 << MB_OSPI0)       /* bit19 */
-#define OSPI1_MASK      (1 << MB_OSPI1)       /* bit20 */
-#define SERAM_1_MASK    (1 << MB_SERAM_1)     /* bit21 */
-#define SERAM_2_MASK    (1 << MB_SERAM_2)     /* bit22 */
-#define FWRAM_MASK      (1 << MB_FWRAM)       /* bit23 */
-#define BACKUP4K_MASK   (1 << MB_BACKUP4K)    /* bit24 */
+#define SRAM0_MASK      (1 << MB_SRAM0)       /* bit0 */
+#define SRAM1_MASK      (1 << MB_SRAM1)       /* bit1 */
+#define SRAM2_MASK      (1 << MB_SRAM2)       /* bit2 */
+#define SRAM3_MASK      (1 << MB_SRAM3)       /* bit3 */
+#define SRAM4_1_MASK    (1 << MB_SRAM4_1)     /* bit4 */
+#define SRAM4_2_MASK    (1 << MB_SRAM4_2)     /* bit5 */
+#define SRAM5_1_MASK    (1 << MB_SRAM5_1)     /* bit6 */
+#define SRAM5_2_MASK    (1 << MB_SRAM5_2)     /* bit7 */
+#define SRAM6A_MASK     (1 << MB_SRAM6A)      /* bit8 */
+#define SRAM6B_MASK     (1 << MB_SRAM6B)      /* bit9 */
+#define SRAM7_1_MASK    (1 << MB_SRAM7_1)     /* bit10 */
+#define SRAM7_2_MASK    (1 << MB_SRAM7_2)     /* bit11 */
+#define SRAM7_3_MASK    (1 << MB_SRAM7_3)     /* bit12 */
+#define SRAM8_MASK      (1 << MB_SRAM8)       /* bit13 */
+#define SRAM9_MASK      (1 << MB_SRAM9)       /* bit14 */
+#define MRAM_MASK       (1 << MB_MRAM)        /* bit15 */
+#define OSPI0_MASK      (1 << MB_OSPI0)       /* bit16 */
+#define OSPI1_MASK      (1 << MB_OSPI1)       /* bit17 */
+#define SERAM_1_MASK    (1 << MB_SERAM_1)     /* bit18 */
+#define SERAM_2_MASK    (1 << MB_SERAM_2)     /* bit19 */
+#define FWRAM_MASK      (1 << MB_FWRAM)       /* bit20 */
+#define BACKUP4K_MASK   (1 << MB_BACKUP4K)    /* bit21 */
+#define SRAM0_1_RET_MASK    (1 << MB_SRAM0_1_RET)    /* bit22 */
+#define SRAM0_2_RET_MASK    (1 << MB_SRAM0_2_RET)    /* bit23 */
+#define SRAM0_3_RET_MASK    (1 << MB_SRAM0_3_RET)    /* bit24 */
+#define SRAM0_4_RET_MASK    (1 << MB_SRAM0_4_RET)    /* bit25 */
+#define SRAM1_RET_MASK      (1 << MB_SRAM1_RET)      /* bit26 */
 
 #define SERAM_MASK      (SERAM_1_MASK | SERAM_2_MASK)
 
