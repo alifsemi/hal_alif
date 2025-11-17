@@ -121,6 +121,7 @@ extern "C" {
 #define BL_TOC_IMAGE_DEVICE_MISMATCH                  0x20
 #define BL_ERROR_UPD_SIGNATURE_INCORRECT              0x21
 #define BL_ERROR_UPD_IMG_IN_MRAM_NOT_SUPPORTED        0x22
+#define BL_ERROR_HAVE_FAILED_ATOC_IMAGES              0x23
 
 /**
  * OTP Offsets
@@ -325,6 +326,26 @@ typedef enum {
 	PLL_SOURCE_OSC   /* use the OCS clocks (can be RC or XTAL) */
 } pll_source_t;
 
+/* ES0 CPU clock frequencies */
+#define ES0_CLOCK_16MHZ   0
+#define ES0_CLOCK_24MHZ   4
+#define ES0_CLOCK_48MHZ   0xC
+
+/* ES0 configuration bit field */
+#define ES0_CONFIG_NONE   0x0
+#define ES0_CONFIG_HPA    0x1
+#define ES0_CONFIG_CSP    0x2
+
+typedef struct {
+	uint32_t nvds_src_addr;
+	uint32_t nvds_dst_addr;
+	uint32_t nvds_copy_len;
+	uint32_t trng_dst_addr;
+	uint32_t trng_len;
+	uint32_t es0_clock_select;
+	uint32_t configuration;
+} net_proc_boot_args_t;
+
 typedef enum {
 	PLL_TARGET_SYSREFCLK,
 	PLL_TARGET_SYSCLK,
@@ -343,8 +364,7 @@ typedef enum {
 	CLKEN_HFXO_OUT,
 	CLKEN_CLK_160M,
 	CLKEN_CLK_100M,
-	CLKEN_CLK_20M, /**< Renamed from CLKEN_USB */
-	CLKEN_USB,
+	CLKEN_CLK_20M,
 	CLKEN_HFOSC,
 	CLKEN_SRAM0,
 	CLKEN_SRAM1,
@@ -385,14 +405,6 @@ typedef enum {
 	DIVIDER_PCLK
 } clock_divider_t;
 
-typedef struct {
-	uint32_t nvds_src_addr;
-	uint32_t nvds_dst_addr;
-	uint32_t nvds_copy_len;
-	uint32_t trng_dst_addr;
-	uint32_t trng_len;
-} net_proc_boot_args_t;
-
 typedef enum {
 	POWER_SETTING_BOR_EN,
 	POWER_SETTING_SCALED_CLK_FREQ
@@ -406,6 +418,8 @@ typedef enum {
 	CLOCK_SETTING_AHB_FREQ,
 	CLOCK_SETTING_APB_FREQ,
 	CLOCK_SETTING_SYSREF_FREQ,
+	CLOCK_SETTING_ACLK_FORCE_EN,
+	CLOCK_SETTING_ACLK_ENTRY_DELAY
 } clock_setting_t;
 
 /*******************************************************************************
