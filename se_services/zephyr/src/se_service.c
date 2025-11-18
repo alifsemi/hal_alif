@@ -934,15 +934,9 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
 int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select)
 {
 	int err, resp_err;
-	uint32_t version;
 
 	/* Ensure SE is ready to receive service calls */
 	err = se_service_ensure_ready();
-	if (err) {
-		return err;
-	}
-
-	err = se_service_get_toc_version(&version);
 	if (err) {
 		return err;
 	}
@@ -960,9 +954,15 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_s
 	se_service_all_svc_d.boot_svc_d.send_nvds_copy_len = nvds_size;
 	se_service_all_svc_d.boot_svc_d.send_trng_dst_addr = 0x501D0200;
 	se_service_all_svc_d.boot_svc_d.send_trng_len = 64;
-	if (version > 0x01650000) {
-		/* additional fields are added only when SE supports it */
-		se_service_all_svc_d.boot_svc_d.send_internal_clock_select = clock_select;
+	se_service_all_svc_d.boot_svc_d.send_internal_clock_select = clock_select;
+
+	se_service_all_svc_d.boot_svc_d.send_configuration =
+		IS_ENABLED(CONFIG_ALIF_HPA_MODE) ? SERVICES_NET_PROC_BOOT_CONFIGURATION_HPA
+						 : SERVICES_NET_PROC_BOOT_CONFIGURATION_NONE;
+
+	if (IS_ENABLED(CONFIG_SOC_AB1C1F1M41820HH0) || IS_ENABLED(CONFIG_SOC_AB1C1F4M51820HH0)) {
+		se_service_all_svc_d.boot_svc_d.send_configuration |=
+			SERVICES_NET_PROC_BOOT_CONFIGURATION_CSP;
 	}
 
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.boot_svc_d,
