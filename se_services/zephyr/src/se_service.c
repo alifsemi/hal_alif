@@ -888,6 +888,18 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_s
 		se_service_all_svc_d.boot_svc_d.send_es0_clock_select = clock_select;
 	}
 
+	se_service_all_svc_d.boot_svc_d.send_internal_clock_select = clock_select;
+
+	se_service_all_svc_d.boot_svc_d.send_configuration =
+		IS_ENABLED(CONFIG_ALIF_HPA_MODE) ? SERVICES_NET_PROC_BOOT_CONFIGURATION_HPA
+						 : SERVICES_NET_PROC_BOOT_CONFIGURATION_NONE;
+
+	/* There is no support for CSP in v1.5 yet. This needs to be updated when it is added */
+	if (IS_ENABLED(CONFIG_SOC_AB1C1F1M41820HH0) || IS_ENABLED(CONFIG_SOC_AB1C1F4M51820HH0)) {
+		se_service_all_svc_d.boot_svc_d.send_configuration |=
+			SERVICES_NET_PROC_BOOT_CONFIGURATION_CSP;
+	}
+
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.boot_svc_d,
 			     sizeof(se_service_all_svc_d.boot_svc_d), SERVICE_TIMEOUT);
 
