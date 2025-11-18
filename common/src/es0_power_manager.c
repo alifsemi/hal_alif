@@ -68,6 +68,9 @@ static volatile uint8_t es0_user_counter;
 #define BOOT_PARAM_LEN_ACTCLK_DRIFT              1
 #define BOOT_PARAM_LEN_CONFIGURATION             4
 
+#define CONFIGURATION_RF_TYPE_HPA		1
+#define CONFIGURATION_SOC_TYPE_CSP		2
+
 #define ES0_PM_ERROR_NO_ERROR             0
 #define ES0_PM_ERROR_TOO_MANY_USERS       -1
 #define ES0_PM_ERROR_TOO_MANY_BOOT_PARAMS -2
@@ -220,6 +223,11 @@ int8_t take_es0_into_use(void)
 	}
 
 	uint8_t bd_address[BOOT_PARAM_LEN_BD_ADDRESS];
+	uint32_t config = IS_ENABLED(CONFIG_ALIF_HPA_MODE) ? CONFIGURATION_RF_TYPE_HPA : 0;
+
+	if (IS_ENABLED(CONFIG_SOC_AB1C1F1M41820HH0) || IS_ENABLED(CONFIG_SOC_AB1C1F4M51820HH0)) {
+		config |= CONFIGURATION_SOC_TYPE_CSP;
+	}
 
 	alif_eui48_read(bd_address);
 
@@ -264,8 +272,9 @@ int8_t take_es0_into_use(void)
 			    BOOT_PARAM_LEN_LPCLK_DRIFT);
 	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_ACTCLK_DRIFT, CONFIG_ALIF_MAX_ACTIVE_CLOCK_DRIFT,
 			    BOOT_PARAM_LEN_ACTCLK_DRIFT);
-	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_CONFIGURATION,
-			    (IS_ENABLED(CONFIG_ALIF_HPA_MODE) ? 1 : 0),
+
+
+	ptr = write_tlv_int(ptr, BOOT_PARAM_ID_CONFIGURATION, config,
 			    BOOT_PARAM_LEN_CONFIGURATION);
 
 	uint32_t min_uart_clk_freq = used_baudrate * 16;
