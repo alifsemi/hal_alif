@@ -168,6 +168,17 @@ typedef struct {
 #define ES0_CLOCK_16MHZ   0
 #define ES0_CLOCK_24MHZ   4
 #define ES0_CLOCK_48MHZ   0xC
+
+/**
+ * Extsys0 configuration field.
+ *
+ * HPA: DCDC configuration for HPA mode.
+ * CSP: DCDC configuration for CSP package.
+ * default: PGA and LPA
+ */
+#define SERVICES_NET_PROC_BOOT_CONFIGURATION_NONE  0x0
+#define SERVICES_NET_PROC_BOOT_CONFIGURATION_HPA   0x1
+#define SERVICES_NET_PROC_BOOT_CONFIGURATION_CSP   0x2
 #endif
 
 typedef struct {
