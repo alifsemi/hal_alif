@@ -117,9 +117,9 @@ typedef struct
  *              using the underlying stack APIs even if the ROM patching failed.
  *
  * @return BLE_INIT_ERR_NONE         On success
+ *         BLE_INIT_ERR_INVALID_ARGS Error: Invalid input arguments
  *         BLE_INIT_ERR_PATCH        Patching BLE ROM failed but stack is initialized
  *                                   and APIs still usable
- *         BLE_INIT_ERR_INVALID_ARGS Error: Invalid input arguments
  */
 ble_init_err_code_t
 ble_stack_init(ble_app_hooks_t const* app_hooks_funcs,
