@@ -195,11 +195,12 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 			__ASSERT(0, "Failed to boot ESO");
 		}
 
-		bool ble_success = ble_stack_init(&app_hooks, &rom_config);
+		ble_init_err_code_t ble_success = ble_stack_init(&app_hooks, &rom_config);
 
-		if (!ble_success) {
+		/* NOTE: BLE_INIT_ERR_PATCH will not be treated as an error case */
+		if (ble_success == BLE_INIT_ERR_INVALID_ARGS) {
+			LOG_ERR("Failed to initialise BLE stack: %u", ble_success);
 			__ASSERT(false, "Failed to initialise BLE stack");
-			LOG_ERR("Failed to initialise BLE stack");
 			return;
 		}
 
