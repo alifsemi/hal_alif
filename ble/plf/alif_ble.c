@@ -38,6 +38,11 @@ static uint32_t ble_heap_non_ret[RWIP_CALC_HEAP_LEN(1000)] __noinit;
 
 static uint32_t initialised __noinit;
 #define INITIALISED_MAGIC 0x45454545
+/* Workaround to keep ES0 powered on, otherwise SE could crash
+ * when ES0 power-on is requested after HE OFF state.
+ * Comment/remove this to enable ES0 power-down on BLE disable.
+ */
+#define DEINITIALISED_MAGIC 0x54545454
 
 extern __weak uint32_t __ble_patch_info_start;
 
@@ -184,6 +189,13 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 	ret = hci_uart_init();
 	__ASSERT(0 == ret, "Failed to initialise HCI UART");
 
+#if DEINITIALISED_MAGIC
+	if (initialised == DEINITIALISED_MAGIC) {
+		initialised = INITIALISED_MAGIC;
+		app_hooks.p_app_init();
+		k_sem_give(&rwip_schedule_sem);
+	} else
+#endif
 	if (initialised != INITIALISED_MAGIC) {
 		LOG_DBG("Cold start");
 
@@ -264,7 +276,11 @@ int alif_ble_disable(void)
 	LOG_DBG("Stopping BLE");
 
 	/* Clear initialised thread indicator */
+#if DEINITIALISED_MAGIC
+	initialised = DEINITIALISED_MAGIC;
+#else
 	initialised = 0;
+#endif
 
 	/* Reset stack to clean processes and queues*/
 	gapm_reset(0, gapm_reset_cb);
@@ -293,13 +309,13 @@ int alif_ble_disable(void)
 			return err;
 		}
 	}
-
+#if !DEINITIALISED_MAGIC
 	/* Request es0 stop */
 	err = (int)stop_using_es0();
 	if (err) {
 		LOG_ERR("Error stopping es0: %02x", err);
 		return err;
 	}
-
+#endif
 	return 0;
 }
