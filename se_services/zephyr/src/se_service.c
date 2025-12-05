@@ -8,6 +8,8 @@
 #include <se_service.h>
 #include <soc_memory_map.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/pm/policy.h>
+
 LOG_MODULE_REGISTER(se_service, CONFIG_IPM_LOG_LEVEL);
 
 #define DT_DRV_COMPAT alif_secure_enclave_services
@@ -98,8 +100,8 @@ static uint32_t se_service_recv_data;
  * @id          - channel number
  * @data        - data
  */
-static void callback_for_receive_msg(const struct device *dev, void *user_data,
-					uint32_t id, volatile void *data)
+static void callback_for_receive_msg(const struct device *dev, void *user_data, uint32_t id,
+				     volatile void *data)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(user_data);
@@ -122,8 +124,8 @@ static void callback_for_receive_msg(const struct device *dev, void *user_data,
  * @id          - channel number
  * @data        - data
  */
-static void callback_for_send_msg(const struct device *dev, void *user_data,
-					uint32_t id, volatile void *data)
+static void callback_for_send_msg(const struct device *dev, void *user_data, uint32_t id,
+				  volatile void *data)
 {
 	ARG_UNUSED(dev);
 	ARG_UNUSED(user_data);
@@ -160,6 +162,9 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	if (k_can_yield()) {
 		int wait = 0;
 
+		/* sem takes might cause poweroff, depending on app state */
+		pm_policy_state_lock_get(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
+
 		k_sem_reset(&svc_send_sem);
 		k_sem_reset(&svc_recv_sem);
 
@@ -167,17 +172,22 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 		err = ipm_send(send_dev, wait, CH_ID, &global_address, (int)size);
 		if (err) {
 			LOG_ERR("failed to send request for MSG(error: %d)\n", err);
+			pm_policy_state_lock_put(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
 			return err;
 		}
 
 		if (k_sem_take(&svc_send_sem, K_MSEC(timeout)) != 0) {
 			LOG_ERR("service %d send is timed out!\n", service_id);
+			pm_policy_state_lock_put(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
 			return -ETIME;
 		}
 		if (k_sem_take(&svc_recv_sem, K_MSEC(timeout)) != 0) {
 			LOG_ERR("service %d response is timed out!\n", service_id);
+			pm_policy_state_lock_put(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
 			return -ETIME;
 		}
+		pm_policy_state_lock_put(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
+
 	} else {
 		uint32_t rx_data = 0;
 
@@ -185,15 +195,13 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 		/* Disable Rx MHU interrupts */
 		ipm_set_enabled(recv_dev, false);
 
-		err = ipm_poll_out(send_dev, CH_ID, &global_address,
-					(int)size, K_MSEC(timeout));
+		err = ipm_poll_out(send_dev, CH_ID, &global_address, (int)size, K_MSEC(timeout));
 		if (err) {
 			LOG_ERR("failed to send service %d\n", service_id);
 			return err;
 		}
 
-		err = ipm_poll_in(recv_dev, CH_ID, &rx_data,
-				(int)size, K_MSEC(timeout));
+		err = ipm_poll_in(recv_dev, CH_ID, &rx_data, (int)size, K_MSEC(timeout));
 		if (err) {
 			LOG_ERR("failed to rcv resp for service %d\n", service_id);
 			return err;
@@ -205,7 +213,6 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	sys_cache_data_invd_range(ptr, size);
 	return 0;
 }
-
 
 int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
 {
@@ -1142,7 +1149,7 @@ int se_service_se_sleep_req(uint32_t param)
 	se_service_all_svc_d.se_sleep_d.header.hdr_service_id = SERVICE_POWER_SE_SLEEP_REQ_ID;
 
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.se_sleep_d,
-				sizeof(se_service_all_svc_d.se_sleep_d), SERVICE_TIMEOUT);
+			     sizeof(se_service_all_svc_d.se_sleep_d), SERVICE_TIMEOUT);
 	resp_err = se_service_all_svc_d.se_sleep_d.resp_error_code;
 
 	k_mutex_unlock(&svc_mutex);
@@ -1203,15 +1210,13 @@ int se_service_boot_reset_soc(void)
 	}
 
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.service_header.hdr_service_id =
-					SERVICE_BOOT_RESET_SOC;
+	se_service_all_svc_d.service_header.hdr_service_id = SERVICE_BOOT_RESET_SOC;
 	while (i < MAX_TRIES) {
-		err = send_msg_to_se((uint32_t *)
-			&se_service_all_svc_d.service_header,
-			sizeof(se_service_all_svc_d.service_header),
-			SERVICE_TIMEOUT);
-		if (!err)
+		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
+				     sizeof(se_service_all_svc_d.service_header), SERVICE_TIMEOUT);
+		if (!err) {
 			break;
+		}
 		/* SE service timed out. Increment count */
 		++i;
 	}
@@ -1235,18 +1240,16 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 	}
 
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.cpu_reboot_d.header.hdr_service_id =
-					SERVICE_BOOT_RESET_CPU;
+	se_service_all_svc_d.cpu_reboot_d.header.hdr_service_id = SERVICE_BOOT_RESET_CPU;
 
 	se_service_all_svc_d.cpu_reboot_d.send_cpu_id = cpu_id;
 
 	while (i < MAX_TRIES) {
-		err = send_msg_to_se((uint32_t *)
-			&se_service_all_svc_d.service_header,
-			sizeof(se_service_all_svc_d.service_header),
-			SERVICE_TIMEOUT);
-		if (!err)
+		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
+				     sizeof(se_service_all_svc_d.service_header), SERVICE_TIMEOUT);
+		if (!err) {
 			break;
+		}
 		/* SE service timed out. Increment count */
 		++i;
 	}
@@ -1281,8 +1284,8 @@ int se_service_process_toc_entry(const char *image_id)
 
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.get_rnd_svc_d.header.hdr_service_id = SERVICE_BOOT_PROCESS_TOC_ENTRY;
-	strncpy((char *) se_service_all_svc_d.process_toc_entry_svc_d.send_entry_id,
-				image_id, IMAGE_NAME_LENGTH);
+	strncpy((char *)se_service_all_svc_d.process_toc_entry_svc_d.send_entry_id, image_id,
+		IMAGE_NAME_LENGTH);
 
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.process_toc_entry_svc_d,
 			     sizeof(se_service_all_svc_d.process_toc_entry_svc_d), SERVICE_TIMEOUT);
