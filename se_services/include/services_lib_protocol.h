@@ -488,6 +488,14 @@ typedef struct {
 	volatile uint32_t resp_error_code;
 } dmpu_svc_t;
 
+/* Verify an image signed with an Arm certificate chain */
+typedef struct {
+	service_header_t header;
+	volatile uint32_t send_image_addr;
+	volatile uint32_t send_cert_addr;
+	volatile uint32_t resp_error_code;
+} verify_image_svc_t;
+
 /**
  * @struct get_se_revision_t
  * Retrieve SERAM version banner
