@@ -83,4 +83,19 @@ config ALIF_MAX_ACTIVE_CLOCK_DRIFT
 config ALIF_HPA_MODE
 	bool "High Power Amplifier for Alif controller"
 
+config ALIF_TX_MAX
+	int
+	default 10 if ALIF_HPA_MODE
+	default 4
+
+config ALIF_TX_MIN
+	int
+	default -25 if ALIF_HPA_MODE
+	default -31
+
+config ALIF_TX_MAX_POWER
+	int "Set maximum allower TX power in dBm"
+	default ALIF_TX_MAX
+	range ALIF_TX_MIN ALIF_TX_MAX
+
 endif # ALIF_PM_LINK_LAYER

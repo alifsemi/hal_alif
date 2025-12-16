@@ -70,6 +70,10 @@ static volatile uint8_t es0_user_counter;
 
 #define CONFIGURATION_RF_TYPE_HPA		1
 #define CONFIGURATION_SOC_TYPE_CSP		2
+#define CONFIGURATION_LIMIT_TX_POWER		4
+// Bit 4 is RFU
+// Bits 5-12 are used for TX power
+// Bits 13-6 are RFU
 
 #define ES0_PM_ERROR_NO_ERROR             0
 #define ES0_PM_ERROR_TOO_MANY_USERS       -1
@@ -227,6 +231,12 @@ int8_t take_es0_into_use(void)
 
 	if (IS_ENABLED(CONFIG_SOC_AB1C1F1M41820HH0) || IS_ENABLED(CONFIG_SOC_AB1C1F4M51820HH0)) {
 		config |= CONFIGURATION_SOC_TYPE_CSP;
+	}
+
+	/* Only use the limit when it is not the maximum */
+	if (CONFIG_ALIF_TX_MAX_POWER < CONFIG_ALIF_TX_MAX) {
+		config |= CONFIGURATION_LIMIT_TX_POWER;
+		config |= ((CONFIG_ALIF_TX_MAX_POWER << 4) & 0xff0);
 	}
 
 	alif_eui48_read(bd_address);
