@@ -48,4 +48,4 @@ rsource "../se_services/zephyr/Kconfig"
 rsource "../common/zephyr/Kconfig"
 rsource "../lc3/zephyr/Kconfig"
 rsource "../ble/zephyr/Kconfig"
-
+rsource "../drivers/isp/Kconfig"

@@ -1,0 +1,85 @@
+config USE_ALIF_ISP_LIB
+	bool "Enable ISP Middleware for Alif SoC"
+	depends on VIDEO_ISP_VSI
+	select FPU
+
+if USE_ALIF_ISP_LIB
+
+config ISP_LIB_SCALAR_MODULE
+	bool "Enable Scalar module in ISP library"
+	default n
+	help
+	 Select the Scalar module in Vivante ISP Nano for Alif SoCs.
+
+config ISP_LIB_AE_MODULE
+	bool "Enable Auto Exposure module in ISP library"
+	default n
+	help
+	 Select the AE module in Vivante ISP Nano for Alif SoCs.
+
+config ISP_LIB_WB_MODULE
+	bool "Enable White Balancing module in ISP library"
+	default n
+	help
+	 Select the White Balancing module in Vivante ISP Nano
+	 for Alif SoCs.
+
+config ISP_LIB_BINNING_MODULE
+	bool "Enable Binning module in ISP library"
+	default n
+	help
+	 Select the Binning module in Vivante ISP Nano for Alif SoCs.
+
+config ISP_LIB_BLS_MODULE
+	bool "Enable Black Level Subtraction module in ISP library"
+	default n
+	help
+	 Select the Black Level Subtraction module in Vivante ISP Nano
+	 for Alif SoCs.
+
+config ISP_LIB_DMSC_MODULE
+	bool "Enable Demosaic module in ISP library"
+	default n
+	help
+	 Select the Demosaic module in Vivante ISP Nano for Alif SoCs.
+
+config ISP_LIB_FLT_MODULE
+	bool "Enable Filter module in ISP library"
+	default n
+	help
+	 Select the Filter module in Vivante ISP Nano for Alif SoCs.
+
+config ISP_LIB_CCM_MODULE
+	bool "Enable Color Correction Matrix module in ISP library"
+	default n
+	help
+	 Select the CCM module in Vivante ISP Nano for Alif SoCs.
+
+config ISP_LIB_GAMMAOUT_MODULE
+	bool "Enable Gamma correction module in ISP library"
+	default n
+	help
+	 Select the Gamma correction module in Vivante ISP Nano for Alif SoCs.
+
+config ISP_LIB_EXPOSUREM_MODULE
+	bool "Enable Exposure Measurement module in ISP library"
+	default n
+	help
+	 Select the Exposure measurement module in Vivante ISP Nano for
+	 Alif SoCs.
+
+config ISP_LIB_CSM_MODULE
+	bool "Enable Color Space Matrix module in ISP library"
+	default n
+	help
+	 Select the Color Space Matrix module in Vivante ISP Nano for
+	 Alif SoCs.
+
+config ISP_LIB_WBM_MODULE
+	bool "Enable White Balancing Measurement module in ISP library"
+	default n
+	help
+	 Select the White Balancing measurement module in Vivante ISP Nano for
+	 Alif SoCs.
+
+endif # USE_ALIF_ISP_LIB
