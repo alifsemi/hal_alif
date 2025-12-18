@@ -231,6 +231,7 @@ uint32_t alif_mac154_capabilities_get(void)
 enum alif_mac154_status_code alif_mac154_timestamp_get(uint64_t *p_timestamp)
 {
 	enum alif_mac154_status_code ret;
+	uint32_t req_ts, resp_ts;
 
 	LOG_DBG("");
 
@@ -238,8 +239,18 @@ enum alif_mac154_status_code alif_mac154_timestamp_get(uint64_t *p_timestamp)
 
 	alif_ahi_msg_timestamp_get(&ahi_msg, 0);
 	alif_ahi_msg_send(&ahi_msg, NULL, 0);
+	/* Read timestamp */
+	req_ts = (uint32_t)k_ticks_to_us_floor64(k_uptime_ticks());
 	alif_hal_msg_wait(&ahi_msg);
 	ret = alif_ahi_msg_timestamp(&ahi_msg, NULL, p_timestamp);
+	/* Read timestamp */
+	resp_ts = (uint32_t)k_ticks_to_us_floor64(k_uptime_ticks());
+
+	if (resp_ts > req_ts) {
+		*p_timestamp += resp_ts - req_ts;
+	} else {
+		*p_timestamp += (0xffffffff - (req_ts - resp_ts));
+	}
 
 	k_mutex_unlock(&api_mutex);
 
