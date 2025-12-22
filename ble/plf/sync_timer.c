@@ -22,8 +22,8 @@ LOG_MODULE_REGISTER(iso_sync_timer);
 #define EVTRTR_SELECT_GROUP_2 0x2
 #define EVTRTR_SELECT_GROUP_3 0x3
 
-static void (*sync_timer_cap_cb)(void);
-static void (*sync_timer_ovf_cb)(void);
+static void (*sync_timer_cap_cb)(void) __attribute__((noinit));
+static void (*sync_timer_ovf_cb)(void) __attribute__((noinit));
 
 /* UTIMER definitions */
 #define UTIMER_BASE    0x48000000u
@@ -177,6 +177,13 @@ static void capture_irq_handler(const void *context)
 	if (sync_timer_cap_cb) {
 		sync_timer_cap_cb();
 	}
+}
+
+int32_t sync_timer_reset(void)
+{
+	sync_timer_cap_cb = NULL;
+	sync_timer_ovf_cb = NULL;
+	return 0;
 }
 
 int32_t sync_timer_init(void)
