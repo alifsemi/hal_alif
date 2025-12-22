@@ -7,6 +7,65 @@
 #include <soc_memory_map.h>
 #include <cmsis_core.h>
 
+typedef struct address_range {
+	uintptr_t base;
+	uintptr_t limit;
+} address_range_t;
+
+static const address_range_t no_need_to_invalidate_or_flush_areas[] = {
+	/* TCM is never cached */
+	{
+		.base = 0x00000000,
+		.limit = 0x01FFFFFF,
+	},
+	{
+		.base = 0x20000000,
+		.limit = 0x21FFFFFF,
+	},
+	/* MRAM should never change while running */
+	{
+		.base = CONFIG_FLASH_BASE_ADDRESS,
+		.limit = CONFIG_FLASH_BASE_ADDRESS + (CONFIG_FLASH_SIZE * 1024) - 1,
+	}};
+
+
+static bool check_need_to_invalidate_or_flush(const void *p, size_t bytes)
+{
+	uintptr_t base = (uintptr_t)p;
+	if (bytes == 0) {
+		return false;
+	}
+	uintptr_t limit = base + bytes - 1;
+	for (unsigned int i = 0;
+	     i < sizeof no_need_to_invalidate_or_flush_areas / sizeof no_need_to_invalidate_or_flush_areas[0]; i++) {
+		if (base >= no_need_to_invalidate_or_flush_areas[i].base &&
+		    limit <= no_need_to_invalidate_or_flush_areas[i].limit) {
+			return false;
+		}
+	}
+	return true;
+}
+
+bool __attribute__((weak)) ethosu_area_needs_invalidate_dcache(const void *p, size_t bytes)
+{
+	/* API says null pointer can be passed */
+	if (!p) {
+		return true;
+	}
+
+	return check_need_to_invalidate_or_flush(p, bytes);
+}
+
+bool __attribute__((weak)) ethosu_area_needs_flush_dcache(const void *p, size_t bytes)
+{
+	/* Passing NULL as p argument * expects the whole cache to be flushed. */
+	if (!p) {
+		return true;
+	}
+
+	return check_need_to_invalidate_or_flush(p, bytes);
+}
+
 uint64_t ethosu_address_remap(uint64_t address, int index)
 {
 	(void)index;
@@ -17,19 +76,18 @@ uint64_t ethosu_address_remap(uint64_t address, int index)
 
 void ethosu_flush_dcache(uint32_t *p, size_t bytes)
 {
-       if (p) {
-               SCB_CleanDCache_by_Addr(p, bytes);
-       } else {
-               SCB_CleanDCache();
-       }
+	if (ethosu_area_needs_flush_dcache(p, bytes)) {
+		SCB_CleanDCache();
+	} else {
+		__DSB();
+	}
 }
 
 void ethosu_invalidate_dcache(uint32_t *p, size_t bytes)
 {
-       if (p) {
-               SCB_InvalidateDCache_by_Addr(p, bytes);
-       } else {
-               SCB_InvalidateDCache();
-       }
+	if (ethosu_area_needs_invalidate_dcache(p, bytes)) {
+		SCB_InvalidateDCache();
+	} else {
+		__DSB();
+	}
 }
-
