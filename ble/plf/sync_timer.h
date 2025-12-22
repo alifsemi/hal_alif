@@ -17,6 +17,13 @@
  */
 
 /**
+ * @brief  Reset sync timer callbacks
+ *
+ * @return 0 on success
+ */
+int32_t sync_timer_reset(void);
+
+/**
  * @brief  Initialise synchronization timer. A free running counter in UP direction
  *
  *         Note: Overflow event(irq) priority should be higher than capture event(irq)
