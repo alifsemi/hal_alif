@@ -7,6 +7,8 @@
 #include <soc_memory_map.h>
 #include <cmsis_core.h>
 
+#define GLOBAL_CLEAN_INVALIDATE_THRESHOLD_SIZE (128 * 1024)
+
 typedef struct address_range {
 	uintptr_t base;
 	uintptr_t limit;
@@ -15,12 +17,12 @@ typedef struct address_range {
 static const address_range_t no_need_to_invalidate_or_flush_areas[] = {
 	/* TCM is never cached */
 	{
-		.base = 0x00000000,
-		.limit = 0x01FFFFFF,
+		.base = DT_REG_ADDR(DT_NODELABEL(itcm)),
+		.limit = DT_REG_ADDR(DT_NODELABEL(itcm)) + DT_REG_SIZE(DT_NODELABEL(itcm)) - 1,
 	},
 	{
-		.base = 0x20000000,
-		.limit = 0x21FFFFFF,
+		.base = DT_REG_ADDR(DT_NODELABEL(dtcm)),
+		.limit = DT_REG_ADDR(DT_NODELABEL(dtcm)) + DT_REG_SIZE(DT_NODELABEL(dtcm)) - 1,
 	},
 	/* MRAM should never change while running */
 	{
@@ -37,8 +39,7 @@ static bool area_needs_invalidate_or_flush(const void *p, size_t bytes)
 
 	uintptr_t base = (uintptr_t)p;
 	uintptr_t limit = base + bytes - 1;
-	size_t nn_flush_size = sizeof(no_need_to_invalidate_or_flush_areas) /
-						sizeof(no_need_to_invalidate_or_flush_areas[0]);
+	size_t nn_flush_size = ARRAY_SIZE(no_need_to_invalidate_or_flush_areas);
 
 	for (size_t i = 0; i < nn_flush_size; i++) {
 		if (base >= no_need_to_invalidate_or_flush_areas[i].base &&
@@ -52,8 +53,9 @@ static bool area_needs_invalidate_or_flush(const void *p, size_t bytes)
 
 bool __attribute__((weak)) ethosu_area_needs_invalidate_dcache(const void *p, size_t bytes)
 {
+	/* Passing NULL as p argument expects the whole cache to be flushed. */
 	if (!p) {
-		return false;
+		return true;
 	}
 
 	return area_needs_invalidate_or_flush(p, bytes);
@@ -61,8 +63,9 @@ bool __attribute__((weak)) ethosu_area_needs_invalidate_dcache(const void *p, si
 
 bool __attribute__((weak)) ethosu_area_needs_flush_dcache(const void *p, size_t bytes)
 {
+	/* Passing NULL as p argument expects the whole cache to be flushed. */
 	if (!p) {
-		return false;
+		return true;
 	}
 
 	return area_needs_invalidate_or_flush(p, bytes);
@@ -78,18 +81,38 @@ uint64_t ethosu_address_remap(uint64_t address, int index)
 
 void ethosu_flush_dcache(uint32_t *p, size_t bytes)
 {
-	if (ethosu_area_needs_flush_dcache(p, bytes)) {
-		SCB_CleanDCache_by_Addr(p, bytes);
+	if (p && ethosu_area_needs_flush_dcache(p, bytes)) {
+		if (bytes <= GLOBAL_CLEAN_INVALIDATE_THRESHOLD_SIZE) {
+			/*
+			 * For small ranges, do what we were told, but if excessively big,
+			 * faster to do a full cache operation
+			 */
+			SCB_CleanDCache_by_Addr(p, bytes);
+		} else {
+			SCB_CleanDCache();
+		}
 	} else {
-		SCB_CleanDCache();
+		__DSB();
 	}
 }
 
 void ethosu_invalidate_dcache(uint32_t *p, size_t bytes)
 {
-	if (ethosu_area_needs_invalidate_dcache(p, bytes)) {
-		SCB_InvalidateDCache_by_Addr(p, bytes);
+	if (p && ethosu_area_needs_invalidate_dcache(p, bytes)) {
+		if (bytes <= GLOBAL_CLEAN_INVALIDATE_THRESHOLD_SIZE) {
+			/*
+			 * For small ranges, do what we were told, but if excessively big,
+			 * faster to do a full cache operation
+			 */
+			SCB_InvalidateDCache_by_Addr(p, bytes);
+		} else {
+			/*
+			 * Not safe to globally invalidate without cleaning
+			 * unless we know there are no write-back areas in the system
+			 */
+			SCB_CleanInvalidateDCache();
+		}
 	} else {
-		SCB_InvalidateDCache();
+		__DSB();
 	}
 }
