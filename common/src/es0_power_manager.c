@@ -338,15 +338,22 @@ int8_t stop_using_es0(void)
 
 void wake_es0(const struct device *uart_dev)
 {
-	uint32_t rts, cts;
+	/* Init default to 2 which not affect anythong  0 & 1 are only possible values */
+	uint32_t rts = 2, cts = 2;
 
 	/* Read RTS and CTS line */
-	uart_line_ctrl_get(uart_dev, UART_LINE_CTRL_RTS, &rts);
-	uart_line_ctrl_get(uart_dev, UART_LINE_MODEM_CTS, &cts);
+	if (uart_line_ctrl_get(uart_dev, UART_LINE_CTRL_RTS, &rts)) {
+		/* Line read not supported */
+		return;
+	}
+	if (uart_line_ctrl_get(uart_dev, UART_LINE_MODEM_CTS, &cts)) {
+		/* Line read not supported */
+		return;
+	}
 
 	if (cts == 0) {
 		/* Wakeup Riscv by low CTS line */
-		if (rts) {
+		if (rts == 1) {
 			uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 0);
 			k_usleep(100);
 		}
