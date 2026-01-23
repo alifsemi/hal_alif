@@ -189,6 +189,9 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 	ret = hci_uart_init();
 	__ASSERT(0 == ret, "Failed to initialise HCI UART");
 
+	ret = sync_timer_init();
+	__ASSERT(0 == ret, "Failed to initialise sync timer");
+
 #if DEINITIALISED_MAGIC
 	if (initialised == DEINITIALISED_MAGIC) {
 		initialised = INITIALISED_MAGIC;
@@ -198,9 +201,6 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 #endif
 	if (initialised != INITIALISED_MAGIC) {
 		LOG_DBG("Cold start");
-
-		ret = sync_timer_init();
-		__ASSERT(0 == ret, "Failed to initialise sync timer");
 
 		/* hci_open calls this so should not be called here */
 		if (0 != take_es0_into_use()) {
