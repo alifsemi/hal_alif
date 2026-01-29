@@ -36,6 +36,7 @@ static uint32_t set_spi_ctrlr0_reg(struct ospi_transfer *transfer,
 		| (SPI_CTRLR0_SPI_RXDS_ENABLE << SPI_CTRLR0_SPI_RXDS_EN_OFFSET)
 		| (transfer->ddr << SPI_CTRLR0_SPI_DDR_EN_OFFSET)
 		| (inst_len << SPI_CTRLR0_INST_L_OFFSET)
+		| (transfer->ddr_inst_en << SPI_CTRLR0_INST_DDR_EN_OFFSET)
 		| (transfer->addr_len << SPI_CTRLR0_ADDR_L_OFFSET)
 		| (transfer->dummy_cycle << SPI_CTRLR0_WAIT_CYCLES_OFFSET);
 
