@@ -224,6 +224,7 @@ int32_t alif_hal_ospi_prepare_transfer(HAL_OSPI_Handle_T handle,
 	ospi_inst->transfer.dummy_cycle = trans_conf->wait_cycles;
 	ospi_inst->transfer.spi_frf = trans_conf->frame_format;
 	ospi_inst->transfer.ddr = trans_conf->ddr_enable;
+	ospi_inst->transfer.ddr_inst_en = trans_conf->ddr_ins_enable;
 
 	return  OSPI_ERR_NONE;
 }

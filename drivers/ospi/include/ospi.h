@@ -415,6 +415,7 @@ struct ospi_transfer {
 	uint32_t            inst_len;           /* Instruction length */
 	uint32_t            dummy_cycle;        /* Dummy cycles    */
 	uint32_t            ddr;                /* DDR / SDR mode  */
+	uint32_t            ddr_inst_en;        /* Instruction in DDR Mode* */
 	bool                tx_default_enable;  /* Enable Tx default */
 	enum spi_tmode      mode;               /* SPI transfer mode */
 	enum spi_transfer_status    status;    /* transfer status */
