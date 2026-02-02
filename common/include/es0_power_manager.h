@@ -41,12 +41,14 @@ int8_t take_es0_into_use(void);
  * @param nvds_buff NVDS configuration defined by user
  * @param nvds_size Length of nvds data
  * @param clock_select ES0 clock select
+ * @param hpa_mode If true, HPA mode is used, otherwise LPA mode is used
  *
  * @retval  0 If successful
  * @retval  -1 If too many users
  * @retval  -4 Starting ES0 failed
  */
-int8_t take_es0_into_use_with_params(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select);
+int8_t take_es0_into_use_with_params(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select,
+				     bool hpa_mode);
 
 /**
  * @brief De-register a user of a ES0
