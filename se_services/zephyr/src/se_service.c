@@ -943,7 +943,8 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
  * errno    - unable to unlock mutex.
  * resp_err - Error in service response for the requested service.
  */
-int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select)
+int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select,
+			bool hpa_mode)
 {
 	int err, resp_err;
 
@@ -969,8 +970,8 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_s
 	se_service_all_svc_d.boot_svc_d.send_internal_clock_select = clock_select;
 
 	se_service_all_svc_d.boot_svc_d.send_configuration =
-		IS_ENABLED(CONFIG_ALIF_HPA_MODE) ? SERVICES_NET_PROC_BOOT_CONFIGURATION_HPA
-						 : SERVICES_NET_PROC_BOOT_CONFIGURATION_NONE;
+		hpa_mode ? SERVICES_NET_PROC_BOOT_CONFIGURATION_HPA
+			 : SERVICES_NET_PROC_BOOT_CONFIGURATION_NONE;
 
 	if (IS_ENABLED(CONFIG_SOC_AB1C1F1M41820HH0) || IS_ENABLED(CONFIG_SOC_AB1C1F4M51820HH0)) {
 		se_service_all_svc_d.boot_svc_d.send_configuration |=

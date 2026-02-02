@@ -148,13 +148,14 @@ static uint16_t add_nvds_param_length(uint16_t added_len){
 
 }
 
-int8_t take_es0_into_use_with_params(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select)
+int8_t take_es0_into_use_with_params(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select,
+				     bool hpa_mode)
 {
 	if (255 == es0_user_counter) {
 		return ES0_PM_ERROR_TOO_MANY_USERS;
 	} else if (es0_user_counter == 0) {
 		/* Start */
-		if (se_service_boot_es0(nvds_buff, nvds_size, clock_select)) {
+		if (se_service_boot_es0(nvds_buff, nvds_size, clock_select, hpa_mode)) {
 			return ES0_PM_ERROR_START_FAILED;
 		}
 	}
@@ -316,7 +317,8 @@ int8_t take_es0_into_use(void)
 		return ES0_PM_ERROR_INVALID_BOOT_PARAMS;
 	}
 
-	return take_es0_into_use_with_params(ll_boot_params_buffer, total_length, es0_clock_select);
+	return take_es0_into_use_with_params(ll_boot_params_buffer, total_length,
+		es0_clock_select, IS_ENABLED(CONFIG_ALIF_HPA_MODE));
 }
 
 
