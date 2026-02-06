@@ -228,7 +228,7 @@ int32_t sync_timer_init(void)
 	IRQ_CONNECT(ISO_EVT_UTIMER_CAP_A_IRQ, ISO_EVT_UTIMER_CAP_IRQ_PRIO, capture_irq_handler, 0,
 		    0);
 
-	LOG_DBG("ISO sync timer initialised");
+	/* LOG_DBG("ISO sync timer initialised"); */
 
 	return 0;
 }
@@ -236,10 +236,15 @@ int32_t sync_timer_init(void)
 uint32_t sync_timer_start(void (*sync_timer_capture_evt_cb)(void),
 			  void (*sync_timer_overflow_evt_cb)(void))
 {
+	if (sync_timer_capture_evt_cb) {
+		sync_timer_cap_cb = sync_timer_capture_evt_cb;
+	}
+	if (sync_timer_overflow_evt_cb) {
+		sync_timer_ovf_cb = sync_timer_overflow_evt_cb;
+	}
+
 	/* Enable IRQs */
 	sync_timer_restore_evts();
-	sync_timer_cap_cb = sync_timer_capture_evt_cb;
-	sync_timer_ovf_cb = sync_timer_overflow_evt_cb;
 
 	/* Global timer channel enable */
 	((TIMER_RegInfo *)(UTIMER_BASE))->glb_cntr_start |= (1 << ISO_EVT_UTIMER_CHAN);
@@ -263,6 +268,8 @@ void sync_timer_disable_evts(void)
 {
 	irq_disable(ISO_EVT_UTIMER_OVF_IRQ);
 	irq_disable(ISO_EVT_UTIMER_CAP_A_IRQ);
+	NVIC_ClearPendingIRQ(ISO_EVT_UTIMER_OVF_IRQ);
+	NVIC_ClearPendingIRQ(ISO_EVT_UTIMER_CAP_A_IRQ);
 }
 
 void sync_timer_restore_evts(void)
