@@ -78,7 +78,6 @@ typedef union {
 	get_toc_number_svc_t get_toc_number_svc_d;
 	get_toc_version_svc_t get_toc_version_svc_d;
 	get_device_part_svc_t get_device_part_svc_d;
-	otp_data_t read_otp_svc_d;
 	get_device_revision_data_t get_device_revision_data_d;
 	net_proc_boot_svc_t boot_svc_d;
 	net_proc_shutdown_svc_t shutdown_svc_d;

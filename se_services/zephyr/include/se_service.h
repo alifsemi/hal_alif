@@ -31,7 +31,6 @@ int se_service_set_off_cfg(off_profile_t *wp);
 int se_service_se_sleep_req(uint32_t param);
 int se_service_boot_reset_soc(void);
 int se_service_boot_reset_cpu(uint32_t cpu_id);
-int se_service_process_toc_entry(const char *image_id);
 int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size);
 
 /**
