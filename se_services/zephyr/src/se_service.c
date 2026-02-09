@@ -1475,6 +1475,48 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 	return 0;
 }
 
+int se_service_clock_set_divider(clock_divider_t divider, uint32_t value)
+{
+	int err, i = 0, resp_err = -1;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.set_clk_divider.header.hdr_service_id = SERVICE_CLOCK_SET_DIVIDER;
+
+	se_service_all_svc_d.set_clk_divider.send_divider = divider;
+	se_service_all_svc_d.set_clk_divider.send_value = value;
+
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		return errno;
+	}
+	while (i < MAX_TRIES) {
+		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
+				     sizeof(se_service_all_svc_d.service_header), SERVICE_TIMEOUT);
+		if (!err) {
+			break;
+		}
+		/* SE service timed out. Increment count */
+		++i;
+	}
+	resp_err = se_service_all_svc_d.set_clk_divider.resp_error_code;
+	k_mutex_unlock(&svc_mutex);
+	if (i >= MAX_TRIES) {
+		LOG_ERR("Failed to set clock divider (errno =%d)\n", err);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("received response error = %d\n", resp_err);
+		return resp_err;
+	}
+	return 0;
+}
+
 /**
  * @brief PM notifier callback for SE service state entry
  *
