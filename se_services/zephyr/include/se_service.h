@@ -33,6 +33,18 @@ int se_service_boot_reset_soc(void);
 int se_service_boot_reset_cpu(uint32_t cpu_id);
 int se_service_process_toc_entry(const char *image_id);
 int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size);
+
+/**
+ * @brief Send service request to SE to set the value of a clock divider.
+ *
+ * Selects the value of a clock divider.
+ *
+ * @param divider Which divider to set – CPUPLL, SYSPLL, ACLK (Corstone), HCLK, PCLK (Alif)
+ * @param value Divider value. 0x0 to 0x1F for Corstone dividers, 0x0 to 0x2 for Alif divider
+ *
+ * @return 0 on success, non-zero on failure
+ */
+int se_service_clock_set_divider(clock_divider_t divider, uint32_t value);
 #ifdef __cplusplus
 }
 #endif
