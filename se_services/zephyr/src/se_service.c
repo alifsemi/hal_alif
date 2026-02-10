@@ -27,8 +27,8 @@ static K_SEM_DEFINE(svc_send_sem, 0, 1);
 static K_SEM_DEFINE(svc_recv_sem, 0, 1);
 static K_MUTEX_DEFINE(svc_mutex);
 
-const struct device *send_dev;
-const struct device *recv_dev;
+static const struct device *send_dev;
+static const struct device *recv_dev;
 static uint32_t se_toc_version;
 
 /* SE ready state - used for lazy initialization */
@@ -89,7 +89,7 @@ typedef union {
 	control_cpu_svc_t cpu_reboot_d;
 	se_sleep_svc_t se_sleep_d;
 	update_stoc_svc_t update_stoc_svc_d;
-	clk_set_clk_divider_svc_t set_clk_divider;
+	clk_set_clk_divider_svc_t set_clk_divider_d;
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -361,7 +361,7 @@ int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
 {
 	int err, resp_err;
 
-	if (img_size == 0) {
+	if (!img_addr || img_size == 0) {
 		LOG_ERR("Invalid argument\n");
 		return -EINVAL;
 	}
@@ -499,7 +499,7 @@ int se_service_get_toc_version(uint32_t *pversion)
 		LOG_ERR("Invalid argument\n");
 		return -EINVAL;
 	}
-	/* Check is TOC version readed */
+	/* Check if the TOC version has already been read */
 	if (se_toc_version) {
 		*pversion = se_toc_version;
 		return 0;
@@ -789,6 +789,11 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
 	mfg_data_v1_t p_mfg_dat;
 	int ret;
 
+	if (!eui_extension) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
+
 	ret = se_service_system_get_device_data(&device_data);
 	if (ret) {
 		return ret;
@@ -896,6 +901,11 @@ int se_service_get_run_cfg(run_profile_t *pp)
 {
 	int err, resp_err = -1;
 
+	if (!pp) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
+
 	/* Ensure SE is ready to receive service calls */
 	err = se_service_ensure_ready();
 	if (err) {
@@ -947,6 +957,11 @@ int se_service_get_last_set_run_cfg(run_profile_t *pp)
 {
 	int ret = 0;
 
+	if (!pp) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
+
 	ret = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
 	if (ret) {
 		LOG_ERR("Unable to lock mutex (error = %d)\n", ret);
@@ -996,6 +1011,11 @@ static bool se_service_profile_changed(const run_profile_t *pp)
 int se_service_set_run_cfg(run_profile_t *pp)
 {
 	int err, resp_err = -1;
+
+	if (!pp) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
 
 	/* Ensure SE is ready to receive service calls */
 	err = se_service_ensure_ready();
@@ -1058,6 +1078,11 @@ int se_service_get_off_cfg(off_profile_t *wp)
 {
 	int err, resp_err = -1;
 
+	if (!wp) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
+
 	/* Ensure SE is ready to receive service calls */
 	err = se_service_ensure_ready();
 	if (err) {
@@ -1107,6 +1132,11 @@ int se_service_get_off_cfg(off_profile_t *wp)
 int se_service_set_off_cfg(off_profile_t *wp)
 {
 	int err, resp_err = -1;
+
+	if (!wp) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
 
 	/* Ensure SE is ready to receive service calls */
 	err = se_service_ensure_ready();
@@ -1331,10 +1361,10 @@ int se_service_clock_set_divider(clock_divider_t divider, uint32_t value)
 	}
 
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
-	se_service_all_svc_d.set_clk_divider.header.hdr_service_id = SERVICE_CLOCK_SET_DIVIDER;
+	se_service_all_svc_d.set_clk_divider_d.header.hdr_service_id = SERVICE_CLOCK_SET_DIVIDER;
 
-	se_service_all_svc_d.set_clk_divider.send_divider = divider;
-	se_service_all_svc_d.set_clk_divider.send_value = value;
+	se_service_all_svc_d.set_clk_divider_d.send_divider = divider;
+	se_service_all_svc_d.set_clk_divider_d.send_value = value;
 
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
@@ -1345,7 +1375,7 @@ int se_service_clock_set_divider(clock_divider_t divider, uint32_t value)
 		/* SE service timed out. Increment count */
 		++i;
 	}
-	resp_err = se_service_all_svc_d.set_clk_divider.resp_error_code;
+	resp_err = se_service_all_svc_d.set_clk_divider_d.resp_error_code;
 	k_mutex_unlock(&svc_mutex);
 	if (i >= MAX_TRIES) {
 		LOG_ERR("Failed to set clock divider (error = %d)\n", err);
