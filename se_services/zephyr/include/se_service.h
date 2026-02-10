@@ -5,6 +5,8 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
+#include <stdint.h>
 #include <zephyr/device.h>
 #include <services_lib_api.h>
 #include <services_lib_ids.h>
@@ -176,6 +178,7 @@ int se_service_shutdown_es0(void);
  *
  * @param pp Pointer to run_profile_t to receive the profile data.
  * @retval 0 Success.
+ * @retval -EINVAL @p pp is NULL.
  * @retval -EAGAIN Operation timed out. Retry after a delay.
  * @retval -EBUSY SE is busy. Retry after a delay.
  * @return Positive error code returned by SE for a failed service request.
@@ -196,6 +199,7 @@ int se_service_get_run_cfg(run_profile_t *pp);
  *
  * @param pp Pointer to run_profile_t to receive cached data.
  * @retval 0 Success.
+ * @retval -EINVAL @p pp is NULL.
  * @retval -ENODATA Profile cache is not initialized.
  * @retval -EAGAIN Operation timed out. Retry after a delay.
  */
@@ -209,6 +213,7 @@ int se_service_get_last_set_run_cfg(run_profile_t *pp);
  *
  * @param pp Pointer to run_profile_t with the desired profile.
  * @retval 0 Success.
+ * @retval -EINVAL @p pp is NULL.
  * @retval -EAGAIN Operation timed out. Retry after a delay.
  * @retval -EBUSY SE is busy. Retry after a delay.
  * @return Positive error code returned by SE for a failed service request.
@@ -220,6 +225,7 @@ int se_service_set_run_cfg(run_profile_t *pp);
  *
  * @param wp Pointer to off_profile_t to receive the profile data.
  * @retval 0 Success.
+ * @retval -EINVAL @p wp is NULL.
  * @retval -EAGAIN Operation timed out. Retry after a delay.
  * @retval -EBUSY SE is busy. Retry after a delay.
  * @return Positive error code returned by SE for a failed service request.
@@ -231,6 +237,7 @@ int se_service_get_off_cfg(off_profile_t *wp);
  *
  * @param wp Pointer to off_profile_t with the desired profile.
  * @retval 0 Success.
+ * @retval -EINVAL @p wp is NULL.
  * @retval -EAGAIN Operation timed out. Retry after a delay.
  * @retval -EBUSY SE is busy. Retry after a delay.
  * @return Positive error code returned by SE for a failed service request.
@@ -277,7 +284,7 @@ int se_service_boot_reset_cpu(uint32_t cpu_id);
  * @param img_addr Pointer to the image data.
  * @param img_size Size of the image in bytes (must be non-zero).
  * @retval 0 Success.
- * @retval -EINVAL @p img_size is zero.
+ * @retval -EINVAL @p img_addr is NULL or @p img_size is zero.
  * @retval -EAGAIN Operation timed out. Retry after a delay.
  * @retval -EBUSY SE is busy. Retry after a delay.
  * @return Positive error code returned by SE for a failed service request.
