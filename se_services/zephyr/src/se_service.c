@@ -90,6 +90,7 @@ typedef union {
 	control_cpu_svc_t cpu_reboot_d;
 	se_sleep_svc_t se_sleep_d;
 	update_stoc_svc_t update_stoc_svc_d;
+	clk_set_clk_divider_svc_t set_clk_divider;
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -1485,16 +1486,17 @@ int se_service_clock_set_divider(clock_divider_t divider, uint32_t value)
 		return err;
 	}
 
+	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
+		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
+		return errno;
+	}
+
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.set_clk_divider.header.hdr_service_id = SERVICE_CLOCK_SET_DIVIDER;
 
 	se_service_all_svc_d.set_clk_divider.send_divider = divider;
 	se_service_all_svc_d.set_clk_divider.send_value = value;
 
-	if (k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT))) {
-		LOG_ERR("Unable to lock mutex (errno = %d)\n", errno);
-		return errno;
-	}
 	while (i < MAX_TRIES) {
 		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
 				     sizeof(se_service_all_svc_d.service_header), SERVICE_TIMEOUT);
