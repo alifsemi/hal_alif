@@ -263,14 +263,6 @@ static int se_service_sync_locked(void)
 	return err;
 }
 
-/**
- * @brief Synchronize with SE or wait until SE wakes up by sending
- * multiple SE heartbeat service requests.
- *
- * returns,
- * 0     - On success. SE is woken up to service SE service requests.
- * errno - Unable to get an valid response from SE.
- */
 int se_service_sync(void)
 {
 	int ret;
@@ -338,18 +330,6 @@ static int se_service_ensure_ready(void)
 	return ret;
 }
 
-/**
- * @brief Send heartbeat service request to SE to check if SE is alive.
-
- * Set the service id as SERVICE_MAINTENANCE_HEARTBEAT_ID in the
- * service_header and call send_msg_to_se to send the service request.
- * Use svc_mutex to avoid race condition while sending service request.
- *
- * returns,
- * 0      - success.
- * err    - if unable to send service request.
- * errno  - Unable to unlock mutex.
- */
 int se_service_heartbeat(void)
 {
 	int err;
@@ -421,24 +401,6 @@ int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size)
 	return 0;
 }
 
-/**
- * @brief Send service request to SE to get random number.
-
- * Set the service id as SERVICE_CRYPTOCELL_GET_RND in the
- * service_header, set send_rnd_length with required random number length and
- * call send_msg_to_se to send the service request. Use svc_mutex to
- * avoid race condition while sending service request.
- *
- * parameters,
- * @buffer - placeholder for random number.
- * @length - length of requested random number.
- *
- * returns,
- * 0        - success, buffer contains random numbers of length 'length'.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - error in service response for the requested service.
- */
 int se_service_get_rnd_num(uint8_t *buffer, uint16_t length)
 {
 	int err, resp_err = -1;
@@ -484,22 +446,6 @@ int se_service_get_rnd_num(uint8_t *buffer, uint16_t length)
 	return 0;
 }
 
-/**
- * @brief Send service request to SE to get number of table of contents (TOC).
-
- * Set the service id as SERVICE_SYSTEM_MGMT_GET_TOC_NUMBER in the
- * service_header and call send_msg_to_se to send the service request.
- * Use svc_mutex to avoid race condition while sending service request.
- *
- * parameters,
- * @ptoc - placeholder for TOC number.
- *
- * returns,
- * 0        - success, ptoc contains number of TOC.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - error in service response for the requested service.
- */
 int se_service_get_toc_number(uint32_t *ptoc)
 {
 	int err, resp_err = -1;
@@ -545,22 +491,6 @@ int se_service_get_toc_number(uint32_t *ptoc)
 	return 0;
 }
 
-/**
- * @brief Send service request to SE to get TOC Version.
-
- * Set the service id as SERVICE_SYSTEM_MGMT_GET_TOC_VERSION in the
- * service_header and call send_msg_to_se to send the service request.
- * Use svc_mutex to avoid race condition while sending service request.
- *
- * parameters,
- * @pversion - placeholder for TOC Version.
- *
- * returns,
- * 0        - success, ptoc contains the TOC version.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - error in service response for the requested service.
- */
 int se_service_get_toc_version(uint32_t *pversion)
 {
 	int err, resp_err;
@@ -613,23 +543,7 @@ int se_service_get_toc_version(uint32_t *pversion)
 	k_mutex_unlock(&svc_mutex);
 	return 0;
 }
-/**
- * @brief Send service request to SE to get revision of SE firmware.
- *
- * Set the service id as SERVICE_APPLICATION_FIRMWARE_VERSION_ID in the
- * service_header and call send_msg_to_se to send the service request.
- * Use svc_mutex to avoid race condition while sending service request.
- *
- * parameters,
- * @prev - placeholder for SE firmware string up to VERSION_RESPONSE_LENGTH
- *        characters.
- *
- * returns,
- * 0        - success, prev contains SE firmware string.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - error in service response for the requested service.
- */
+
 int se_service_get_se_revision(uint8_t *prev)
 {
 	int err, resp_err = -1;
@@ -676,22 +590,6 @@ int se_service_get_se_revision(uint8_t *prev)
 	return 0;
 }
 
-/**
- * @brief Send service request to SE to get device part number.
- *
- * Set the service id as SERVICE_SYSTEM_MGMT_GET_DEVICE_PART_NUMBER in the
- * service_header and call send_msg_to_se to send the service request.
- * Use svc_mutex to avoid race condition while sending service request.
- *
- * parameters,
- * @pdev_part - placeholder for device part number.
- *
- * returns,
- * 0        - success, pdev_part contains device part number.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - error in service response for the requested service.
- */
 int se_service_get_device_part_number(uint32_t *pdev_part)
 {
 	int err, resp_err = -1;
@@ -737,25 +635,6 @@ int se_service_get_device_part_number(uint32_t *pdev_part)
 	return 0;
 }
 
-/**
- * @brief Send service request to SE to get device data
- *
- * Set the service id as SERVICE_SYSTEM_MGMT_GET_DEVICE_REVISION_DATA in the
- * service_header and call send_msg_to_se to send the service request.
- * Use svc_mutex to avoid race condition while sending service request.
- *
- * parameters,
- * @pdev_data - placeholder for device data.
- *
- * returns,
- * 0        - success, pdev_data contains device data containing
- *            SoC revision, SoC part number, various keys,
- *            firmware version, wounding data, DCU settings,
- *            manufacturing data, serial number, SoC lifecycle state.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - Error in service response for the requested service.
- */
 int se_service_system_get_device_data(get_device_revision_data_t *pdev_data)
 {
 	int err, resp_err = -1;
@@ -904,17 +783,6 @@ static void se_service_manufacture_data_parse(get_device_revision_data_t *device
 	}
 }
 
-/**
- * @brief Calculate unique extension values for EUI-48 or EUI-64
- *
- * @fn    uint32_t se_system_get_eui_extension(
- *                                bool is_eui48,
- *                                uint8_t * eui_extension)
- *
- * @param is_eui48       Specify whether EUI-48 or EUI-64 extension is requested
- * @param eui_extension  Buffer to store the calculated extension
- * @return
- */
 int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
 {
 	get_device_revision_data_t device_data;
@@ -938,24 +806,6 @@ int se_system_get_eui_extension(bool is_eui48, uint8_t *eui_extension)
 	return ret;
 }
 
-/**
- * @brief Send service request to SE to boot ES0
- *
- * At boot the ES0 is not started automatically.
- * This API function will start the core but it is encouraged not to call this
- * from application, separate power manager library should be used instead.
- *
- * parameters,
- * @nvds_buff - placeholder for NVDS data.
- * @nvds_size - length of the passed NVDS buff
- * @clock_select - ES0 uart and main clock selection
- *
- * returns,
- * 0        - success.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - Error in service response for the requested service.
- */
 int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select,
 			bool hpa_mode)
 {
@@ -1008,24 +858,6 @@ int se_service_boot_es0(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_s
 	return 0;
 }
 
-/**
- * @brief Send service request to SE to shutdown ES0
- *
- * ES0 is started using se_service_boot_es0 and when the application does not need
- * the services of ES0 anymore it should be shutdown to save power.
- * This API function will shutdown the core but it is encouraged not to call this
- * from application, separate power manager library should be used instead.
- *
- * parameters,
- * @nvds_buff - placeholder for NVDS data.
- * @nvds_size - length of the passed NVDS buff
- *
- * returns,
- * 0        - success.
- * err      - if unable to send service request.
- * errno    - unable to unlock mutex.
- * resp_err - Error in service response for the requested service.
- */
 int se_service_shutdown_es0(void)
 {
 	int err, resp_err = -1;
@@ -1111,23 +943,6 @@ int se_service_get_run_cfg(run_profile_t *pp)
 	return 0;
 }
 
-/**
- * @brief Get the last run configuration that was set via se_service_set_run_cfg()
- *
- * Returns the locally cached run profile that was set by this core via
- * se_service_set_run_cfg(). This is much faster than querying SE firmware
- * and suitable for callers that need to read-modify-write the profile.
- *
- * Note: The cached profile reflects what THIS core has set, not the actual
- * SE firmware state. The actual state may differ if:
- * - Other cores have made changes
- * - System has been suspended/resumed
- * - Profile has never been initialized on this core
- *
- * @param pp Pointer to run_profile_t to receive cached data
- * @return 0 on success
- *         -ENODATA if profile cache is not initialized
- */
 int se_service_get_last_set_run_cfg(run_profile_t *pp)
 {
 	int ret = 0;
