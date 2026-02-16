@@ -120,6 +120,7 @@ struct ospi_trans_config {
 	uint8_t  wait_cycles;           /* Number of Wait Cycles */
 	uint8_t  ddr_enable;            /* Enable DDR Mode */
 	uint8_t  rx_ds_enable;          /* Read Data Strobe Enable */
+	uint8_t  ddr_ins_enable;        /* Enable Instruction in DDR mode*/
 };
 
 
