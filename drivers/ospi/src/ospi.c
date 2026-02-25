@@ -495,7 +495,9 @@ void ospi_psram_xip_init(struct ospi_regs *ospi,
 			| SPI_CTRLR0_SCPH_LOW
 			| (0 << SPI_CTRLR0_SSTE)
 			| (SPI_TMOD_RX << SPI_CTRLR0_TMOD)
-			| (SPI_CTRLR0_DFS_16bit << SPI_CTRLR0_DFS);
+			| (SPI_CTRLR0_DFS_32bit << SPI_CTRLR0_DFS);
+
+	ospi->OSPI_CTRLR0 = val;
 
 	val = (SPI_FRAME_FORMAT_OCTAL << XIP_CTRL_FRF_OFFSET)
 			| (trans_type << XIP_CTRL_TRANS_TYPE_OFFSET)
@@ -518,7 +520,7 @@ void ospi_psram_xip_init(struct ospi_regs *ospi,
 	ospi->OSPI_XIP_CTRL = val;
 
 	val = (SPI_FRAME_FORMAT_OCTAL << XIP_WRITE_CTRL_WR_FRF_OFFSET)
-			| (0x2 << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
+			| (trans_type << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
 			| (0x8 << XIP_WRITE_CTRL_WR_ADDR_L_OFFSET)
 			| (0x3 << XIP_WRITE_CTRL_WR_INST_L_OFFSET)
 			| (0x1 << XIP_WRITE_CTRL_WR_SPI_DDR_EN_OFFSET)

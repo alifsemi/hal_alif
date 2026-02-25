@@ -638,6 +638,42 @@ static inline void aes_set_signal_delay(struct ospi_aes_regs *aes, uint8_t delay
 
 	aes->AES_SCLK_DELAY = ((delay << AES_SCLK_DELAY_POS) | (delay << AES_SCLK_N_DELAY_POS));
 }
+
+struct aes_addr_ctrl {
+	/* Number of bits in the lower portion of the address */
+	uint8_t addr_lower_bits;
+	/* Bit position of the lowest bit in the upper portion of the address */
+	uint8_t addr_upper_shift;
+	/* Enable array mode for SS0 line (lower 256MB) */
+	bool ss0_array_mode_en;
+	/* Enable array mode for SS1 line (upper 256MB) */
+	bool ss1_array_mode_en;
+	/* Mask bits in the lower portion of the address to drive low */
+	uint16_t addr_mask;
+};
+
+#define AES_ADDR_CTRL_ARRAY_MASK_POS        (0)
+#define AES_ADDR_CTRL_SS0_ARRAY_MODE_POS    (18)
+#define AES_ADDR_CTRL_SS1_ARRAY_MODE_POS    (19)
+#define AES_ADDR_CTRL_ARRAY_MODE_SHIFT_POS  (22)
+#define AES_ADDR_CTRL_ARRAY_MODE_SPLIT_POS  (28)
+
+/***
+ * \fn          static inline void aes_ctrl_xip_addr(struct ospi_aes_regs *aes,
+ *                                                struct aes_addr_ctrl *addr_cfg)
+ * \brief       configure aes address shim
+ * \param[in]   aes       Pointer to the AES register map
+ * \param[in]   addr_cfg  Pointer to the AES address configuration struct
+ * \return      none
+ */
+static inline void aes_ctrl_xip_addr(struct ospi_aes_regs *aes, struct aes_addr_ctrl *addr_cfg)
+{
+	aes->AES_ADDR_CONTROL = (((uint32_t)addr_cfg->addr_mask << AES_ADDR_CTRL_ARRAY_MASK_POS) |
+		((uint32_t)addr_cfg->ss0_array_mode_en << AES_ADDR_CTRL_SS0_ARRAY_MODE_POS) |
+		((uint32_t)addr_cfg->ss1_array_mode_en << AES_ADDR_CTRL_SS1_ARRAY_MODE_POS) |
+		((uint32_t)addr_cfg->addr_upper_shift << AES_ADDR_CTRL_ARRAY_MODE_SHIFT_POS) |
+		((uint32_t)addr_cfg->addr_lower_bits << AES_ADDR_CTRL_ARRAY_MODE_SPLIT_POS));
+}
 #else
 
 /***
@@ -980,7 +1016,6 @@ void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is
   \return      none
 */
 void ospi_hyperbus_send(struct ospi_regs *ospi, struct ospi_transfer *transfer);
-
 
 /**
  * \fn          void ospi_irq_handler(struct ospi_regs *ospi,
