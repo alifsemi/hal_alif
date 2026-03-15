@@ -69,6 +69,19 @@ static K_SEM_DEFINE(reset_sem, 0, 1);
 
 static int irq_key;
 
+/* Hooks for custom functionality. Can be used e.g. to benchmark BLE task */
+void __weak alif_ble_enable_pre_hook(void)
+{
+}
+
+void __weak alif_ble_enable_post_hook(void)
+{
+}
+
+void __weak alif_ble_task_post_hook(void)
+{
+}
+
 static void global_int_start(void)
 {
 	irq_unlock(irq_key);
@@ -186,6 +199,8 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 {
 	int ret = 0;
 
+	alif_ble_enable_pre_hook();
+
 	ret = hci_uart_init();
 	__ASSERT(0 == ret, "Failed to initialise HCI UART");
 
@@ -227,6 +242,8 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 
 	LOG_DBG("task starting event loop");
 
+	alif_ble_enable_post_hook();
+
 	while (!atomic_get(&stop_flag)) {
 		k_sem_take(&rwip_schedule_sem, K_FOREVER);
 
@@ -236,6 +253,8 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 	}
 
 	LOG_DBG("Ending BLE thread");
+
+	alif_ble_task_post_hook();
 }
 
 int alif_ble_enable(void (*cb)(void))
