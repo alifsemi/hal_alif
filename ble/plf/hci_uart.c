@@ -150,6 +150,9 @@ void hci_uart_read(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint
 
 void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint8_t), void *dummy)
 {
+	/* Disable ES0 sleep while writing commands */
+	uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_BRK, 0);
+
 	LOG_DBG("HCI UART write request: %d bytes", size);
 
 	__ASSERT(bufptr != NULL, "Invalid buffer pointer");
@@ -181,6 +184,9 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 		/* Call handler */
 		callback(dummy, if_status);
 	}
+
+	/* Allow ES0 to sleep */
+	uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_BRK, 1);
 }
 
 void hci_uart_flow_on(void)
