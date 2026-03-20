@@ -150,8 +150,10 @@ void hci_uart_read(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint
 
 void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uint8_t), void *dummy)
 {
+#if CONFIG_ALIF_BLE_ALLOW_SLEEP_RUNTIME
 	/* Disable ES0 sleep while writing commands */
 	uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_BRK, 0);
+#endif
 
 	LOG_DBG("HCI UART write request: %d bytes", size);
 
@@ -165,6 +167,7 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 
 	uart_env.tx.callback = callback;
 	uart_env.tx.dummy = dummy;
+
 	if (IS_ENABLED(CONFIG_PM)) {
 		pm_policy_state_lock_get(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
 	}
@@ -185,8 +188,10 @@ void hci_uart_write(uint8_t *bufptr, uint32_t size, void (*callback)(void *, uin
 		callback(dummy, if_status);
 	}
 
+#if CONFIG_ALIF_BLE_ALLOW_SLEEP_RUNTIME
 	/* Allow ES0 to sleep */
 	uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_BRK, 1);
+#endif
 }
 
 void hci_uart_flow_on(void)

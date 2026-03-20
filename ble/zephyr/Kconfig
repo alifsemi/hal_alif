@@ -28,6 +28,13 @@ config ALIF_BLE_HOST_ADDL_ENV_HEAPSIZE
 	  Depending on the environments enabled in the stack the environment
 	  heap size allocated needs to be adjusted.
 
+config ALIF_BLE_ALLOW_SLEEP_RUNTIME
+	bool "Allow sleep during BLE operations"
+	default n
+	help
+	  Allow the system to enter sleep mode during BLE operations.
+	  This can save power but may increase latency.
+
 endmenu
 
 endif
