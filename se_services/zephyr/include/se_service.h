@@ -316,6 +316,18 @@ int se_service_clock_set_divider(clock_divider_t divider, uint32_t value);
  */
 int se_service_process_toc_entry(const char *image_id);
 
+/**
+ * @brief Read an OTP word specified by an offset.
+ *
+ * @param otp_offset An offset position to read OTP from.
+ * @param otp_word   Pointer to store OTP value.
+ * @retval 0 Success.
+ * @retval -EINVAL @p otp_word is NULL.
+ * @retval -EAGAIN Operation timed out. Retry after a delay.
+ * @return Positive error code returned by SE for a failed service request.
+ */
+int se_service_read_otp(uint32_t otp_offset, uint32_t *otp_word);
+
 #ifdef __cplusplus
 }
 #endif

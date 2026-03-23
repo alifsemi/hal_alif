@@ -91,6 +91,7 @@ typedef union {
 	update_stoc_svc_t update_stoc_svc_d;
 	clk_set_clk_divider_svc_t set_clk_divider_d;
 	process_toc_entry_svc_t process_toc_entry_svc_d;
+	otp_data_t otp_svc_d;
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -1432,6 +1433,53 @@ int se_service_process_toc_entry(const char *image_id)
 		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
 		return resp_err;
 	}
+
+	return 0;
+}
+
+int se_service_read_otp(uint32_t otp_offset, uint32_t *otp_word)
+{
+	int err, resp_err = -1;
+
+	if (!otp_word) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (err) {
+		LOG_ERR("Unable to lock mutex (err = %d)\n", err);
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.otp_svc_d.header.hdr_service_id = SERVICE_SYSTEM_MGMT_READ_OTP;
+
+	se_service_all_svc_d.otp_svc_d.send_offset = otp_offset;
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.otp_svc_d,
+			sizeof(se_service_all_svc_d.otp_svc_d), SERVICE_TIMEOUT);
+
+	resp_err = se_service_all_svc_d.otp_svc_d.resp_error_code;
+	k_mutex_unlock(&svc_mutex);
+
+	if (err) {
+		LOG_ERR("service_read_otp failed with %d\n", err);
+		return err;
+	}
+
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		return resp_err;
+	}
+
+	*otp_word = se_service_all_svc_d.otp_svc_d.otp_word;
 
 	return 0;
 }
