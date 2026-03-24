@@ -1,0 +1,36 @@
+def common_funcs
+
+pipeline {
+    agent any
+    options {
+        disableConcurrentBuilds(abortPrevious: true)
+    }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    common_funcs = load 'automation/ble_samples.groovy'
+                }
+            }
+        }
+        stage('verify_checkpatch') {
+            agent { label 'zas20' }
+            options { skipDefaultCheckout() }
+            steps {
+                script {
+                    common_funcs.verify_checkpatch()
+                }
+            }
+        }
+        stage('verify_gitlint') {
+            agent { label 'zas20' }
+            options { skipDefaultCheckout() }
+            steps {
+                script {
+                    common_funcs.verify_gitlint()
+                }
+            }
+        }
+    }
+}
