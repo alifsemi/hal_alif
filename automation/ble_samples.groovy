@@ -46,7 +46,7 @@ def verify_gitlint (){
             git fetch alif pull/${CHANGE_ID}/head:pr-${CHANGE_ID}
             git checkout pr-${CHANGE_ID}
         else
-            git checkout main
+            git checkout alif/main
             git reset --hard alif/main
             git pull
         fi
