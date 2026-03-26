@@ -40,8 +40,8 @@ def verify_gitlint (){
         git reset --hard origin/main
         west update
         cd /root/alif/modules/hal/alif
+        git fetch --all -pu
         if [[ -v CHANGE_ID ]]; then
-            git fetch -pu alif
             git branch -D pr-${CHANGE_ID} || true
             git fetch alif pull/${CHANGE_ID}/head:pr-${CHANGE_ID}
             git checkout pr-${CHANGE_ID}
