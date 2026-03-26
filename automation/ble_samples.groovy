@@ -22,8 +22,8 @@ def verify_checkpatch(){
                 echo "Checkpatch passed successfully"
             fi
         else
-            git fetch origin -pu
-            git reset --hard origin/main
+            git fetch alif -pu
+            git reset --hard alif/main
         fi
         cd ..
         '''
@@ -47,7 +47,7 @@ def verify_gitlint (){
             git checkout pr-${CHANGE_ID}
         else
             git checkout main
-            git reset --hard origin/main
+            git reset --hard alif/main
             git pull
         fi
         cd ..
