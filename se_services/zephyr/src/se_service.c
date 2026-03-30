@@ -1709,6 +1709,46 @@ int se_service_read_otp(uint32_t otp_offset, uint32_t *otp_word)
 	return 0;
 }
 
+int se_service_enable_pd(uint32_t pd_id)
+{
+	run_profile_t runp;
+	int ret;
+
+	if (pd_id >= 32) {  /* power_domains is a uint32_t bitmask */
+		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	ret = se_service_ensure_ready();
+	if (ret) {
+		return ret;
+	}
+
+	ret = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+
+	if (ret) {
+		LOG_ERR("Unable to lock mutex (err = %d)\n", ret);
+		return ret;
+	}
+
+	ret = se_service_get_last_set_run_cfg(&runp);
+	if (ret) {
+		goto out;
+	}
+
+	if (runp.power_domains & BIT(pd_id)) {
+		ret = 0;
+		goto out;
+	}
+
+	runp.power_domains |= BIT(pd_id);
+	ret = se_service_set_run_cfg(&runp);
+
+out:
+	k_mutex_unlock(&svc_mutex);
+	return ret;
+}
+
 /**
  * @brief PM notifier callback for SE service state entry
  *

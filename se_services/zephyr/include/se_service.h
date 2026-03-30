@@ -328,6 +328,23 @@ int se_service_process_toc_entry(const char *image_id);
  */
 int se_service_read_otp(uint32_t otp_offset, uint32_t *otp_word);
 
+/**
+ * @brief Enable a power domain via SE service run configuration.
+ *
+ * Performs a read-modify-write on the last set run profile to enable the
+ * specified power domain. Safe to call before the power domain driver is
+ * initialized (e.g. from a PM notifier pre_device_resume callback).
+ *
+ * @param pd_id Power domain bit index (ALIF_PD_* from alif_power_domain.h)
+ * @retval 0 on success
+ * @retval -EINVAL Invalid pd_id (must be < 32).
+ * @retval -ENODATA Profile cache is not initialized.
+ * @retval -EAGAIN Operation timed out. Retry after a delay.
+ * @retval -EBUSY SE is busy. Retry after a delay.
+ * @return Positive error code returned by SE for a failed service request.
+ */
+int se_service_enable_pd(uint32_t pd_id);
+
 #ifdef __cplusplus
 }
 #endif
