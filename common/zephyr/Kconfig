@@ -72,13 +72,13 @@ config ALIF_EXT_WARMBOOT_WAKEUP_TIME
 
 config ALIF_MAX_SLEEP_CLOCK_DRIFT
 	int "Max drift of sleep clock in PPM"
-	default 20
-	range 0 65535
+	default 250
+	range 20 65535
 
 config ALIF_MAX_ACTIVE_CLOCK_DRIFT
 	int "Max drift of active clock in PPM"
-	default 20
-	range 0 255
+	default 250
+	range 20 255
 
 config ALIF_HPA_MODE
 	bool "High Power Amplifier for Alif controller"
