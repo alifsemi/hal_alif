@@ -17,3 +17,16 @@ config SE_SERVICE_RF_CORE_FREQUENCY
 	default 4
 	help
 	  Valid values are 0, 4, 12.
+
+config ALIF_SE_DTS_RUN_PROFILE
+	bool "Apply SE run profile from DTS at boot and resume"
+	depends on ARM_MHUV2
+	depends on $(dt_nodelabel_enabled,aipm_run)
+	default y
+	help
+	  When enabled, se_service reads child nodes from the aipm-run DTS
+	  node and applies the matching run profile automatically:
+	    - At cold boot, from se_service_mhuv2_nodes_init()
+	      (PRE_KERNEL_1, CONFIG_SE_SERVICE_INIT_PRIORITY, default 45).
+	    - In pre_device_resume PM notifier on wakeup from any PM state,
+	      before pm_resume_devices() is called.
