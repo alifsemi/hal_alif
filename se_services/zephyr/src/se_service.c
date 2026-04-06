@@ -6,6 +6,7 @@
 #include <zephyr/cache.h>
 #include <zephyr/drivers/ipm.h>
 #include <zephyr/pm/pm.h>
+#include <zephyr/dt-bindings/misc/alif_aipm_common.h>
 #include <se_service.h>
 #include <soc_memory_map.h>
 #include <zephyr/logging/log.h>
@@ -41,6 +42,135 @@ static atomic_t se_ready = ATOMIC_INIT(0);
  */
 static run_profile_t cached_run_profile;
 static bool run_profile_initialized;
+
+#ifdef CONFIG_ALIF_SE_DTS_RUN_PROFILE
+
+/*
+ * DTS string token to aipm.h enum dispatch macros.
+ */
+#define _SE_DT_CAT_DCDC(t)      _SE_DT_DCDC_##t
+#define SE_DT_DCDC_MODE(t)      _SE_DT_CAT_DCDC(t)
+#define _SE_DT_DCDC_off         DCDC_MODE_OFF
+#define _SE_DT_DCDC_pfm_auto    DCDC_MODE_PFM_AUTO
+#define _SE_DT_DCDC_pfm_forced  DCDC_MODE_PFM_FORCED
+#define _SE_DT_DCDC_pwm         DCDC_MODE_PWM
+
+#define _SE_DT_CAT_AON_CLK(t)   _SE_DT_AON_CLK_##t
+#define SE_DT_AON_CLK(t)        _SE_DT_CAT_AON_CLK(t)
+#define _SE_DT_AON_CLK_lfrc     CLK_SRC_LFRC
+#define _SE_DT_AON_CLK_lfxo     CLK_SRC_LFXO
+
+#define _SE_DT_CAT_RUN_CLK(t)   _SE_DT_RUN_CLK_##t
+#define SE_DT_RUN_CLK(t)        _SE_DT_CAT_RUN_CLK(t)
+#define _SE_DT_RUN_CLK_hfrc     CLK_SRC_HFRC
+#define _SE_DT_RUN_CLK_hfxo     CLK_SRC_HFXO
+#define _SE_DT_RUN_CLK_pll      CLK_SRC_PLL
+
+#define AIPM_RUN_NODE DT_NODELABEL(aipm_run)
+
+struct aipm_profile_entry {
+	bool          is_default; /* true = no pm-state property = cold-boot default */
+	enum pm_state state;
+	uint8_t       substate;
+	run_profile_t profile;
+};
+
+/*
+ * Expand one aipm-run child node into an aipm_profile_entry
+ * initialiser.
+ */
+#define AIPM_CHILD_ENTRY(node_id) {						\
+	.is_default = !DT_NODE_HAS_PROP(node_id, pm_state),			\
+	.state      = (enum pm_state)DT_PROP_OR(node_id, pm_state, 0),		\
+	.substate   = (uint8_t)DT_PROP_OR(node_id, pm_substate, 0),		\
+	.profile = {								\
+		.power_domains   = DT_PROP_OR(node_id, aipm_power_domains,	\
+				   (PD_SSE700_AON_MASK | PD_SYST_MASK)),	\
+		.dcdc_voltage    = DT_PROP_OR(node_id, dcdc_voltage, 825),	\
+		.dcdc_mode       = SE_DT_DCDC_MODE(DT_STRING_TOKEN_OR(		\
+				       node_id, dcdc_mode, pwm)),		\
+		.aon_clk_src     = SE_DT_AON_CLK(DT_STRING_TOKEN_OR(		\
+				       node_id, aon_clk_src, lfxo)),		\
+		.run_clk_src     = SE_DT_RUN_CLK(DT_STRING_TOKEN_OR(		\
+				       node_id, clk_src, pll)),			\
+		.cpu_clk_freq    = (clock_frequency_t)DT_PROP(node_id,		\
+				       cpu_clk_freq),				\
+		.scaled_clk_freq = (scaled_clk_freq_t)DT_PROP_OR(		\
+				       node_id, scaled_clk_freq,		\
+				       ALIF_SCALED_FREQ_RC_ACTIVE_76_8_MHZ),	\
+		.memory_blocks   = DT_PROP_OR(node_id, memory_blocks, 0),	\
+		.ip_clock_gating = DT_PROP_OR(node_id, ip_clock_gating, 0),	\
+		.phy_pwr_gating  = DT_PROP_OR(node_id, phy_pwr_gating, 0),	\
+		.vdd_ioflex_3V3  = (ioflex_mode_t)DT_PROP_OR(node_id,		\
+				       vdd_ioflex, ALIF_IOFLEX_LEVEL_1V8),	\
+	},									\
+},
+
+/*
+ * Compile-time lookup table
+ */
+static const struct aipm_profile_entry aipm_profiles[] = {
+	DT_FOREACH_CHILD_STATUS_OKAY(AIPM_RUN_NODE, AIPM_CHILD_ENTRY)
+};
+
+/*
+ * Apply the DTS run profile for a given (state, substate_id).
+ *
+ * Scans aipm_profiles[] for a matching (state, substate) child.  Falls back
+ * to the default child (is_default = true) if no match found.  No-op if
+ * run_profile_initialized is already true (avoids overwriting an app-set
+ * profile).
+ */
+static void se_service_apply_run_profile_for_state(enum pm_state state,
+					       uint8_t substate_id)
+{
+	const run_profile_t *default_profile = NULL;
+	const run_profile_t *match = NULL;
+
+	if (run_profile_initialized) {
+		return;
+	}
+
+	for (int i = 0; i < ARRAY_SIZE(aipm_profiles); i++) {
+		if (aipm_profiles[i].is_default) {
+			default_profile = &aipm_profiles[i].profile;
+		} else if (aipm_profiles[i].state   == state &&
+			   aipm_profiles[i].substate == substate_id) {
+			match = &aipm_profiles[i].profile;
+			break;
+		}
+	}
+
+	const run_profile_t *selected = match ? match : default_profile;
+
+	if (!selected) {
+		LOG_WRN("aipm: no run profile for state %d/%d; skipping",
+			state, substate_id);
+		return;
+	}
+
+	/* profile is not modified */
+	int err = se_service_set_run_cfg((run_profile_t *)selected);
+
+	if (err) {
+		LOG_ERR("aipm: set_run_cfg failed (state %d/%d): %d",
+			state, substate_id, err);
+	}
+}
+
+/*
+ * PM resume: re-apply the run profile before peripheral drivers wake up.
+ * Called from pm_state_notify_pre_resume() before pm_resume_devices().
+ */
+static void se_service_run_profile_pre_device_resume(enum pm_state state)
+{
+	ARG_UNUSED(state);
+	const struct pm_state_info *info = pm_state_next_get(0);
+
+	se_service_apply_run_profile_for_state(info->state, info->substate_id);
+}
+
+#endif /* CONFIG_ALIF_SE_DTS_RUN_PROFILE */
 
 /* Manufacturing data for older Ensemble Family revision <= REV_B2 */
 typedef struct {
@@ -1544,7 +1674,15 @@ static int se_service_mhuv2_nodes_init(void)
 
 	/* Register PM notifier to handle suspend/resume */
 	se_pm_notifier.state_entry = se_service_pm_notify_entry;
+#ifdef CONFIG_ALIF_SE_DTS_RUN_PROFILE
+	se_pm_notifier.pre_device_resume = se_service_run_profile_pre_device_resume;
+#endif
 	pm_notifier_register(&se_pm_notifier);
+
+#ifdef CONFIG_ALIF_SE_DTS_RUN_PROFILE
+	/* Cold boot: apply the DTS default run profile now that MHUv2 is up. */
+	se_service_apply_run_profile_for_state(PM_STATE_ACTIVE, 0);
+#endif
 
 	return 0;
 }
