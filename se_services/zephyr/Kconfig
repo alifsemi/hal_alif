@@ -30,3 +30,18 @@ config ALIF_SE_DTS_RUN_PROFILE
 	      (PRE_KERNEL_1, CONFIG_SE_SERVICE_INIT_PRIORITY, default 45).
 	    - In pre_device_resume PM notifier on wakeup from any PM state,
 	      before pm_resume_devices() is called.
+
+config ALIF_SE_DTS_OFF_PROFILE
+	bool "Apply SE off profile from DTS on PM state entry"
+	depends on ARM_MHUV2
+	depends on $(dt_nodelabel_enabled,aipm_off)
+	default y
+	help
+	  When enabled, se_service reads child nodes from the aipm-off DTS
+	  node and applies the matching off_profile_t before the CPU enters
+	  a low-power state (SUSPEND_TO_RAM or SOFT_OFF). The profile is
+	  applied in the state_entry PM notifier, before the CPU is
+	  clock-gated or powered down.
+
+	  The aipm-off node is disabled by default in SoC DTSIs. Enable it
+	  in a board overlay alongside the power-state nodes it supports.
