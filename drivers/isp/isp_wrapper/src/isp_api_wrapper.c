@@ -754,15 +754,21 @@ int isp_vsi_enqueue(struct isp_config_params *init_cfg, struct video_buffer *buf
 	LOG_DBG("Image size: %d, #Planes: %d, buffer local address - 0x%08x",
 			buf->size, isp_buf.numPlanes, (uint32_t) buf->buffer);
 	for (int i = 0; i < isp_buf.numPlanes; i++) {
-		tmp = fourcc_to_plane_size(channel->output_fmt.pixelformat, i, buf->size);
-		if (tmp == UINT_MAX || tmp == 0) {
-			LOG_ERR("Illegal format!, plane-id: %d", i);
-			return -EINVAL;
-		}
+		if (!i) {
+			isp_buf.planes[i].dmaPhyAddr =
+				POINTER_TO_UINT(local_to_global(buf->buffer));
+		} else {
+			tmp = fourcc_to_plane_size(channel->output_fmt.pixelformat,
+					i - 1,
+					buf->size);
+			if (tmp == UINT_MAX || tmp == 0) {
+				LOG_ERR("Illegal format!, plane-id: %d", i);
+				return -EINVAL;
+			}
 
-		isp_buf.planes[i].dmaPhyAddr = (i) ?
-			(tmp + isp_buf.planes[i - 1].dmaPhyAddr) :
-			POINTER_TO_UINT(local_to_global(buf->buffer));
+			isp_buf.planes[i].dmaPhyAddr =
+				(tmp + isp_buf.planes[i - 1].dmaPhyAddr);
+		}
 	}
 
 	ret = VSI_MPI_ISP_QBUF(isp_chn_id, &isp_buf);
