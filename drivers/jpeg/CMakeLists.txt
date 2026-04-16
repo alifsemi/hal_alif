@@ -1,0 +1,12 @@
+if (CONFIG_USE_ALIF_JPEG_SW_LIB)
+  zephyr_include_directories(inc)
+  target_link_directories(app PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/Lib)
+
+  if ("${ZEPHYR_TOOLCHAIN_VARIANT}" STREQUAL "armclang")
+    zephyr_link_libraries(jpeg_hantro_sw_armclang)
+  elseif ("${ZEPHYR_TOOLCHAIN_VARIANT}" STREQUAL "llvm")
+    zephyr_link_libraries(jpeg_hantro_sw_llvm)
+  else()
+    zephyr_link_libraries(jpeg_hantro_sw_gcc)
+  endif()
+endif()
