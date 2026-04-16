@@ -1,0 +1,7 @@
+config USE_ALIF_JPEG_SW_LIB
+	bool "Use prebuilt JPEG SW library"
+	depends on VIDEO_JPEG_HANTRO_VC9000E
+	help
+	  Link the prebuilt JPEG SW static library (.a) instead of
+	  compiling from source. The correct library variant is automatically
+	  selected based on ZEPHYR_TOOLCHAIN_VARIANT.
