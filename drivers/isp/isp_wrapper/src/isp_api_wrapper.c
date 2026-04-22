@@ -4,9 +4,15 @@
  */
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
+#include <string.h>
 
 #include "isp_conf.h"
 #include "isp_param_conf.h"
+
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+#include "sensor_attributes.h"
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
+
 #include <zephyr/drivers/video.h>
 #include <zephyr/drivers/video-controls.h>
 #include <soc_memory_map.h>
@@ -20,6 +26,7 @@
 
 #include "mpi_isp_calib.h"
 #include "vsi_comm_awb.h"
+#include "vsi_comm_sns.h"
 
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(isp_wrapper, CONFIG_VIDEO_LOG_LEVEL);
@@ -28,11 +35,15 @@ LOG_MODULE_REGISTER(isp_wrapper, CONFIG_VIDEO_LOG_LEVEL);
 extern ISP_AWB_FUNC_S vsiAwbAlgo;
 #endif /* defined(CONFIG_ISP_LIB_WB_MODULE) */
 
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+extern ISP_AE_FUNC_S vsiAeAlgo;
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
 
 extern int isp_vsi_init(struct isp_config_params *init_cfg);
 extern int isp_vsi_update_cfg(struct isp_config_params *init_cfg);
 extern int isp_vsi_uninit(struct isp_config_params *init_cfg);
-extern void isp_vsi_bottom_half(struct isp_config_params *init_cfg, uint32_t mi_mis);
+extern void isp_vsi_bottom_half(const struct device *dev,
+		struct isp_config_params *init_cfg, uint32_t mi_mis);
 extern int isp_vsi_start(struct isp_config_params *init_cfg);
 extern int isp_vsi_stop(struct isp_config_params *init_cfg);
 extern int isp_vsi_enqueue(struct isp_config_params *init_cfg,
@@ -40,6 +51,14 @@ extern int isp_vsi_enqueue(struct isp_config_params *init_cfg,
 extern int isp_vsi_dequeue(struct isp_config_params *init_cfg,
 		struct video_buffer *buf);
 extern void VSI_ISP_IrqProcessFrameEnd(ISP_PORT IspPort);
+
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+static struct sensor_config {
+	vsi_u32_t aGain;
+	vsi_u32_t dGain;
+	vsi_u32_t intLine;
+} sns_config = {0}, cached_sns_config = {0};
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
 
 static inline int isp_err_2_errno(int val)
 {
@@ -208,6 +227,45 @@ static inline int isp_pixelfmt_from_fourcc(uint32_t fourcc)
 	}
 }
 
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+static int vsi_get_ae_default(ISP_PORT IspPort, AE_SNS_DEFAULT_S *pAeSnsDft)
+{
+	ARG_UNUSED(IspPort);
+
+	if (!pAeSnsDft) {
+		return -EFAULT;
+	}
+
+	memcpy(pAeSnsDft, &sensor_attributes, sizeof(sensor_attributes));
+
+	pAeSnsDft->linesPer500ms = (vsi_u32_t)(
+		(vsi_u64_t)pAeSnsDft->fullLines * pAeSnsDft->fps / (2 * ISP_SNS_FPS_ACCU));
+
+	return 0;
+}
+
+static int vsi_int_time_update(ISP_PORT IspPort, vsi_u32_t *pIntLine)
+{
+	sns_config.intLine = *pIntLine;
+
+	return 0;
+}
+
+static int vsi_gain_update(ISP_PORT IspPort, vsi_u32_t *pAgain, vsi_u32_t *pDgain)
+{
+	sns_config.aGain = *pAgain;
+	sns_config.dGain = *pDgain;
+
+	return 0;
+}
+
+static AE_SNS_FUNC_S aeSnsFunc = {
+	.pfnGetAeDefault = vsi_get_ae_default,
+	.pfnIntTimeUpdate = vsi_int_time_update,
+	.pfnGainUpdate = vsi_gain_update,
+};
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
+
 int isp_vsi_init(struct isp_config_params *init_cfg)
 {
 	struct channel_parameters *channel;
@@ -268,12 +326,19 @@ int isp_vsi_init(struct isp_config_params *init_cfg)
 	}
 #endif /* defined(CONFIG_ISP_LIB_WB_MODULE) */
 
-	/* Configure the ISP as per the calibration parameters */
-	ret = VSI_MPI_ISP_SetCalib(isp_port_id, &isp_calib_param);
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+	ret = VSI_MPI_ISP_InitAeSnsFunc(isp_port_id, &aeSnsFunc);
 	if (ret) {
-		LOG_ERR("Programming ISP calibration data in library failed!");
+		LOG_ERR("AE Sensor function setup in library failed");
 		return isp_err_2_errno(ret);
 	}
+
+	ret = VSI_MPI_ISP_AeRegCallBack(isp_port_id, &vsiAeAlgo);
+	if (ret) {
+		LOG_ERR("AE Algorithm setup in library failed");
+		return isp_err_2_errno(ret);
+	}
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
 
 	return 0;
 }
@@ -432,6 +497,13 @@ int isp_vsi_update_cfg(struct isp_config_params *init_cfg)
 		return isp_err_2_errno(ret);
 	}
 
+	/* Configure the ISP as per the calibration parameters */
+	ret = VSI_MPI_ISP_SetCalib(isp_port_id, &isp_calib_param);
+	if (ret) {
+		LOG_ERR("Programming ISP calibration data in library failed!");
+		return isp_err_2_errno(ret);
+	}
+
 	switch (channel->trans_bus) {
 	case ONLINE:
 		isp_chan_attr.transBus = TRANS_BUS_ONLINE;
@@ -493,6 +565,14 @@ int isp_vsi_uninit(struct isp_config_params *init_cfg)
 	}
 #endif /* defined(CONFIG_ISP_LIB_WB_MODULE) */
 
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+	ret = VSI_MPI_ISP_AeUnRegCallBack(isp_port_id);
+	if (ret) {
+		LOG_ERR("Failed to Un-register AE call-back!");
+		return isp_err_2_errno(ret);
+	}
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
+
 	ret = VSI_MPI_ISP_Exit(isp_dev_id);
 	if (ret) {
 		LOG_ERR("Failed to unregister ISP!");
@@ -501,10 +581,15 @@ int isp_vsi_uninit(struct isp_config_params *init_cfg)
 	return 0;
 }
 
-void isp_vsi_bottom_half(struct isp_config_params *init_cfg, uint32_t mi_mis)
+void isp_vsi_bottom_half(const struct device *dev,
+		struct isp_config_params *init_cfg, uint32_t mi_mis)
 {
 	struct port_parameters *port;
 	ISP_PORT isp_port_id;
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+	vsi_u32_t totalGain;
+	int ret;
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
 
 	port = &(init_cfg->port);
 
@@ -512,6 +597,31 @@ void isp_vsi_bottom_half(struct isp_config_params *init_cfg, uint32_t mi_mis)
 	isp_port_id.portId = port->port_id;
 
 	VSI_ISP_IrqProcessFrameEnd(isp_port_id);
+
+#if defined(CONFIG_ISP_LIB_AE_MODULE)
+	if ((cached_sns_config.aGain != sns_config.aGain) ||
+	    (cached_sns_config.dGain != sns_config.dGain)) {
+		totalGain = ((vsi_u64_t)sns_config.aGain *
+				sns_config.dGain) / ISP_SNS_GAIN_ACCU;
+
+		ret = video_set_ctrl(dev, VIDEO_CID_GAIN, (void *)&totalGain);
+		if (ret) {
+			LOG_ERR("Failed to write Total Gain to the sensor!");
+		} else {
+			cached_sns_config.aGain = sns_config.aGain;
+			cached_sns_config.dGain = sns_config.dGain;
+		}
+	}
+	if (cached_sns_config.intLine != sns_config.intLine) {
+		ret = video_set_ctrl(dev, VIDEO_CID_EXPOSURE,
+				(void *)&sns_config.intLine);
+		if (ret) {
+			LOG_ERR("Failed to write Exposure to the sensor!");
+		} else {
+			cached_sns_config.intLine = sns_config.intLine;
+		}
+	}
+#endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
 }
 
 int isp_vsi_start(struct isp_config_params *init_cfg)

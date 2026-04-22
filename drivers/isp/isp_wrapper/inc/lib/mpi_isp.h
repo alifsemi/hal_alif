@@ -70,6 +70,18 @@ int VSI_MPI_ISP_Exit(ISP_DEV IspDev);
  * @brief   Register sensor call back function.
  *
  * @param   IspPort             Port ID.
+ * @param   pAeSnsFunc          Pointer to the AE control sensor function.
+ *
+ * @retval  VSI_SUCCESS         Operation succeeded
+ *
+ *****************************************************************************/
+int VSI_MPI_ISP_InitAeSnsFunc(ISP_PORT IspPort, AE_SNS_FUNC_S *pAeSnsFunc);
+
+/*****************************************************************************/
+/**
+ * @brief   Register sensor call back function.
+ *
+ * @param   IspPort             Port ID.
  * @param   pSnsObj           Pointer to the sensor configuration.
  * @param   snsDev            Pointer to the sensor device.
  *

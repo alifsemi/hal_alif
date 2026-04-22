@@ -136,7 +136,7 @@ typedef struct vsiISP_AWB_ATTR_S {
 	/* @brief The speed of approaching the target.
 	 * range [0 256].
 	 **/
-	vsi_u8_t speed;
+	vsi_u16_t  speed;
 	/* @brief The threshold range to reach target.
 	 * range [0 100].
 	 **/
@@ -145,8 +145,6 @@ typedef struct vsiISP_AWB_ATTR_S {
 	vsi_u32_t             initColorTemp;
 	/* @brief The AWB calibration data. */
 	ISP_AWB_CALIB_PARAM_S calibParam;
-	/* @brief Reserve */
-	vsi_u8_t              reserver[256];
 } ISP_AWB_ATTR_S;
 
 /* @brief   WB attribute. */

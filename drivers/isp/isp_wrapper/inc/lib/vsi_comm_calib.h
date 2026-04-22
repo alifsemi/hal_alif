@@ -34,12 +34,12 @@ extern "C" {
 #endif
 
 /*
- * Add components that are not here like:
- * #include "mpi_isp_ae.h"
+ * Add components that are not here
  */
 #include "mpi_isp.h"
 #include "mpi_isp_bls.h"
 #include "mpi_isp_expm.h"
+#include "mpi_isp_ae.h"
 #include "mpi_isp_wbm.h"
 #include "mpi_isp_wb.h"
 #include "mpi_isp_dmsc.h"
@@ -60,7 +60,7 @@ typedef struct vsiISP_CALIB_MODULE_S {
 	ISP_AUTO_ROUTE_S autoRoute;    /**< \brief Auto route. */
 	ISP_BLS_ATTR_S   bls;          /**< \brief BLS. */
 	ISP_EXPM_ATTR_S  aem;          /**< \brief AE measurement. */
-	/*ISP_EXPOSURE_ATTR_S ae;*/       /**< \brief AE. */
+	ISP_EXPOSURE_ATTR_S ae;        /**< \brief AE. */
 	ISP_WBM_ATTR_S       wbm;      /**< \brief WB measurement. */
 	ISP_WB_ATTR_S        wb;       /**< \brief WB. */
 	ISP_DMSC_ATTR_S      dmsc;     /**< \brief Demosaic. */

@@ -67,25 +67,25 @@ static ISP_CALIB_DATA_S isp_calib_param = {
 		.ae = {
 			.opType = OP_TYPE_AUTO,
 			.manualAttr = {
-				.intTime = 10000,
-				.again = 3072,
-				.dgain = 1024,
+				.intTime = 100000,
+				.again = 75000,
+				.dgain = 256,
 			},
 			.autoAttr = {
 				.expTimeRange = {
 					.min =  100,
-					.max =  300000,
+					.max =  3000000,
 				},
 				.againRange = {
-					.min = 3 * 1024,
-					.max = 1056 * 1024,
+					.min = 1 * 1024,
+					.max = 8 * 1024,
 				},
 				.dgainRange = {
-					.min = 1024,
-					.max = 1024,
+					.min = 1 * 1024,
+					.max = 8 * 1024,
 				},
 				.aeRunInterval = 1,
-				.aeTarget = 48,
+				.aeTarget = 255,
 				.dampOver = 0x40,
 				.dampUnder = 0x40,
 				.tolerance = 1,
@@ -120,8 +120,8 @@ static ISP_CALIB_DATA_S isp_calib_param = {
 			.measRect = {
 				.hOffs = 0,
 				.vOffs = 0,
-				.hSize = 1920,
-				.vSize = 1080,
+				.hSize = 560,
+				.vSize = 560,
 			},
 			.wpRange = {
 				.maxY = 0xEB,
