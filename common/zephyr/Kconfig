@@ -94,8 +94,28 @@ config ALIF_TX_MIN
 	default -31
 
 config ALIF_TX_MAX_POWER
-	int "Set maximum allower TX power in dBm"
+	int "Set maximum allowed TX power in dBm"
 	default ALIF_TX_MAX
 	range ALIF_TX_MIN ALIF_TX_MAX
+
+config ALIF_EDGE_LIMIT_ON
+	bool # "Limit power on edge channels"
+	default y if BOARD_ALIF_B1_DK
+	default n
+
+config ALIF_EDGE_LOW_CHANNEL
+	int "First channel the edge limit is not applied"
+	default 0
+
+config ALIF_EDGE_HIGH_CHANNEL
+	int "Last channel the edge limit is not applied"
+	default 38 if BOARD_ALIF_B1_DK
+	default 39
+
+config ALIF_EDGE_CHANNEL_POWER_LIMIT
+	int "Set maximum allowed TX power in dBm for edges"
+	default 0 if BOARD_ALIF_B1_DK
+	default ALIF_TX_MAX_POWER
+	range ALIF_TX_MIN ALIF_TX_MAX_POWER
 
 endif # ALIF_PM_LINK_LAYER
