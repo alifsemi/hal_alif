@@ -999,15 +999,14 @@ void ospi_dma_send(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 void ospi_dma_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer);
 
 /**
-  \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles,
-						bool is_dual_octal)
+  \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi,
+					struct ospi_xip_config *xip_cfg)
   \brief       Initialize hyperbus XIP configuration for the OSPI instance
-  \param[in]   ospi        Pointer to the OSPI register map
-  \param[in]   wait_cycles Wait cycles needed by the hyperbus device
-  \param[in]   is_dual_octal OSPI transfer type is Dual Octal
+  \param[in]   ospi     Pointer to the OSPI register map
+  \param[in]   xip_cfg  Pointer to the xip config structure
   \return      none
 */
-void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is_dual_octal);
+void ospi_hyperbus_xip_init(struct ospi_regs *ospi, struct ospi_xip_config *xip_cfg);
 
 /**
   \fn          void ospi_hyperbus_send(struct ospi_regs *spi, ospi_transfer *transfer)
