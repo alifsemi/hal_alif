@@ -637,6 +637,7 @@ void isp_vsi_bottom_half(const struct device *dev,
 	struct port_parameters *port;
 	ISP_PORT isp_port_id;
 #if defined(CONFIG_ISP_LIB_AE_MODULE)
+	ISP_EXPOSURE_INFO_S info;
 	vsi_u32_t totalGain;
 	int ret;
 #endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
@@ -669,6 +670,16 @@ void isp_vsi_bottom_half(const struct device *dev,
 			LOG_ERR("Failed to write Exposure to the sensor!");
 		} else {
 			cached_sns_config.intLine = sns_config.intLine;
+		}
+	}
+
+	if (init_cfg->ae_status_cb) {
+		ret = VSI_MPI_ISP_QueryExposureInfo(isp_port_id, &info);
+		if (ret) {
+			LOG_ERR("Failed to Query Exposure Info");
+		} else {
+			init_cfg->ae_status_cb(dev, info.isStable,
+					init_cfg->ae_status_user_data);
 		}
 	}
 #endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */

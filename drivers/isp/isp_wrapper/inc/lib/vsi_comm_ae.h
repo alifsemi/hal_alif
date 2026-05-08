@@ -143,6 +143,12 @@ typedef struct vsiISP_EXPOSURE_INFO_S {
 	vsi_u32_t iso;
 	/* @brief Not currently supported. */
 	vsi_u32_t ratio[HDR_FRAME_MAX - 1];
+	/* @brief The status of AE.
+	 * \n Valid values:
+	 * \n - 0: Unstable.
+	 * \n - 1: Stable.
+	 */
+	vsi_bool_t isStable;
 } ISP_EXPOSURE_INFO_S;
 
 /* @brief   AE parameters. */
@@ -172,6 +178,12 @@ typedef struct vsiISP_AE_RESULT_S {
 	vsi_u32_t intLine; /* @brief The number of exposure line. */
 	vsi_u32_t again;   /* @brief The analog gain.             */
 	vsi_u32_t dgain;   /* @brief The digital gain.            */
+	/* @brief The status of AE.
+	 * \n Valid values:
+	 * \n - 0: Unstable.
+	 * \n - 1: Stable.
+	 */
+	vsi_bool_t isStable;
 } ISP_AE_RESULT_S;
 
 /* @brief   AE commands. */
