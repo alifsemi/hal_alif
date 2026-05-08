@@ -5,6 +5,7 @@
 #include <zephyr/device.h>
 #include <zephyr/kernel.h>
 #include <string.h>
+#include <stdarg.h>
 
 #include "isp_conf.h"
 #include "isp_param_conf.h"
@@ -60,6 +61,8 @@
 #include "mpi_isp_csm.h"
 #endif
 
+#include "vsios_log.h"
+
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(isp_wrapper, CONFIG_VIDEO_LOG_LEVEL);
 
@@ -91,6 +94,21 @@ static struct sensor_config {
 	vsi_u32_t intLine;
 } sns_config = {0}, cached_sns_config = {0};
 #endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
+
+extern int log_level(void);
+
+static int isp_lib_log_print(const char *fmt, ...)
+{
+	char buf[512];
+	va_list args;
+
+	va_start(args, fmt);
+	vsnprintf(buf, sizeof(buf), fmt, args);
+	va_end(args);
+
+	LOG_INF("%s", buf);
+	return 0;
+}
 
 static inline int isp_err_2_errno(int val)
 {
@@ -316,6 +334,8 @@ int isp_vsi_init(struct isp_config_params *init_cfg)
 		LOG_ERR("Empty parameters!");
 		return -EINVAL;
 	}
+
+	VsiLogLevelSet(&log_level, &isp_lib_log_print);
 
 	port = &(init_cfg->port);
 	channel = &(init_cfg->channel);
