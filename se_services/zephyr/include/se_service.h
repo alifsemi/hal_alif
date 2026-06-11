@@ -345,6 +345,21 @@ int se_service_read_otp(uint32_t otp_offset, uint32_t *otp_word);
  */
 int se_service_enable_pd(uint32_t pd_id);
 
+/**
+ * @brief Boot a CPU via SE service.
+ *
+ * Boots the specified CPU with the given entry point address. The address
+ * must be an executable image that is properly set up for the target CPU.
+ *
+ * @param cpu_id Identifier of the CPU to boot.
+ * @param address Entry point address to boot the CPU from.
+ * @retval 0 Success.
+ * @retval -EINVAL Invalid argument.
+ * @retval -EAGAIN Operation timed out. Retry after a delay.
+ * @return Positive error code returned by SE for a failed service request.
+ */
+int se_service_boot_cpu(uint32_t cpu_id, uint32_t address);
+
 #ifdef __cplusplus
 }
 #endif

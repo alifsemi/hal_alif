@@ -317,6 +317,7 @@ typedef union {
 	clk_set_clk_divider_svc_t set_clk_divider_d;
 	process_toc_entry_svc_t process_toc_entry_svc_d;
 	otp_data_t otp_svc_d;
+	boot_cpu_svc_t boot_cpu_svc_d;
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -1789,6 +1790,48 @@ static void se_service_pm_notify_entry(enum pm_state state)
 		/* No action needed for other states */
 		break;
 	}
+}
+
+int se_service_boot_cpu(uint32_t cpu_id, uint32_t address)
+{
+	int err, resp_err = 0;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.boot_cpu_svc_d.header.hdr_service_id = SERVICE_BOOT_CPU;
+	se_service_all_svc_d.boot_cpu_svc_d.send_cpu_id = cpu_id;
+	se_service_all_svc_d.boot_cpu_svc_d.send_address = address;
+
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.boot_cpu_svc_d,
+			sizeof(se_service_all_svc_d.boot_cpu_svc_d), SERVICE_TIMEOUT);
+
+	k_mutex_unlock(&svc_mutex);
+
+	if (err) {
+		LOG_ERR("SE service call failed with %d\n", err);
+		return err;
+	}
+
+	resp_err = se_service_all_svc_d.boot_cpu_svc_d.resp_error_code;
+
+	if (resp_err) {
+		LOG_ERR("boot_cpu response error = %d\n", resp_err);
+		return resp_err;
+	}
+
+	return 0;
 }
 
 static struct pm_notifier se_pm_notifier;
