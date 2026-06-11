@@ -7,6 +7,7 @@
 #define __ES0_POWER_MANAGER_H__
 
 #include <stdint.h>
+#include <stdbool.h>
 /*
  * This class is taking care of power modes of the available system cores.
  * It will also take care of the users of a specific core and when last user
@@ -20,6 +21,14 @@ enum core_error_t {
 };
 
 #define BD_ADDRESS_LENGTH 6
+
+/**
+ * @brief Enable or disable HPA mode for controller RF.
+ * Note: Needs to be set before take_es0_into_use() is called.
+ * If ES0 is already running this has no effect until stop & start is called.
+ * @param enabled If true, HPA mode is enabled, LPA mode otherwise.
+ */
+void es0_enable_hpa_mode(bool enabled);
 
 /**
  * @brief Register a user of a ES0

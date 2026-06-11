@@ -69,9 +69,10 @@ static volatile uint8_t es0_user_counter;
 #define BOOT_PARAM_LEN_ACTCLK_DRIFT              1
 #define BOOT_PARAM_LEN_CONFIGURATION             4
 #define BOOT_PARAM_LEN_CONFIGURATION2            4
-#define CONFIGURATION_RF_TYPE_HPA		1
-#define CONFIGURATION_SOC_TYPE_CSP		2
-#define CONFIGURATION_LIMIT_TX_POWER		4
+
+#define CONFIGURATION_RF_TYPE_HPA		 1
+#define CONFIGURATION_SOC_TYPE_CSP		 2
+#define CONFIGURATION_LIMIT_TX_POWER		 4
 // Bit 4 is RFU
 // Bits 5-12 are used for TX power
 // Bits 13-6 are RFU
@@ -83,6 +84,14 @@ static volatile uint8_t es0_user_counter;
 #define ES0_PM_ERROR_START_FAILED         -4
 #define ES0_PM_ERROR_NO_BAUDRATE          -5
 #define ES0_PM_ERROR_BAUDRATE_MISMATCH    -6
+
+struct es0_start_params_t {
+	bool hpa_enabled;
+};
+
+static struct es0_start_params_t es0_start_params = {
+	.hpa_enabled = IS_ENABLED(CONFIG_ALIF_HPA_MODE),
+};
 
 static uint8_t *write_tlv_int(uint8_t *target, uint8_t tag, uint32_t value, uint8_t len)
 {
@@ -147,6 +156,11 @@ static void alif_eui48_read(uint8_t *eui48)
 static uint16_t add_nvds_param_length(uint16_t added_len){
 	return (added_len +3); /* Each write_tlv_x call writes additional 3 bytes */
 
+}
+
+void es0_enable_hpa_mode(bool enabled)
+{
+	es0_start_params.hpa_enabled = enabled;
 }
 
 int8_t take_es0_into_use_with_params(uint8_t *nvds_buff, uint16_t nvds_size, uint32_t clock_select,
@@ -230,7 +244,7 @@ int8_t take_es0_into_use(void)
 	}
 
 	uint8_t bd_address[BOOT_PARAM_LEN_BD_ADDRESS];
-	uint32_t config = IS_ENABLED(CONFIG_ALIF_HPA_MODE) ? CONFIGURATION_RF_TYPE_HPA : 0;
+	uint32_t config = es0_start_params.hpa_enabled ? CONFIGURATION_RF_TYPE_HPA : 0;
 	uint32_t edge_config = 0;
 
 	if (IS_ENABLED(CONFIG_SOC_AB1C1F1M41820HH0) || IS_ENABLED(CONFIG_SOC_AB1C1F4M51820HH0)) {
@@ -332,7 +346,7 @@ int8_t take_es0_into_use(void)
 	}
 
 	return take_es0_into_use_with_params(ll_boot_params_buffer, total_length,
-		es0_clock_select, IS_ENABLED(CONFIG_ALIF_HPA_MODE));
+		es0_clock_select, es0_start_params.hpa_enabled);
 }
 
 
