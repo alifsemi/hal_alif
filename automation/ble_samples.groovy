@@ -7,7 +7,7 @@ def verify_checkpatch(){
         git checkout main
         git fetch -pu
         git reset --hard origin/main
-        west update
+        west update -n
         cd /root/alif/modules/hal/alif
         if [[ -v CHANGE_ID ]]; then
             git fetch -pu alif
@@ -21,9 +21,6 @@ def verify_checkpatch(){
             else
                 echo "Checkpatch passed successfully"
             fi
-        else
-            git fetch alif -pu
-            git reset --hard alif/main
         fi
         cd ..
         '''
@@ -38,23 +35,17 @@ def verify_gitlint (){
         git checkout main
         git fetch -pu
         git reset --hard origin/main
-        west update
+        west update -n
         cd /root/alif/modules/hal/alif
         git fetch --all -pu
         if [[ -v CHANGE_ID ]]; then
             git branch -D pr-${CHANGE_ID} || true
             git fetch alif pull/${CHANGE_ID}/head:pr-${CHANGE_ID}
             git checkout pr-${CHANGE_ID}
-        else
-            git checkout -b alif/main
-            git reset --hard alif/main
-            git pull
+            pip install gitlint
+            git log -$(git rev-list --count alif/main..HEAD) --pretty=%B | gitlint
+            exit $?
         fi
-        cd ..
-        cd /root/alif/modules/hal/alif
-        pip install gitlint
-        git log -$(git rev-list --count alif/main..HEAD) --pretty=%B | gitlint
-        exit $?
         '''
 }
 
