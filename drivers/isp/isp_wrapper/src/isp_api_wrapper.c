@@ -189,8 +189,8 @@ static inline int isp_mode_from_fourcc(uint32_t fourcc)
 	case VIDEO_PIX_FMT_GRBG12:
 	case VIDEO_PIX_FMT_RGGB12:
 	case VIDEO_PIX_FMT_Y10P:
-		return ISP_MODE_RAW;
 	case VIDEO_PIX_FMT_GREY:
+		return ISP_MODE_RAW;
 	case VIDEO_PIX_FMT_Y10:
 		return ISP_MODE_BT601;
 	default:
@@ -242,12 +242,14 @@ static inline int isp_pixelfmt_from_fourcc(uint32_t fourcc)
 	case VIDEO_PIX_FMT_RGGB16:
 		return PIXEL_FORMAT_RGGB16;
 	case VIDEO_PIX_FMT_GREY:
-		return PIXEL_FORMAT_RAW8;
-	case VIDEO_PIX_FMT_Y10P:
 		/*
-		 * This should have been PIXEL_FORMAT_RAW10, but lib does not support it.
-		 * TODO: Fill-in correct equivalent format for RAW8/RAW10 and RAW12
+		 * GREY and Y10P (8-bit and 10-bit greyscale) have no native ISP
+		 * pixel format equivalent. The ISP pipeline only accepts Bayer
+		 * formats as input, so BGGR8 and GRBG10 are used as the closest
+		 * 8-bit and 10-bit bayer placeholder.
 		 */
+		return PIXEL_FORMAT_BGGR8;
+	case VIDEO_PIX_FMT_Y10P:
 		return PIXEL_FORMAT_GRBG10;
 	case VIDEO_PIX_FMT_Y12P:
 		return PIXEL_FORMAT_RAW12;
