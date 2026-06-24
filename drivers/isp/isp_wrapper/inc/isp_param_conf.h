@@ -57,8 +57,8 @@ static ISP_CALIB_DATA_S isp_calib_param = {
 			.blockWin = {
 				.hOffs = 0,
 				.vOffs = 0,
-				.hSize = 1920,
-				.vSize = 1080,
+				.hSize = 560,
+				.vSize = 560,
 			},
 		},
 #endif /* defined(CONFIG_ISP_LIB_EXPOSUREM_MODULE) */
@@ -67,34 +67,34 @@ static ISP_CALIB_DATA_S isp_calib_param = {
 		.ae = {
 			.opType = OP_TYPE_AUTO,
 			.manualAttr = {
-				.intTime = 100000,
-				.again = 75000,
-				.dgain = 256,
+				.intTime = 73470,
+				.again = 10240,
+				.dgain = 1024,
 			},
 			.autoAttr = {
 				.expTimeRange = {
 					.min =  100,
-					.max =  3000000,
+					.max =  200000,
 				},
 				.againRange = {
-					.min = 1 * 1024,
-					.max = 8 * 1024,
+					.min = 10 * 1024,
+					.max = 80 * 1024,
 				},
 				.dgainRange = {
 					.min = 1 * 1024,
 					.max = 8 * 1024,
 				},
 				.aeRunInterval = 1,
-				.aeTarget = 255,
+				.aeTarget = 100,
 				.dampOver = 0x40,
 				.dampUnder = 0x40,
-				.tolerance = 1,
+				.tolerance = 10,
 				.antiflicker = {
 					.enable = 0,
 					.flickerFreq = 100,
 				},
 				.aeMode = AE_MODE_FIX_FRAME_RATE,
-				.gainThreshold = 1024,
+				.gainThreshold = 12000,
 				.aeRoute = {
 					.totalNum = 0,
 				},

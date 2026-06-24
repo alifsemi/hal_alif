@@ -367,6 +367,12 @@ int isp_vsi_init(struct isp_config_params *init_cfg)
 		return isp_err_2_errno(ret);
 	}
 
+	ret = VSI_MPI_ISP_SetCalib(isp_port_id, &isp_calib_param);
+	if (ret) {
+		LOG_ERR("Writing calibration data before Initialization of AWB Algo!");
+		return isp_err_2_errno(ret);
+	}
+
 	/* Program the function pointers for AWB Algorithm in library */
 #if defined(CONFIG_ISP_LIB_WB_MODULE)
 	ret = VSI_MPI_ISP_AwbRegCallBack(isp_port_id, &vsiAwbAlgo);
@@ -715,15 +721,15 @@ int isp_vsi_start(struct isp_config_params *init_cfg)
 		return isp_err_2_errno(ret);
 	}
 
-	ret = VSI_MPI_ISP_EnablePort(isp_port_id);
-	if (ret) {
-		LOG_ERR("Failed to enable ISP Port!");
-		return isp_err_2_errno(ret);
-	}
-
 	ret = VSI_MPI_ISP_EnableChn(isp_chn_id);
 	if (ret) {
 		LOG_ERR("Failed to enable ISP Channel!");
+		return isp_err_2_errno(ret);
+	}
+
+	ret = VSI_MPI_ISP_EnablePort(isp_port_id);
+	if (ret) {
+		LOG_ERR("Failed to enable ISP Port!");
 		return isp_err_2_errno(ret);
 	}
 
@@ -759,6 +765,12 @@ int isp_vsi_stop(struct isp_config_params *init_cfg)
 	isp_chn_id.portId = port->port_id;
 	isp_chn_id.chnId = channel->channel_idx;
 
+	ret = VSI_MPI_ISP_DisablePort(isp_port_id);
+	if (ret) {
+		LOG_ERR("Failed to disable ISP Port!");
+		return isp_err_2_errno(ret);
+	}
+
 	ret = VSI_MPI_ISP_DisableChn(isp_chn_id);
 	if (ret) {
 		LOG_ERR("Failed to disable ISP Channel!");
@@ -768,12 +780,6 @@ int isp_vsi_stop(struct isp_config_params *init_cfg)
 	ret = VSI_MPI_ISP_DisableDev(isp_dev_id);
 	if (ret) {
 		LOG_ERR("Failed to disable ISP Device!");
-		return isp_err_2_errno(ret);
-	}
-
-	ret = VSI_MPI_ISP_DisablePort(isp_port_id);
-	if (ret) {
-		LOG_ERR("Failed to disable ISP Port!");
 		return isp_err_2_errno(ret);
 	}
 
