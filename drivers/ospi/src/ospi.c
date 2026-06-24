@@ -426,33 +426,32 @@ void ospi_dma_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 }
 
 /**
-  \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles,
-					bool is_dual_octal)
+  \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi,
+					struct ospi_xip_config *xip_cfg)
   \brief       Initialize hyperbus XIP configuration for the OSPI instance
   \param[in]   ospi        Pointer to the OSPI register map
-  \param[in]   wait_cycles Wait cycles needed by the hyperbus device
-  \param[in]   is_dual_octal OSPI transfer type is Dual Octal
+  \param[in]   xip_cfg     Pointer to the xip config structure
   \return      none
 */
-void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is_dual_octal)
+void ospi_hyperbus_xip_init(struct ospi_regs *ospi, struct ospi_xip_config *xip_cfg)
 {
-	uint8_t trans_type;
-
-	if (is_dual_octal) {
-		trans_type = SPI_TRANS_TYPE_FRF_DUAL_OCTAL;
-	} else {
-		trans_type = SPI_TRANS_TYPE_STANDARD;
-	}
-
 	ospi_disable(ospi);
 
-	ospi->OSPI_SPI_CTRLR0 = 1 << SPI_CTRLR0_SPI_DM_EN_OFFSET;
+	ospi->OSPI_CTRLR0  = (1 << SPI_CTRLR0_SSI_IS_MST)
+			| (SPI_FRAME_FORMAT_OCTAL << SPI_CTRLR0_SPI_FRF)
+			| SPI_CTRLR0_SCPOL_LOW
+			| SPI_CTRLR0_SCPH_LOW
+			| (0 << SPI_CTRLR0_SSTE)
+			| (SPI_TMOD_RX << SPI_CTRLR0_TMOD)
+			| (SPI_CTRLR0_DFS_16bit << SPI_CTRLR0_DFS);
+
+	ospi->OSPI_SPI_CTRLR0 = (1 << SPI_CTRLR0_SPI_DM_EN_OFFSET);
 
 	ospi->OSPI_XIP_CTRL = (1 << XIP_CTRL_XIP_HYPERBUS_EN_OFFSET)
 			| (1 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
-			| (wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+			| (xip_cfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
 			| (1 << XIP_CTRL_DFS_HC_OFFSET)
-			| (trans_type << XIP_CTRL_TRANS_TYPE_OFFSET);
+			| (SPI_TRANS_TYPE_FRF_DEFINED << XIP_CTRL_TRANS_TYPE_OFFSET);
 
 	ospi->OSPI_XIP_WRITE_CTRL = (1 << XIP_WRITE_CTRL_XIPWR_HYPERBUS_EN_OFFSET)
 			| (1 << XIP_WRITE_CTRL_XIPWR_DM_EN_OFFSET)
@@ -461,9 +460,13 @@ void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is
 		|| defined(CONFIG_ENSEMBLE_GEN2))
 			| (1 << XIP_WRITE_CTRL_XIPWR_DFS_HC_OFFSET)
 #endif
-			| (trans_type << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
-			| (wait_cycles << XIP_WRITE_CTRL_XIPWR_WAIT_CYCLES);
+			| (SPI_TRANS_TYPE_FRF_DEFINED << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
+			| (xip_cfg->xip_wait_cycles << XIP_WRITE_CTRL_XIPWR_WAIT_CYCLES);
 
+#if (defined(CONFIG_SOC_SERIES_E7) || defined(CONFIG_SOC_SERIES_E5) \
+		|| defined(CONFIG_SOC_SERIES_E3) || defined(CONFIG_SOC_SERIES_E1))
+	ospi_control_xip_ss(ospi, xip_cfg->xip_cs_pin, SPI_SS_STATE_ENABLE);
+#endif
 	ospi_enable(ospi);
 }
 
