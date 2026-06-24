@@ -60,6 +60,9 @@
 #if defined(CONFIG_ISP_LIB_CSM_MODULE)
 #include "mpi_isp_csm.h"
 #endif
+#if defined(CONFIG_ISP_LIB_BINNING_MODULE)
+#include "mpi_isp_binning.h"
+#endif
 
 #include "vsios_log.h"
 
@@ -406,6 +409,10 @@ int isp_vsi_update_cfg(struct isp_config_params *init_cfg)
 	ISP_PORT isp_port_id;
 	ISP_CHN isp_chn_id;
 
+#if defined(CONFIG_ISP_LIB_BINNING_MODULE)
+	ISP_BINNING_ATTR_S bin_attr;
+#endif /* defined(CONFIG_ISP_LIB_BINNING_MODULE) */
+
 	int ret;
 
 	if (!init_cfg) {
@@ -430,6 +437,16 @@ int isp_vsi_update_cfg(struct isp_config_params *init_cfg)
 	isp_chn_id.portId = port->port_id;
 	isp_chn_id.chnId = channel->channel_idx;
 
+#if defined(CONFIG_ISP_LIB_BINNING_MODULE)
+	bin_attr.enable = port->bin.enable;
+	bin_attr.binHStep = port->bin.hstep;
+	bin_attr.binVStep = port->bin.vstep;
+	LOG_DBG("Binning en: %d, Binning hstep: %d, Binning vstep: %d",
+			bin_attr.enable,
+			bin_attr.binHStep,
+			bin_attr.binVStep);
+	VSI_MPI_ISP_SetBinningAttr(isp_port_id, &bin_attr);
+#endif /* defined(CONFIG_ISP_LIB_BINNING_MODULE) */
 
 	ret = VSI_MPI_ISP_GetPortAttr(isp_port_id, &isp_port_config);
 	if (ret) {
