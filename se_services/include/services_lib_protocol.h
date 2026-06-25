@@ -923,6 +923,18 @@ typedef struct {
 	uint32_t resp_error_code;
 } set_aclk_svc_t;
 
+/* Low Power Comparator Configuration */
+typedef struct {
+	service_header_t header;
+	volatile uint8_t comp_lp0_hyst;
+	volatile uint8_t comp_lp0_in_m_sel;
+	volatile uint8_t comp_lp0_in_p_sel;
+	volatile uint8_t comp_lp_en;
+	volatile uint8_t lpcomp_clk32k_en;
+	volatile uint8_t lpcomp_clk_sel;
+	volatile uint32_t resp_error_code;
+} lp_cmp_configure_svc_t;
+
 /*******************************************************************************
  *  G L O B A L   D E F I N E S
  ******************************************************************************/
