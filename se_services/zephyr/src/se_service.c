@@ -318,6 +318,8 @@ typedef union {
 	process_toc_entry_svc_t process_toc_entry_svc_d;
 	otp_data_t otp_svc_d;
 	boot_cpu_svc_t boot_cpu_svc_d;
+	power_setting_svc_t power_setting_svc_d;
+	lp_cmp_configure_svc_t lp_cmp_configure_svc_d;
 } se_service_all_svc_t;
 
 static se_service_all_svc_t se_service_all_svc_d;
@@ -1748,6 +1750,105 @@ int se_service_enable_pd(uint32_t pd_id)
 out:
 	k_mutex_unlock(&svc_mutex);
 	return ret;
+}
+
+int se_service_configure_lpcmp(const lpcmp_configure_t *const config)
+{
+	int err;
+
+	if (config == NULL) {
+		return -EINVAL;
+	}
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+	if (err) {
+		LOG_ERR("Unable to lock mutex (err = %d)\n", err);
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+
+	se_service_all_svc_d.lp_cmp_configure_svc_d.header.hdr_service_id =
+		SERVICE_APPLICATION_LPCMP_CONFIGURE_ID;
+
+	se_service_all_svc_d.lp_cmp_configure_svc_d.comp_lp0_hyst = config->comp_lp0_hyst;
+	se_service_all_svc_d.lp_cmp_configure_svc_d.comp_lp0_in_m_sel = config->comp_lp0_in_m_sel;
+	se_service_all_svc_d.lp_cmp_configure_svc_d.comp_lp0_in_p_sel = config->comp_lp0_in_p_sel;
+	se_service_all_svc_d.lp_cmp_configure_svc_d.comp_lp_en = config->comp_lp_en;
+	se_service_all_svc_d.lp_cmp_configure_svc_d.lpcomp_clk32k_en = config->lpcomp_clk32k_en;
+	se_service_all_svc_d.lp_cmp_configure_svc_d.lpcomp_clk_sel = config->lpcomp_clk_sel;
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.lp_cmp_configure_svc_d,
+			     sizeof(se_service_all_svc_d.lp_cmp_configure_svc_d), SERVICE_TIMEOUT);
+
+	const int resp_err = se_service_all_svc_d.lp_cmp_configure_svc_d.resp_error_code;
+
+	k_mutex_unlock(&svc_mutex);
+
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		return err;
+	}
+
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		return resp_err;
+	}
+
+	return 0;
+}
+
+int se_service_power_settings_set(const power_setting_t setting, const uint32_t value)
+{
+	int err;
+
+	/* Ensure SE is ready to receive service calls */
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
+	if (setting > POWER_SETTING_ANA_PERIPH_EN) {
+		return -EINVAL;
+	}
+
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+	if (err) {
+		LOG_ERR("Unable to lock mutex (err = %d)\n", err);
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+
+	se_service_all_svc_d.power_setting_svc_d.header.hdr_service_id =
+		SERVICE_POWER_SETTING_CONFIG_REQ_ID;
+	se_service_all_svc_d.power_setting_svc_d.send_setting_type = setting;
+	se_service_all_svc_d.power_setting_svc_d.value = value;
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.power_setting_svc_d,
+			     sizeof(se_service_all_svc_d.power_setting_svc_d), SERVICE_TIMEOUT);
+
+	const int resp_err = se_service_all_svc_d.power_setting_svc_d.resp_error_code;
+
+	k_mutex_unlock(&svc_mutex);
+
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		return err;
+	}
+
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		return resp_err;
+	}
+
+	return 0;
 }
 
 /**

@@ -462,6 +462,15 @@ typedef struct {
 	uint32_t vtor_address_ns;
 } off_profile_t;
 
+typedef struct {
+	uint8_t comp_lp0_hyst;
+	uint8_t comp_lp0_in_m_sel;
+	uint8_t comp_lp0_in_p_sel;
+	uint8_t comp_lp_en;
+	uint8_t lpcomp_clk32k_en;
+	uint8_t lpcomp_clk_sel;
+} lpcmp_configure_t;
+
 uint32_t SERVICES_get_run_cfg(uint32_t handle, run_profile_t *pp, uint32_t *error_code);
 uint32_t SERVICES_set_run_cfg(uint32_t handle, run_profile_t *pp, uint32_t *error_code);
 uint32_t SERVICES_get_off_cfg(uint32_t handle, off_profile_t *wp, uint32_t *error_code);

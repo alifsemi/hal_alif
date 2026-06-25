@@ -360,6 +360,31 @@ int se_service_enable_pd(uint32_t pd_id);
  */
 int se_service_boot_cpu(uint32_t cpu_id, uint32_t address);
 
+/**
+ * @brief Configure the LPCMP service via SE.
+ *
+ * @param config Pointer to the LPCMP configuration structure.
+ *
+ * @retval 0 Success.
+ * @retval -EINVAL Invalid argument.
+ * @retval -EAGAIN Operation timed out. Retry after a delay.
+ * @return Positive error code returned by SE for a failed service request.
+ */
+int se_service_configure_lpcmp(const lpcmp_configure_t *config);
+
+/**
+ * @brief Set a power setting via SE service.
+ *
+ * @param setting The type of power setting to set.
+ * @param value The value to set for the specified power setting.
+ *
+ * @retval 0 Success.
+ * @retval -EINVAL Invalid argument.
+ * @retval -EAGAIN Operation timed out. Retry after a delay.
+ * @return Positive error code returned by SE for a failed service request.
+ */
+int se_service_power_settings_set(power_setting_t setting, uint32_t value);
+
 #ifdef __cplusplus
 }
 #endif
