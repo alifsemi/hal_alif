@@ -82,4 +82,22 @@ config ISP_LIB_WBM_MODULE
 	 Select the White Balancing measurement module in Vivante ISP Nano for
 	 Alif SoCs.
 
+config ISP_SENSOR_OV5675
+	bool "OV5675 sensor ISP parameters"
+	depends on VIDEO_OV5675
+	default y if VIDEO_OV5675
+	help
+	  Compile OV5675-specific ISP calibration parameters and sensor
+	  attributes (ov5675_isp_param_conf.c, ov5675_sensor_attributes.c)
+	  when the OV5675 sensor is connected to the ISP pipeline.
+
+config ISP_SENSOR_ARX3A0
+	bool "ARX3A0 sensor ISP parameters"
+	depends on VIDEO_ARX3A0
+	default y if VIDEO_ARX3A0
+	help
+	  Compile ARX3A0-specific ISP calibration parameters and sensor
+	  attributes (arx3a0_isp_param_conf.c, arx3a0_sensor_attributes.c)
+	  when the ARX3A0 sensor is connected to the ISP pipeline.
+
 endif # USE_ALIF_ISP_LIB
