@@ -8,4 +8,19 @@ if (CONFIG_USE_ALIF_ISP_LIB)
 
   zephyr_library()
   zephyr_library_sources(isp_wrapper/src/isp_api_wrapper.c)
+
+  if (CONFIG_ISP_SENSOR_OV5675)
+    zephyr_library_sources(isp_wrapper/src/ov5675_isp_param_conf.c)
+    zephyr_library_sources(isp_wrapper/src/ov5675_sensor_attributes.c)
+  endif()
+
+  if (CONFIG_ISP_SENSOR_ARX3A0)
+    zephyr_library_sources(isp_wrapper/src/arx3a0_isp_param_conf.c)
+    zephyr_library_sources(isp_wrapper/src/arx3a0_sensor_attributes.c)
+  endif()
+
+  if (CONFIG_ISP_SENSOR_MT9M114)
+    zephyr_library_sources(isp_wrapper/src/mt9m114_isp_param_conf.c)
+    zephyr_library_sources(isp_wrapper/src/mt9m114_sensor_attributes.c)
+  endif()
 endif()

@@ -82,4 +82,43 @@ config ISP_LIB_WBM_MODULE
 	 Select the White Balancing measurement module in Vivante ISP Nano for
 	 Alif SoCs.
 
+choice ISP_SENSOR_PARAMS
+	prompt "ISP sensor parameter set"
+	default ISP_SENSOR_OV5675 if VIDEO_OV5675
+	default ISP_SENSOR_ARX3A0 if VIDEO_ARX3A0
+	default ISP_SENSOR_MT9M114 if VIDEO_MT9M114
+	help
+	  Select exactly one sensor whose ISP calibration parameters
+	  (isp_calib_param) and AE sensor attributes (sensor_attributes)
+	  are compiled into the build.  Both symbols are defined as global
+	  objects; compiling more than one set causes multiple-definition
+	  link failures, and compiling none causes undefined-reference
+	  failures in isp_api_wrapper.c.
+
+config ISP_SENSOR_OV5675
+	bool "OV5675"
+	depends on VIDEO_OV5675
+	help
+	  Compile OV5675-specific ISP calibration parameters and sensor
+	  attributes (ov5675_isp_param_conf.c, ov5675_sensor_attributes.c)
+	  when the OV5675 sensor is connected to the ISP pipeline.
+
+config ISP_SENSOR_ARX3A0
+	bool "ARX3A0"
+	depends on VIDEO_ARX3A0
+	help
+	  Compile ARX3A0-specific ISP calibration parameters and sensor
+	  attributes (arx3a0_isp_param_conf.c, arx3a0_sensor_attributes.c)
+	  when the ARX3A0 sensor is connected to the ISP pipeline.
+
+config ISP_SENSOR_MT9M114
+	bool "MT9M114"
+	depends on VIDEO_MT9M114
+	help
+	  Compile MT9M114-specific ISP calibration parameters and sensor
+	  attributes (mt9m114_isp_param_conf.c, mt9m114_sensor_attributes.c)
+	  when the MT9M114 sensor is connected to the ISP pipeline.
+
+endchoice # ISP_SENSOR_PARAMS
+
 endif # USE_ALIF_ISP_LIB
