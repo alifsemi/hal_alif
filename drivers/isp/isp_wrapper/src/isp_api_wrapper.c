@@ -493,8 +493,17 @@ int isp_vsi_update_cfg(struct isp_config_params *init_cfg)
 	isp_port_config.inFormRect.width  = port->in_form_rect.width;
 	isp_port_config.inFormRect.height = port->in_form_rect.height;
 
-	isp_port_config.outFormRect.top    = port->out_form_rect.top;
-	isp_port_config.outFormRect.left   = port->out_form_rect.left;
+	/*
+	 * RECT_S field naming is swapped in the libisp:
+	 * RECT_S.top  -> ISP_OUT_H_OFFS (horizontal/left offset)
+	 * RECT_S.left -> ISP_OUT_V_OFFS (vertical/top offset)
+	 * Swap top/left here so the rest of the driver can use conventional
+	 * image coordinates (left = X/crop-x0, top = Y/crop-y0). Without this,
+	 * a crop-x0 offset is applied on the vertical axis and overruns the
+	 * frame height, tripping the ISP picture-size violation (INTR_SIZE_ERR).
+	 */
+	isp_port_config.outFormRect.top    = port->out_form_rect.left;
+	isp_port_config.outFormRect.left   = port->out_form_rect.top;
 	isp_port_config.outFormRect.width  = port->out_form_rect.width;
 	isp_port_config.outFormRect.height = port->out_form_rect.height;
 
