@@ -655,7 +655,7 @@ void isp_vsi_bottom_half(const struct device *dev,
 		totalGain = ((vsi_u64_t)sns_config.aGain *
 				sns_config.dGain) / ISP_SNS_GAIN_ACCU;
 
-		ret = video_set_ctrl(dev, VIDEO_CID_GAIN, (void *)&totalGain);
+		ret = video_set_ctrl(dev, VIDEO_CID_GAIN, (void *)UINT_TO_POINTER(totalGain));
 		if (ret) {
 			LOG_ERR("Failed to write Total Gain to the sensor!");
 		} else {
@@ -665,7 +665,7 @@ void isp_vsi_bottom_half(const struct device *dev,
 	}
 	if (cached_sns_config.intLine != sns_config.intLine) {
 		ret = video_set_ctrl(dev, VIDEO_CID_EXPOSURE,
-				(void *)&sns_config.intLine);
+				(void *)UINT_TO_POINTER(sns_config.intLine));
 		if (ret) {
 			LOG_ERR("Failed to write Exposure to the sensor!");
 		} else {
