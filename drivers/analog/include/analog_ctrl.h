@@ -66,20 +66,26 @@ extern "C" {
  * 0000: 1.6 V
  * 0001: 1.62 V
  * ...
- * 1010: 1.8 V
+ * 1000: 1.76 V
+ * 1010: 1.80 V
  * 1111: 1.9 V
- * Step: 20 mV Default (0xA)
+ * Step: 20 mV Default (0x8)
  */
-#define ANA_PERIPH_LDO_CONT		(0xAU << 6)
+#define ANA_PERIPH_LDO_CONT		(0x8U << 6)
+#define ANA_PERIPH_LDO_MASK		(0xFU << 6)
 
 /* Calibration for analog peripherals precision bandgap:
  * 0000: 1.140 V
  * ...
+ * 1000: 1.188 V
  * 1010: 1.2 V
  * 1111: 1.233 V
- * Step: 6 mV Default (0xA)
+ * Step: 6 mV Default (0x8)
  */
-#define ANA_PERIPH_BG_CONT		(0xAU << 1)
+#define ANA_PERIPH_BG_CONT		(0x8U << 1)
+
+#define ANA_PERIPH_LDO_BG_MASK		(ANA_PERIPH_LDO_MASK | ANA_PERIPH_BG_MASK)
+#define ANA_PERIPH_LDO_BG_CONT_VAL	(ANA_PERIPH_LDO_CONT | ANA_PERIPH_BG_CONT)
 
 #define CMP_CTRL_CMP0_CLKEN	(1U << 0U) /* Enable CMP0 clock */
 
@@ -89,7 +95,9 @@ extern "C" {
 
 #define DAC12_REF_VAL		(DAC12_VREF_CONT | ADC_VREF_BUF_EN | ADC_VREF_BUF_RDIV_EN)
 
-#define ADC_REF_VAL			(ADC_VREF_BUF_RDIV_EN | ADC_VREF_BUF_EN | ADC_VREF_CONT)
+#define ADC_REF_VAL		(ADC_VREF_BUF_RDIV_EN | ADC_VREF_BUF_EN | ADC_VREF_CONT)
+
+#define ANA_PERIPH_LDO_BG_CONT_VAL (ANA_PERIPH_LDO_CONT | ANA_PERIPH_BG_CONT)
 
 extern uint32_t analog_ldo_ref_cnt;
 extern uint32_t adc_vref_cnt;
@@ -272,21 +280,25 @@ static inline void disable_dac12_ref_voltage_alias_mode(uintptr_t cmp_reg2, uint
 static inline void enable_adc_ref_voltage(uintptr_t cmp_reg2)
 {
 	REG(cmp_reg2) |= ADC_REF_VAL;
+	REG(cmp_reg2) = (REG(cmp_reg2) & ~ANA_PERIPH_LDO_BG_MASK) | ANA_PERIPH_LDO_BG_CONT_VAL;
 	adc_vref_cnt++;
 }
 
 /**
- * @fn      void enable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base)
+ * @fn      void enable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base,
+ *                                                  uintptr_t cmp_reg2)
  * @brief   Enable ADC reference voltage (aliasing mode).
  *          Configures the ADC VREF register to enable the
  *          reference divider, turn on the VREF buffer, and set the
  *          appropriate control level for the ADC reference voltage.
  * @param[in] adc_vref_base  Base address of the ADC VREF register.
+ * @param[in] cmp_reg2       Base address of the comparator control register.
  * @return   none
  */
-static inline void enable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base)
+static inline void enable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base, uintptr_t cmp_reg2)
 {
 	REG(adc_vref_base) |= ADC_REF_VAL;
+	REG(cmp_reg2) = (REG(cmp_reg2) & ~ANA_PERIPH_LDO_BG_MASK) | ANA_PERIPH_LDO_BG_CONT_VAL;
 	adc_vref_cnt++;
 }
 
@@ -301,22 +313,25 @@ static inline void disable_adc_ref_voltage(uintptr_t cmp_reg2)
 {
 	adc_vref_cnt--;
 	if (adc_vref_cnt == 0) {
-		REG(cmp_reg2) &= ~ADC_REF_VAL;
+		REG(cmp_reg2) &= ~(ADC_REF_VAL | ANA_PERIPH_LDO_BG_CONT_VAL);
 	}
 }
 
 /**
- * @fn        void disable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base)
+ * @fn        void disable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base,
+ *                                                     uintptr_t cmp_reg2)
  * @brief     Disable the reference divider, VREF buffer,
  *            and ADC reference voltage (aliasing mode).
  * @param[in] adc_vref_base  Base address of the ADC VREF register.
+ * @param[in] cmp_reg2       Base address of the comparator control register.
  * @return     none
  */
-static inline void disable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base)
+static inline void disable_adc_ref_voltage_alias_mode(uintptr_t adc_vref_base, uintptr_t cmp_reg2)
 {
 	adc_vref_cnt--;
 	if (adc_vref_cnt == 0) {
 		REG(adc_vref_base) &= ~ADC_REF_VAL;
+		REG(cmp_reg2) &= ~ANA_PERIPH_LDO_BG_CONT_VAL;
 	}
 }
 
