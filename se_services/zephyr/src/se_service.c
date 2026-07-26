@@ -321,6 +321,7 @@ typedef union {
 	boot_cpu_svc_t boot_cpu_svc_d;
 	power_setting_svc_t power_setting_svc_d;
 	lp_cmp_configure_svc_t lp_cmp_configure_svc_d;
+	clock_setting_svc_t clock_setting_svc_d;
 } se_service_all_svc_t;
 
 /*
@@ -1648,6 +1649,53 @@ int se_service_clock_set_divider(clock_divider_t divider, uint32_t value)
 		LOG_ERR("received response error = %d\n", resp_err);
 		return resp_err;
 	}
+	return 0;
+}
+
+int se_service_clock_setting_get(clock_setting_t setting, uint32_t *freq)
+{
+	int err, resp_err = -1;
+
+	if (!freq) {
+		LOG_ERR("Invalid argument\n");
+		return -EINVAL;
+	}
+
+	err = se_service_ensure_ready();
+	if (err) {
+		return err;
+	}
+
+	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+	if (err) {
+		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+		return err;
+	}
+
+	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
+	se_service_all_svc_d.clock_setting_svc_d.header.hdr_service_id =
+		SERVICE_CLOCK_SETTING_GET_REQ_ID;
+	se_service_all_svc_d.clock_setting_svc_d.send_setting_type = setting;
+
+	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.clock_setting_svc_d,
+			     sizeof(se_service_all_svc_d.clock_setting_svc_d),
+			     SERVICE_TIMEOUT);
+	resp_err = se_service_all_svc_d.clock_setting_svc_d.resp_error_code;
+
+	if (err) {
+		LOG_ERR("%s failed with %d\n", __func__, err);
+		k_mutex_unlock(&svc_mutex);
+		return err;
+	}
+	if (resp_err) {
+		LOG_ERR("%s: received response error = %d\n", __func__, resp_err);
+		k_mutex_unlock(&svc_mutex);
+		return resp_err;
+	}
+
+	*freq = se_service_all_svc_d.clock_setting_svc_d.value;
+	k_mutex_unlock(&svc_mutex);
+
 	return 0;
 }
 
