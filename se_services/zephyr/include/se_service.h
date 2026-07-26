@@ -306,6 +306,23 @@ int se_service_update_stoc(uint8_t *img_addr, uint32_t img_size);
 int se_service_clock_set_divider(clock_divider_t divider, uint32_t value);
 
 /**
+ * @brief Send service request to SE to get a clock frequency setting.
+ *
+ * Queries the actual clock frequency configured by SE firmware for the
+ * given setting. Use this instead of hardcoded values, since SE run
+ * profile changes affect these frequencies.
+ *
+ * @param setting Clock setting to query.
+ * @param freq Pointer to store frequency value in Hz.
+ * @retval 0 Success.
+ * @retval -EINVAL Invalid argument.
+ * @retval -EAGAIN Operation timed out. Retry after a delay.
+ * @retval -EBUSY SE is busy. Retry after a delay.
+ * @return Positive error code returned by SE for a failed service request.
+ */
+int se_service_clock_setting_get(clock_setting_t setting, uint32_t *freq);
+
+/**
  * @brief Send service request to SE to process TOC entry.
  *
  * @param image_id ID that matches the TOC entry field image identifier.
