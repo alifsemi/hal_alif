@@ -461,19 +461,27 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 		/* Disable Rx MHU interrupts */
 		ipm_set_enabled(recv_dev, false);
 
-		err = ipm_poll_out(send_dev, CH_ID, &global_address, (int)size, K_MSEC(timeout));
+		err = ipm_poll_out(send_dev, CH_ID, &global_address,
+				(int)size, K_MSEC(timeout));
 		if (err) {
-			LOG_ERR("failed to send service %d\n", service_id);
-			return err;
+			LOG_ERR("failed to send service %d (err=%d)",
+				service_id, err);
+			goto poll_cleanup;
 		}
 
-		err = ipm_poll_in(recv_dev, CH_ID, &rx_data, (int)size, K_MSEC(timeout));
+		err = ipm_poll_in(recv_dev, CH_ID, &rx_data,
+				(int)size, K_MSEC(timeout));
 		if (err) {
-			LOG_ERR("failed to rcv resp for service %d\n", service_id);
+			LOG_ERR("failed to rcv resp for service %d (err=%d)",
+				service_id, err);
+		}
+
+poll_cleanup:
+		ipm_set_enabled(recv_dev, true);
+
+		if (err) {
 			return err;
 		}
-		/* Enable Rx MHU interrupts */
-		ipm_set_enabled(recv_dev, true);
 	}
 
 	sys_cache_data_invd_range(ptr, size);
