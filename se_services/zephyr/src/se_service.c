@@ -6,6 +6,7 @@
 #include <zephyr/cache.h>
 #include <zephyr/drivers/ipm.h>
 #include <zephyr/pm/pm.h>
+#include <zephyr/pm/policy.h>
 #include <zephyr/dt-bindings/misc/alif_aipm_common.h>
 #include <se_service.h>
 #include <soc_memory_map.h>
@@ -422,8 +423,13 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 	if (k_can_yield()) {
 		int wait = 0;
 
-		/* Prevent sleeps during SE service calls */
-		pm_device_busy_set(send_dev);
+		/*
+		 * Block SUSPEND_TO_RAM / SOFT_OFF while we hold svc_mutex and
+		 * wait on the SE mailbox response. Otherwise the idle thread
+		 * may run PM device-suspend callbacks
+		 */
+		pm_policy_state_lock_get(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+		pm_policy_state_lock_get(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
 
 		k_sem_reset(&svc_send_sem);
 		k_sem_reset(&svc_recv_sem);
@@ -432,27 +438,27 @@ static int send_msg_to_se(uint32_t *ptr, uint32_t size, uint32_t timeout)
 		err = ipm_send(send_dev, wait, CH_ID, &global_address, (int)size);
 		if (err) {
 			LOG_ERR("failed to send request for MSG(error: %d)\n", err);
-			pm_device_busy_clear(send_dev);
-			return err;
+			goto unlock;
 		}
 
 		err = k_sem_take(&svc_send_sem, K_MSEC(timeout));
 		if (err) {
 			LOG_ERR("service %d send is timed out!\n", service_id);
-			pm_device_busy_clear(send_dev);
-			return err;
+			goto unlock;
 		}
-
-		pm_device_busy_set(recv_dev);
-		pm_device_busy_clear(send_dev);
 
 		err = k_sem_take(&svc_recv_sem, K_MSEC(timeout));
 		if (err) {
 			LOG_ERR("service %d response is timed out!\n", service_id);
-			pm_device_busy_clear(recv_dev);
+		}
+
+unlock:
+		pm_policy_state_lock_put(PM_STATE_SOFT_OFF, PM_ALL_SUBSTATES);
+		pm_policy_state_lock_put(PM_STATE_SUSPEND_TO_RAM, PM_ALL_SUBSTATES);
+
+		if (err) {
 			return err;
 		}
-		pm_device_busy_clear(recv_dev);
 
 	} else {
 		uint32_t rx_data = 0;
