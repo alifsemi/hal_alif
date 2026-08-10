@@ -7,6 +7,10 @@ if(CONFIG_RTSS_HE OR CONFIG_RTSS_HP)
   zephyr_library_sources(src/system.c)
 endif()
 
+if(CONFIG_APSS)
+  zephyr_include_directories(include)
+endif()
+
 zephyr_library_sources_ifdef(CONFIG_HAS_ALIF_POWER_MANAGER
     src/es0_power_manager.c
 )

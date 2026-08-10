@@ -12,6 +12,8 @@ extern "C" {
 
 #include <zephyr/devicetree.h>
 
+#if DT_NODE_EXISTS(DT_NODELABEL(itcm)) && DT_NODE_EXISTS(DT_NODELABEL(dtcm))
+
 #define ITCM_BASE (DT_REG_ADDR(DT_NODELABEL(itcm)))
 #define ITCM_SIZE (DT_REG_SIZE(DT_NODELABEL(itcm)))
 #define DTCM_BASE (DT_REG_ADDR(DT_NODELABEL(dtcm)))
@@ -31,6 +33,15 @@ static inline uint32_t local_to_global(const volatile void *local_addr)
 		return (addr);
 	}
 }
+
+#else /* No local TCM remap (e.g. Cortex-A32/APSS): addresses are already global */
+
+static inline uint32_t local_to_global(const volatile void *local_addr)
+{
+	return (uint32_t)local_addr;
+}
+
+#endif
 
 #ifdef __cplusplus
 }
