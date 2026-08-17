@@ -322,7 +322,26 @@ typedef union {
 	lp_cmp_configure_svc_t lp_cmp_configure_svc_d;
 } se_service_all_svc_t;
 
-static se_service_all_svc_t se_service_all_svc_d;
+/*
+ * The SE communication buffer is shared with the Secure Enclave over MHUv2 and
+ * kept coherent with explicit cache maintenance (flush before send, invalidate
+ * after receive). It must therefore occupy whole cache lines of its own: if a
+ * neighbouring variable shares a boundary cache line, that line can be written
+ * back over the SE response, corrupting it (seen as all-zero data when e.g.
+ * CONFIG_THREAD_MONITOR changes the .bss layout).
+ */
+#if defined(CONFIG_DCACHE_LINE_SIZE) && (CONFIG_DCACHE_LINE_SIZE > 0)
+#define SE_SVC_BUF_ALIGN CONFIG_DCACHE_LINE_SIZE
+#else
+#define SE_SVC_BUF_ALIGN sizeof(uint32_t)
+#endif
+
+static union {
+	se_service_all_svc_t svc;
+	uint8_t pad[ROUND_UP(sizeof(se_service_all_svc_t), SE_SVC_BUF_ALIGN)];
+} se_service_all_svc_buf __aligned(SE_SVC_BUF_ALIGN);
+#define se_service_all_svc_d (se_service_all_svc_buf.svc)
+
 static uint32_t global_address;
 static uint32_t se_service_recv_data;
 
