@@ -307,3 +307,18 @@ void alif_utimer_disable_filter(uint32_t reg_base)
 	REG(UTIMER_FILTER_CTRL_A(reg_base)) &= ~CHAN_FILTER_CTRL_FILTER_EN;
 	REG(UTIMER_FILTER_CTRL_B(reg_base)) &= ~CHAN_FILTER_CTRL_FILTER_EN;
 }
+
+bool alif_utimer_all_channel_clocks_disabled(uint32_t reg_base)
+{
+	/* GLB_CLK_EN masks the valid channel bits [15:0]. Reading zero
+	 * means no channel on this UTIMER IP has its clock enabled,
+	 * i.e. no counter/pwm/qdec driver instance is currently using
+	 * any channel of the block.
+	 */
+	return ((REG(UTIMER_GLB_CLOCK_ENABLE(reg_base)) & GLB_CLK_EN) == 0U);
+}
+
+bool alif_utimer_any_counter_running(uint32_t reg_base)
+{
+	return ((REG(UTIMER_GLB_CNTR_RUNNING(reg_base)) & GLB_CNTR_RUNNING) != 0U);
+}
