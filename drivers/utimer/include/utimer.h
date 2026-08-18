@@ -581,4 +581,20 @@ void alif_utimer_enable_filter(uint32_t reg_base, uint8_t prescaler,
  */
 void alif_utimer_disable_filter(uint32_t reg_base);
 
+/**
+ * \fn        bool alif_utimer_all_channel_clocks_disabled(uint32_t reg_base)
+ * \brief     check whether all channel clocks are disabled.
+ * \param[in] reg_base  register base address
+ * \return    true if all channel clocks are disabled, otherwise false
+ */
+bool alif_utimer_all_channel_clocks_disabled(uint32_t reg_base);
+
+/**
+ * \fn        bool alif_utimer_any_counter_running(uint32_t reg_base)
+ * \brief     check whether any channel counter is running.
+ * \param[in] reg_base  register base address
+ * \return    true if any channel counter is running, otherwise false
+ */
+bool alif_utimer_any_counter_running(uint32_t reg_base);
+
 #endif /* UTIMER_H_ */
