@@ -9,6 +9,12 @@
 #include "tgu.h"
 #include "sau_tcm_ns_setup.h"
 
+/* DTCM_BASE and ITCM_BASE defines denote memory regions that might be
+ * offset in the actual TCM - we need to refer to the actual physical base.
+ */
+#define ITCM_PHYSICAL_BASE 0x00000000
+#define DTCM_PHYSICAL_BASE 0x20000000
+
 /*
  * Array of NS memory regions. Add new regions to this list.
  * The start and end address of the non-secure region in updated
@@ -44,12 +50,12 @@ void TGU_Setup(void)
 
 	for (i = 0; i < ARRAY_SIZE(ns_regions); i++) {
 		if (ns_regions[i].type == DTCM) {
-			start_block =  (ns_regions[i].start - DTCM_BASE) / dtcm_blksize;
-			end_block = (ns_regions[i].end - DTCM_BASE) / dtcm_blksize;
+			start_block =  (ns_regions[i].start - DTCM_PHYSICAL_BASE) / dtcm_blksize;
+			end_block = (ns_regions[i].end - DTCM_PHYSICAL_BASE) / dtcm_blksize;
 			base = DTGU_BASE;
 		} else {
-			start_block =  (ns_regions[i].start - ITCM_BASE) / itcm_blksize;
-			end_block = (ns_regions[i].end - ITCM_BASE) / itcm_blksize;
+			start_block =  (ns_regions[i].start - ITCM_PHYSICAL_BASE) / itcm_blksize;
+			end_block = (ns_regions[i].end - ITCM_PHYSICAL_BASE) / itcm_blksize;
 			base = ITGU_BASE;
 		}
 
