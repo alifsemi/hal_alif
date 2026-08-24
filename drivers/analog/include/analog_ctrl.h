@@ -83,6 +83,7 @@ extern "C" {
  * Step: 6 mV Default (0x8)
  */
 #define ANA_PERIPH_BG_CONT		(0x8U << 1)
+#define ANA_PERIPH_BG_MASK		(0xFU << 1)
 
 #define ANA_PERIPH_LDO_BG_MASK		(ANA_PERIPH_LDO_MASK | ANA_PERIPH_BG_MASK)
 #define ANA_PERIPH_LDO_BG_CONT_VAL	(ANA_PERIPH_LDO_CONT | ANA_PERIPH_BG_CONT)
