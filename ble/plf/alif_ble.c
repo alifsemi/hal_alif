@@ -168,11 +168,20 @@ static ble_app_hooks_t app_hooks = {.p_global_int_disable = global_int_stop,
 				    .p_rtos_evt_post = rtos_evt_post,
 				    .p_dma_copy = copy_without_dma,
 				    .p_dma_abort = NULL,
+#if IS_ENABLED(CONFIG_ALIF_BLE_ENABLE_AUDIO_SYNC_TIMER)
 				    .p_sync_timer_start = sync_timer_start,
 				    .p_sync_timer_get_curr_cnt = sync_timer_get_curr_cnt,
 				    .p_sync_timer_get_last_capture = sync_timer_get_last_capture,
 				    .p_sync_timer_disable_evts = sync_timer_disable_evts,
-				    .p_sync_timer_restore_evts = sync_timer_restore_evts};
+				    .p_sync_timer_restore_evts = sync_timer_restore_evts
+#else
+				    .p_sync_timer_start = NULL,
+				    .p_sync_timer_get_curr_cnt = NULL,
+				    .p_sync_timer_get_last_capture = NULL,
+				    .p_sync_timer_disable_evts = NULL,
+				    .p_sync_timer_restore_evts = NULL
+#endif
+				};
 
 int alif_ble_mutex_lock(k_timeout_t timeout)
 {
@@ -199,8 +208,10 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 	ret = hci_uart_init();
 	__ASSERT(0 == ret, "Failed to initialise HCI UART");
 
+#if IS_ENABLED(CONFIG_ALIF_BLE_ENABLE_AUDIO_SYNC_TIMER)
 	ret = sync_timer_init();
 	__ASSERT(0 == ret, "Failed to initialise sync timer");
+#endif
 
 	if (initialised != INITIALISED_MAGIC) {
 		LOG_DBG("Cold start");

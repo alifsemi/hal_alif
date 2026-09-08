@@ -35,6 +35,13 @@ config ALIF_BLE_ALLOW_SLEEP_RUNTIME
 	  Allow the system to enter sleep mode during BLE operations.
 	  This can save power but may increase latency.
 
+config ALIF_BLE_ENABLE_AUDIO_SYNC_TIMER
+	bool "Enable sync timer to be used with BLE audio"
+	default n
+	help
+	  Sync timer is only needed for BLE audio use cases and thus should
+	  be disabled for non-audio applications
+
 endmenu
 
 endif
