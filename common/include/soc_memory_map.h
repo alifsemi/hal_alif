@@ -34,11 +34,29 @@ static inline uint32_t local_to_global(const volatile void *local_addr)
 	}
 }
 
+static inline uint32_t global_to_local(const volatile void *global_addr)
+{
+	uint32_t addr = (uint32_t)global_addr;
+
+	if ((addr >= DTCM_GLOBAL_BASE) && (addr < (DTCM_GLOBAL_BASE + DTCM_SIZE))) {
+		return addr - DTCM_GLOBAL_BASE + DTCM_BASE;
+	} else if ((addr >= ITCM_GLOBAL_BASE) && (addr < (ITCM_GLOBAL_BASE + ITCM_SIZE))) {
+		return addr - ITCM_GLOBAL_BASE + ITCM_BASE;
+	} else {
+		return addr;
+	}
+}
+
 #else /* No local TCM remap (e.g. Cortex-A32/APSS): addresses are already global */
 
 static inline uint32_t local_to_global(const volatile void *local_addr)
 {
 	return (uint32_t)local_addr;
+}
+
+static inline uint32_t global_to_local(const volatile void *global_addr)
+{
+	return (uint32_t)global_addr;
 }
 
 #endif
