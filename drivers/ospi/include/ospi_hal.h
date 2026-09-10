@@ -108,6 +108,8 @@ struct ospi_init {
 	uint16_t  xip_aes_rxds_dly;		/* AES RxDS Delay*/
 	uint16_t  xip_wait_cycles;		/* XiP Wait Cycle*/
 	uint16_t  xip_rxds_vl_en;		/* XiP RxDS variable latency*/
+	uint8_t   xip_inst_len;			/* XiP instruction length code */
+	uint8_t   xip_inst_ddr_en;		/* Enable instruction DDR in XiP */
 };
 
 /*---- OSPI Event ---------------------*/

@@ -62,19 +62,19 @@ static uint32_t set_ospi_ctrl0_in_xip(uint8_t frf,
 }
 
 /* Helper : value to ospi_xip_ctrl0 for XiP */
-static uint32_t set_xip_ctrl(uint8_t wait_cycles, uint8_t rxds_vl_en)
+static uint32_t set_xip_ctrl(struct ospi_xip_config xip_cfg)
 {
 	uint32_t val;
 
 	val = (OCTAL << XIP_CTRL_FRF_OFFSET)
 	| (0x2 << XIP_CTRL_TRANS_TYPE_OFFSET)
 	| (XIP_CTRL_ADDR_LEN_36_BIT << XIP_CTRL_ADDR_L_OFFSET)
-	| (XIP_CTRL_INST_LEN_8_BIT << XIP_CTRL_INST_L_OFFSET)
+	| (xip_cfg->inst_len << XIP_CTRL_INST_L_OFFSET)
 	| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
-	| (wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+	| (xip_cfg->wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
 	| (0x1 << XIP_CTRL_DFS_HC_OFFSET)
 	| (0x1 << XIP_CTRL_DDR_EN_OFFSET)
-	| (0x0 << XIP_CTRL_INST_DDR_EN_OFFSET)
+	| (xip_cfg->inst_ddr_en << XIP_CTRL_INST_DDR_EN_OFFSET)
 	| (0x1 << XIP_CTRL_RXDS_EN_OFFSET)
 	| (0x1 << XIP_CTRL_INST_EN_OFFSET)
 	| (0x0 << XIP_CTRL_CONT_XFER_EN_OFFSET)
@@ -82,7 +82,7 @@ static uint32_t set_xip_ctrl(uint8_t wait_cycles, uint8_t rxds_vl_en)
 	| (0x0 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
 	| (0x0 << XIP_CTRL_XIP_MBL_OFFSET)
 	| (0x0 << XIP_CTRL_XIP_PREFETCH_EN_OFFSET)
-	| (rxds_vl_en << XIP_CTRL_RXDS_VL_EN_OFFSET);
+	| (xip_cfg->rxds_vl_en << XIP_CTRL_RXDS_VL_EN_OFFSET);
 
 	return val;
 }
@@ -799,8 +799,7 @@ void ospi_xip_enable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
 					TMODE_RD_ONLY, SPI_CTRLR0_DFS_16bit);
 
 	/* Set OSPI XIP CTRL */
-	ospi->OSPI_XIP_CTRL = set_xip_ctrl(xfg->xip_wait_cycles,
-					xfg->xip_rxds_vl_en);
+	ospi->OSPI_XIP_CTRL = set_xip_ctrl(xfg);
 
 	ospi->OSPI_XIP_INCR_INST = xfg->incr_cmd;
 	ospi->OSPI_XIP_WRAP_INST = xfg->wrap_cmd;
