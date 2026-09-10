@@ -67,7 +67,9 @@
 #include "vsios_log.h"
 
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(isp_wrapper, CONFIG_VIDEO_LOG_LEVEL);
+#include <zephyr/logging/log_ctrl.h>
+#define LOG_MODULE_NAME isp_wrapper
+LOG_MODULE_REGISTER(LOG_MODULE_NAME, CONFIG_VIDEO_LOG_LEVEL);
 
 #if defined(CONFIG_ISP_LIB_WB_MODULE)
 extern ISP_AWB_FUNC_S vsiAwbAlgo;
@@ -98,7 +100,13 @@ static struct sensor_config {
 } sns_config = {0}, cached_sns_config = {0};
 #endif /* defined(CONFIG_ISP_LIB_AE_MODULE) */
 
-extern int log_level(void);
+/* Default for apps that do not supply one. Samples may override this. */
+__weak int log_level(void)
+{
+	return log_filter_get(NULL, Z_LOG_LOCAL_DOMAIN_ID,
+			      log_source_id_get(STRINGIFY(LOG_MODULE_NAME)),
+			      true);
+}
 
 static int isp_lib_log_print(const char *fmt, ...)
 {
