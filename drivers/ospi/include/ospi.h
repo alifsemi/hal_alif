@@ -430,17 +430,19 @@ struct ospi_transfer {
  * configuration for xip setup.
  */
 struct ospi_xip_config {
-	int16_t                 xip_cs_pin;          /* CS PIN   */
-	uint16_t                wrap_cmd;            /* WRAP cmd */
-	uint16_t                incr_cmd;            /* INCR cmd */
-	uint16_t                write_wrap_cmd;      /* Write WRAP cmd */
-	uint16_t                write_incr_cmd;      /* Write INCR cmd */
-	uint16_t                rx_smpl_dlay;        /* Delay on Sampling */
-	uint16_t                aes_rx_ds_dlay;      /* AES Dly */
-	uint16_t                xip_mod_bits;        /* XIP Mod */
-	uint16_t                xip_cnt_time_out;    /* Timeout value */
-	uint16_t                xip_wait_cycles;     /* Dummy cycles*/
-	uint16_t                xip_rxds_vl_en;      /* Enable RxDS_VL_EN bit */
+	int16_t      xip_cs_pin;          /* CS PIN   */
+	uint16_t     wrap_cmd;            /* WRAP cmd */
+	uint16_t     incr_cmd;            /* INCR cmd */
+	uint16_t     write_wrap_cmd;      /* Write WRAP cmd */
+	uint16_t     write_incr_cmd;      /* Write INCR cmd */
+	uint16_t     rx_smpl_dlay;        /* Delay on Sampling */
+	uint16_t     aes_rx_ds_dlay;      /* AES Dly */
+	uint16_t     xip_mod_bits;        /* XIP Mod */
+	uint16_t     xip_cnt_time_out;    /* Timeout value */
+	uint16_t     xip_wait_cycles;     /* Dummy cycles*/
+	uint16_t     xip_rxds_vl_en;      /* Enable RxDS_VL_EN bit */
+	uint16_t     xip_inst_len;        /* instruction length */
+	uint16_t     xip_inst_ddr_en;     /* Enable instruction DDR in XIP */
 };
 
 /**
