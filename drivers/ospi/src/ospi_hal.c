@@ -119,6 +119,8 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 	ospi_inst->xip_config.aes_rx_ds_dlay = init_d->rx_ds_delay;
 	ospi_inst->xip_config.xip_rxds_vl_en = init_d->xip_rxds_vl_en;
 	ospi_inst->xip_config.xip_wait_cycles = init_d->xip_wait_cycles;
+	ospi_inst->xip_config.xip_inst_len = init_d->xip_inst_len;
+	ospi_inst->xip_config.xip_inst_ddr_en = init_d->xip_inst_ddr_en;
 
 	ospi_regs = (struct ospi_regs *) init_d->base_regs;
 
