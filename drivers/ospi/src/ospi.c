@@ -62,19 +62,19 @@ static uint32_t set_ospi_ctrl0_in_xip(uint8_t frf,
 }
 
 /* Helper : value to ospi_xip_ctrl0 for XiP */
-static uint32_t set_xip_ctrl(struct ospi_xip_config xip_cfg)
+static uint32_t set_xip_ctrl(struct ospi_xip_config *xip_cfg)
 {
 	uint32_t val;
 
 	val = (OCTAL << XIP_CTRL_FRF_OFFSET)
 	| (0x2 << XIP_CTRL_TRANS_TYPE_OFFSET)
 	| (XIP_CTRL_ADDR_LEN_36_BIT << XIP_CTRL_ADDR_L_OFFSET)
-	| (xip_cfg->inst_len << XIP_CTRL_INST_L_OFFSET)
+	| (xip_cfg->xip_inst_len << XIP_CTRL_INST_L_OFFSET)
 	| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
-	| (xip_cfg->wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+	| (xip_cfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
 	| (0x1 << XIP_CTRL_DFS_HC_OFFSET)
 	| (0x1 << XIP_CTRL_DDR_EN_OFFSET)
-	| (xip_cfg->inst_ddr_en << XIP_CTRL_INST_DDR_EN_OFFSET)
+	| (xip_cfg->xip_inst_ddr_en << XIP_CTRL_INST_DDR_EN_OFFSET)
 	| (0x1 << XIP_CTRL_RXDS_EN_OFFSET)
 	| (0x1 << XIP_CTRL_INST_EN_OFFSET)
 	| (0x0 << XIP_CTRL_CONT_XFER_EN_OFFSET)
@@ -82,7 +82,7 @@ static uint32_t set_xip_ctrl(struct ospi_xip_config xip_cfg)
 	| (0x0 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
 	| (0x0 << XIP_CTRL_XIP_MBL_OFFSET)
 	| (0x0 << XIP_CTRL_XIP_PREFETCH_EN_OFFSET)
-	| (xip_cfg->rxds_vl_en << XIP_CTRL_RXDS_VL_EN_OFFSET);
+	| (xip_cfg->xip_rxds_vl_en << XIP_CTRL_RXDS_VL_EN_OFFSET);
 
 	return val;
 }
@@ -426,15 +426,16 @@ void ospi_dma_transfer(struct ospi_regs *ospi, struct ospi_transfer *transfer)
 }
 
 /**
-  \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles,
-					bool is_dual_octal)
+  \fn          void ospi_hyperbus_xip_init(struct ospi_regs *ospi,
+			struct ospi_xip_config *xip_cfg, bool is_dual_octal)
   \brief       Initialize hyperbus XIP configuration for the OSPI instance
   \param[in]   ospi        Pointer to the OSPI register map
-  \param[in]   wait_cycles Wait cycles needed by the hyperbus device
+  \param[in]   xip_cfg     Pointer to the XIP configuration
   \param[in]   is_dual_octal OSPI transfer type is Dual Octal
   \return      none
 */
-void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is_dual_octal)
+void ospi_hyperbus_xip_init(struct ospi_regs *ospi,
+		struct ospi_xip_config *xip_cfg, bool is_dual_octal)
 {
 	uint8_t trans_type;
 
@@ -449,20 +450,24 @@ void ospi_hyperbus_xip_init(struct ospi_regs *ospi, uint8_t wait_cycles, bool is
 	ospi->OSPI_SPI_CTRLR0 = 1 << SPI_CTRLR0_SPI_DM_EN_OFFSET;
 
 	ospi->OSPI_XIP_CTRL = (1 << XIP_CTRL_XIP_HYPERBUS_EN_OFFSET)
-			| (1 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
-			| (wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
-			| (1 << XIP_CTRL_DFS_HC_OFFSET)
-			| (trans_type << XIP_CTRL_TRANS_TYPE_OFFSET);
+		| (1 << XIP_CTRL_RXDS_SIG_EN_OFFSET)
+		| (xip_cfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
+		| (1 << XIP_CTRL_DFS_HC_OFFSET)
+		| (trans_type << XIP_CTRL_TRANS_TYPE_OFFSET);
 
 	ospi->OSPI_XIP_WRITE_CTRL = (1 << XIP_WRITE_CTRL_XIPWR_HYPERBUS_EN_OFFSET)
-			| (1 << XIP_WRITE_CTRL_XIPWR_DM_EN_OFFSET)
-			| (1 << XIP_WRITE_CTRL_XIPWR_RXDS_SIG_EN_OFFSET)
+		| (1 << XIP_WRITE_CTRL_XIPWR_DM_EN_OFFSET)
+		| (1 << XIP_WRITE_CTRL_XIPWR_RXDS_SIG_EN_OFFSET)
 #if (defined(CONFIG_SOC_SERIES_E1C) || defined(CONFIG_SOC_SERIES_B1) \
 		|| defined(CONFIG_ENSEMBLE_GEN2))
 			| (1 << XIP_WRITE_CTRL_XIPWR_DFS_HC_OFFSET)
 #endif
-			| (trans_type << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
-			| (wait_cycles << XIP_WRITE_CTRL_XIPWR_WAIT_CYCLES);
+	| (trans_type << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
+	| (xip_cfg->xip_wait_cycles << XIP_WRITE_CTRL_XIPWR_WAIT_CYCLES);
+
+#ifndef CONFIG_FLASH_ADDRESS_IN_SINGLE_FIFO_LOCATION
+	ospi_control_xip_ss(ospi, xip_cfg->xip_cs_pin, SPI_SS_STATE_ENABLE);
+#endif
 
 	ospi_enable(ospi);
 }
