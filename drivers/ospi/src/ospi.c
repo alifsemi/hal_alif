@@ -465,7 +465,8 @@ void ospi_hyperbus_xip_init(struct ospi_regs *ospi,
 	| (trans_type << XIP_WRITE_CTRL_WR_TRANS_TYPE_OFFSET)
 	| (xip_cfg->xip_wait_cycles << XIP_WRITE_CTRL_XIPWR_WAIT_CYCLES);
 
-#ifndef CONFIG_FLASH_ADDRESS_IN_SINGLE_FIFO_LOCATION
+#if (defined(CONFIG_SOC_SERIES_E7) || defined(CONFIG_SOC_SERIES_E5) \
+	|| defined(CONFIG_SOC_SERIES_E3) || defined(CONFIG_SOC_SERIES_E1))
 	ospi_control_xip_ss(ospi, xip_cfg->xip_cs_pin, SPI_SS_STATE_ENABLE);
 #endif
 
