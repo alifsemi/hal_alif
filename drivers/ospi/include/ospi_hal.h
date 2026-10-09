@@ -45,6 +45,7 @@
 #define OSPI_ERR_INVALID_STATE      -101            /* State Invalid */
 #define OSPI_ERR_CTRL_BUSY          -102            /* Controller Busy */
 #define OSPI_ERR_INVALID_HANDLE     -103            /* Handler not valid */
+#define OSPI_ERR_UNSUPPORTED        -104            /* Unsupported hardware capability */
 
 
 /*---- OSPI DFS BITS ------------------*/
@@ -53,6 +54,8 @@
 #define OSPI_DFS_BITS_24       24             /* 24-bit DFS */
 #define OSPI_DFS_BITS_32       32             /* 32-bit DFS */
 
+/*---- Max value of Signal Delay -------*/
+#define OSPI_SIGNAL_DELAY_MAX	23U
 
 /*---- OSPI Status ---------------------*/
 struct ospi_status {
@@ -125,6 +128,18 @@ struct ospi_trans_config {
 	uint8_t  ddr_ins_enable;        /* Enable Instruction in DDR mode*/
 };
 
+/* ---- OSPI Signal Delay Configuration ---------------*/
+struct ospi_signal_delay_config {
+	uint8_t txd[16];    /* Transmit data delays */
+	uint8_t rxd[16];    /* Receive data delays */
+	uint8_t ssioen[16]; /* Data output-enable delays */
+	uint8_t rxds[2];    /* Read strobe delays */
+	uint8_t txddm[2];   /* Data mask delays */
+	uint8_t dmoen[2];   /* Mask output-enable delays */
+	uint8_t sclk;       /* Serial clock delay */
+	uint8_t sclkn;      /* Inverted clock delay */
+	uint8_t ssn[2];     /* Chip-select delays */
+};
 
 /**
  * \fn          alif_hal_ospi_initialize
@@ -135,6 +150,16 @@ struct ospi_trans_config {
  */
 int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 				struct ospi_init *init_d);
+
+/**
+ * \fn          alif_hal_ospi_apply_signal_delays
+ * \brief       Apply a complete set of signal delays
+ * \param[in]   handle  Instance handler
+ * \param[in]   config  Validated delay.
+ * \return      0 on Success, else error code
+ */
+int32_t alif_hal_ospi_apply_signal_delays(HAL_OSPI_Handle_T handle,
+			const struct ospi_signal_delay_config *config);
 
 /**
  * \fn          alif_hal_ospi_prepare_transfer

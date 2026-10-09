@@ -42,7 +42,7 @@ struct hal_ospi_inst
 		{.is_avail = 1}
 	};
 
-/* Helper : To fetch Instnace from Handle. */
+/* Helper : To fetch Instance from Handle. */
 static struct hal_ospi_inst *get_inst_by_handle(HAL_OSPI_Handle_T handle)
 {
 	if (handle >= HAL_OSPI_MAX_INST)
@@ -50,6 +50,19 @@ static struct hal_ospi_inst *get_inst_by_handle(HAL_OSPI_Handle_T handle)
 
 	return &(g_ospi_instance[handle]);
 }
+
+#if defined(CONFIG_ENSEMBLE_GEN2)
+/* Helper : Convert signal delays to register value */
+static uint32_t ospi_delays_to_reg_value(const uint8_t *delays, size_t count)
+{
+	uint32_t value = 0;
+
+	for (size_t i = 0; i < count; i++) {
+		value |= (uint32_t)delays[i] << (8U * i);
+	}
+	return value;
+}
+#endif
 
 /**
  * \fn          alif_hal_ospi_initialize
@@ -158,6 +171,75 @@ int32_t alif_hal_ospi_initialize(HAL_OSPI_Handle_T *handle,
 		return OSPI_ERR_INVALID_PARAM;
 	}
 
+	return OSPI_ERR_NONE;
+}
+
+int32_t alif_hal_ospi_apply_signal_delays(HAL_OSPI_Handle_T handle,
+				const struct ospi_signal_delay_config *config)
+{
+	if (config == NULL) {
+		return OSPI_ERR_INVALID_PARAM;
+	}
+	if (handle < 0 || handle >= HAL_OSPI_MAX_INST) {
+		return OSPI_ERR_INVALID_HANDLE;
+	}
+
+#if defined(CONFIG_ENSEMBLE_GEN2)
+	struct hal_ospi_inst *inst = get_inst_by_handle(handle);
+	struct ospi_regs *ospi;
+	struct ospi_aes_regs *aes;
+	uint32_t enabled;
+
+	if (inst->is_avail || inst->regs == NULL || inst->aes_regs == NULL) {
+		return OSPI_ERR_INVALID_STATE;
+	}
+
+	ospi = (struct ospi_regs *)inst->regs;
+	aes = (struct ospi_aes_regs *)inst->aes_regs;
+	if (aes->AES_CTRL & AES_CONTROL_XIP_EN) {
+		return OSPI_ERR_INVALID_STATE;
+	}
+	if ((ospi->OSPI_SR & SPI_SR_BUSY) || ospi->OSPI_TXFLR || ospi->OSPI_RXFLR) {
+		return OSPI_ERR_CTRL_BUSY;
+	}
+
+	enabled = ospi->OSPI_ENR;
+	ospi_disable(ospi);
+
+	/* Set per-line transmit data delays for TXD[0:15]. */
+	aes->AES_TXD_DELAY_0 = ospi_delays_to_reg_value(&config->txd[0], 4);
+	aes->AES_TXD_DELAY_1 = ospi_delays_to_reg_value(&config->txd[4], 4);
+	aes->AES_TXD_DELAY_2 = ospi_delays_to_reg_value(&config->txd[8], 4);
+	aes->AES_TXD_DELAY_3 = ospi_delays_to_reg_value(&config->txd[12], 4);
+
+	/* Set per-line receive data delays for RXD[0:15]. */
+	aes->AES_RXD_DELAY_0 = ospi_delays_to_reg_value(&config->rxd[0], 4);
+	aes->AES_RXD_DELAY_1 = ospi_delays_to_reg_value(&config->rxd[4], 4);
+	aes->AES_RXD_DELAY_2 = ospi_delays_to_reg_value(&config->rxd[8], 4);
+	aes->AES_RXD_DELAY_3 = ospi_delays_to_reg_value(&config->rxd[12], 4);
+
+	/* Set per-line data output-enable delays for SSI_OE_N[0:15]. */
+	aes->AES_SSI_OE_N_DELAY_0 = ospi_delays_to_reg_value(&config->ssioen[0], 4);
+	aes->AES_SSI_OE_N_DELAY_1 = ospi_delays_to_reg_value(&config->ssioen[4], 4);
+	aes->AES_SSI_OE_N_DELAY_2 = ospi_delays_to_reg_value(&config->ssioen[8], 4);
+	aes->AES_SSI_OE_N_DELAY_3 = ospi_delays_to_reg_value(&config->ssioen[12], 4);
+
+	/* Set read strobe delays for RXDS[0:1]. */
+	aes->AES_RXDS_DLY = ospi_delays_to_reg_value(config->rxds, 2);
+
+	/* Set data mask and mask output-enable delays for both lanes. */
+	aes->AES_TXD_DM_DELAY = ospi_delays_to_reg_value(config->txddm, 2) |
+			       (ospi_delays_to_reg_value(config->dmoen, 2) << 16);
+
+	/* Set chip-select delays for SS_N[0:1]. */
+	aes->AES_SS_N_DELAY = ospi_delays_to_reg_value(config->ssn, 2);
+
+	/* Set serial clock and inverted serial clock delays. */
+	aes->AES_SCLK_DELAY = (uint32_t)config->sclk | ((uint32_t)config->sclkn << 8);
+	ospi->OSPI_ENR = enabled;
+#else
+	return OSPI_ERR_UNSUPPORTED;
+#endif
 	return OSPI_ERR_NONE;
 }
 
