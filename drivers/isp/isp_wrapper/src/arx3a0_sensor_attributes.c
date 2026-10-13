@@ -25,7 +25,7 @@ AE_SNS_DEFAULT_S sensor_attributes = {
 	.minDgain = 1 * 1024,
 	.dgainStep = 1,
 	.aeRunInterval = 1,
-	.aeTarget = 100,
+	.aeTarget = 50,
 
 	.dampOver = 0x40,
 	.dampUnder = 0x40,
