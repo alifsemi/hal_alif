@@ -74,7 +74,7 @@ ISP_CALIB_DATA_S isp_calib_param = {
 			.autoAttr = {
 				.expTimeRange = {
 					.min =  100,
-					.max =  33000,
+					.max =  16000,
 				},
 				.againRange = {
 					.min = 1 * 1024,
@@ -84,7 +84,7 @@ ISP_CALIB_DATA_S isp_calib_param = {
 					.min = 1 * 1024,
 					.max = 1 * 1024,
 				},
-				.aeRunInterval = 1,
+				.aeRunInterval = 6,
 				.aeTarget = 100,
 				.dampOver = 0x10,
 				.dampUnder = 0x10,
@@ -115,7 +115,7 @@ ISP_CALIB_DATA_S isp_calib_param = {
 
 #if defined(CONFIG_ISP_LIB_WBM_MODULE)
 		.wbm = {
-			.enable = 1,
+			.enable = 0,
 			.measMode = ISP_AWB_MEAS_MODE_RGB,
 			.measRect = {
 				.hOffs = 0,
@@ -136,13 +136,13 @@ ISP_CALIB_DATA_S isp_calib_param = {
 
 #if defined(CONFIG_ISP_LIB_WB_MODULE)
 		.wb = {
-			.enable = 1,
+			.enable = 0,
 			.opType = OP_TYPE_AUTO,
 			.manualAttr = {
 				.wbGain = {0x100, 0x100, 0x100, 0x100},
 			},
 			.autoAttr = {
-				.runInterval = 1,
+				.runInterval = 12,
 				.speed = 64,
 				.tolerance = 1,
 				.initColorTemp = 5000,
@@ -257,7 +257,7 @@ ISP_CALIB_DATA_S isp_calib_param = {
 #if defined(CONFIG_ISP_LIB_FLT_MODULE)
 		.flt = {
 			.enable = 1,
-			.opType = OP_TYPE_AUTO,
+			.opType = OP_TYPE_MANUAL,
 			.manualAttr = {
 				.denoiseLevel = 0,
 				.sharpenLevel = 0,
@@ -271,12 +271,12 @@ ISP_CALIB_DATA_S isp_calib_param = {
 
 #if defined(CONFIG_ISP_LIB_CCM_MODULE)
 		.ccm = {
-			.opType = OP_TYPE_AUTO,
+			.opType = OP_TYPE_MANUAL,
 			.manualAttr = {
 				.colorMatrix = {
-					0x80, 0x00, 0x00,
-					0x00, 0x80, 0x00,
-					0x00, 0x00, 0x80
+					289, -70, -16,
+					-21, 183, -67,
+					-81, -8, 304
 				},
 				.rOffset = 0,
 				.gOffset = 0,
