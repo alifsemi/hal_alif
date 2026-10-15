@@ -75,6 +75,8 @@ extern int (*VsiLogLevel)(void);
 extern int (*VsiLogPrint)(const char *fmt, ...);
 void VsiLogLevelSet(int (*pfnLogLevel)(void), int (*pfnLogPrint)(const char *fmt, ...));
 
+extern int (*VsiVbBufCount)(void);
+void VsiVbBufCountSet(int (*pfnBufCount)(void));
 
 #ifdef __cplusplus
 #if __cplusplus
