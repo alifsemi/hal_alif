@@ -1765,8 +1765,8 @@ int se_service_process_toc_entry(const char *image_id)
 
 	se_service_all_svc_d.process_toc_entry_svc_d.header.hdr_service_id =
 						SERVICE_BOOT_PROCESS_TOC_ENTRY;
-	strncpy((char *) se_service_all_svc_d.process_toc_entry_svc_d.send_entry_id,
-				image_id, IMAGE_NAME_LENGTH);
+	memcpy((void *)se_service_all_svc_d.process_toc_entry_svc_d.send_entry_id,
+			image_id, strnlen(image_id, IMAGE_NAME_LENGTH));
 
 	err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.process_toc_entry_svc_d,
 			sizeof(se_service_all_svc_d.process_toc_entry_svc_d), SERVICE_TIMEOUT);
