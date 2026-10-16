@@ -1034,7 +1034,9 @@ static void get_eui48_extension(mfg_data_v1_t *p_mfg_data, uint8_t *p_data_out)
 static void se_service_manufacture_data_parse(get_device_revision_data_t *device_data,
 					      mfg_data_v1_t *mfg_data)
 {
-	if (IS_ENABLED(CONFIG_SOC_FAMILY_ENSEMBLE) && device_data->revision_id < 0x0000b300) {
+	if ((IS_ENABLED(CONFIG_SOC_SERIES_E7) || IS_ENABLED(CONFIG_SOC_SERIES_E5) ||
+		 IS_ENABLED(CONFIG_SOC_SERIES_E3) || IS_ENABLED(CONFIG_SOC_SERIES_E1)) &&
+		device_data->revision_id < 0x0000b300) {
 		mfg_data_v1_t *p_mfg_data = (mfg_data_v1_t *)device_data->MfgData;
 
 		mfg_data->fab_id = p_mfg_data->fab_id;
