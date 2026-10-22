@@ -1575,17 +1575,31 @@ int se_service_system_set_services_debug(bool debug_enable)
 int se_service_boot_reset_soc(void)
 {
 	int err, i = 0;
+	const bool in_isr = k_is_in_isr();
 
-	/* Ensure SE is ready to receive service calls */
-	err = se_service_ensure_ready();
-	if (err) {
-		return err;
-	}
+	if (in_isr) {
+		/*
+		 * Called from an ISR, e.g. a fatal error handler: the mutex
+		 * cannot be taken, so wake the SE with polled heartbeats.
+		 */
+		if (!atomic_get(&se_ready)) {
+			err = se_service_sync_locked(true);
+			if (err) {
+				return err;
+			}
+		}
+	} else {
+		/* Ensure SE is ready to receive service calls */
+		err = se_service_ensure_ready();
+		if (err) {
+			return err;
+		}
 
-	err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
-	if (err) {
-		LOG_ERR("Unable to lock mutex (error = %d)\n", err);
-		return err;
+		err = k_mutex_lock(&svc_mutex, K_MSEC(MUTEX_TIMEOUT));
+		if (err) {
+			LOG_ERR("Unable to lock mutex (error = %d)\n", err);
+			return err;
+		}
 	}
 
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
@@ -1601,7 +1615,9 @@ int se_service_boot_reset_soc(void)
 		/* SE service timed out. Increment count */
 		++i;
 	}
-	k_mutex_unlock(&svc_mutex);
+	if (!in_isr) {
+		k_mutex_unlock(&svc_mutex);
+	}
 	if (i >= MAX_TRIES) {
 		LOG_ERR("Failed to reset SoC with SE (error = %d)\n", err);
 		return err;
