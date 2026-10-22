@@ -1420,6 +1420,7 @@ int se_service_get_off_cfg(off_profile_t *wp)
 	}
 
 	wp->dcdc_voltage = se_service_all_svc_d.get_off_d.resp_dcdc_voltage;
+	wp->dcdc_mode = se_service_all_svc_d.get_off_d.resp_dcdc_mode;
 	wp->memory_blocks = se_service_all_svc_d.get_off_d.resp_memory_blocks;
 	wp->power_domains = se_service_all_svc_d.get_off_d.resp_power_domains;
 	wp->aon_clk_src = se_service_all_svc_d.get_off_d.resp_aon_clk_src;
@@ -1459,6 +1460,7 @@ int se_service_set_off_cfg(off_profile_t *wp)
 	memset(&se_service_all_svc_d, 0, sizeof(se_service_all_svc_d));
 	se_service_all_svc_d.set_off_d.header.hdr_service_id = SERVICE_POWER_SET_OFF_REQ_ID;
 	se_service_all_svc_d.set_off_d.send_dcdc_voltage = wp->dcdc_voltage;
+	se_service_all_svc_d.set_off_d.send_dcdc_mode = wp->dcdc_mode;
 	se_service_all_svc_d.set_off_d.send_memory_blocks = wp->memory_blocks;
 	se_service_all_svc_d.set_off_d.send_power_domains = wp->power_domains;
 	se_service_all_svc_d.set_off_d.send_aon_clk_src = wp->aon_clk_src;
