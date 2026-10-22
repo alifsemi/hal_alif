@@ -1630,8 +1630,8 @@ int se_service_boot_reset_cpu(uint32_t cpu_id)
 	se_service_all_svc_d.cpu_reboot_d.send_cpu_id = cpu_id;
 
 	while (i < MAX_TRIES) {
-		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
-				     sizeof(se_service_all_svc_d.service_header), SERVICE_TIMEOUT);
+		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.cpu_reboot_d,
+				     sizeof(se_service_all_svc_d.cpu_reboot_d), SERVICE_TIMEOUT);
 		if (!err) {
 			break;
 		}
@@ -1674,8 +1674,8 @@ int se_service_clock_set_divider(clock_divider_t divider, uint32_t value)
 	se_service_all_svc_d.set_clk_divider_d.send_value = value;
 
 	while (i < MAX_TRIES) {
-		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.service_header,
-				     sizeof(se_service_all_svc_d.service_header), SERVICE_TIMEOUT);
+		err = send_msg_to_se((uint32_t *)&se_service_all_svc_d.set_clk_divider_d,
+				     sizeof(se_service_all_svc_d.set_clk_divider_d), SERVICE_TIMEOUT);
 		if (!err) {
 			break;
 		}
