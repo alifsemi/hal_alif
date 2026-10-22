@@ -812,7 +812,9 @@ void ospi_xip_enable(struct ospi_regs *ospi, struct ospi_aes_regs *aes,
 	ospi->OSPI_XIP_MODE_BITS = xfg->xip_mod_bits;
 	ospi->OSPI_RX_SAMPLE_DELAY = xfg->rx_smpl_dlay;
 
-#ifndef CONFIG_FLASH_ADDRESS_IN_SINGLE_FIFO_LOCATION
+#if !defined(CONFIG_FLASH_ADDRESS_IN_SINGLE_FIFO_LOCATION) && \
+	(defined(CONFIG_SOC_SERIES_E7) || defined(CONFIG_SOC_SERIES_E5) \
+	|| defined(CONFIG_SOC_SERIES_E3) || defined(CONFIG_SOC_SERIES_E1))
 	ospi_control_xip_ss(ospi, xfg->xip_cs_pin, SPI_SS_STATE_ENABLE);
 #endif
 	ospi_enable(ospi);
