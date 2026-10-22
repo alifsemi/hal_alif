@@ -328,12 +328,13 @@ struct ospi_aes_regs {
 #define XIP_CTRL_ADDR_LEN_0_BIT         0x0
 #define XIP_CTRL_ADDR_LEN_4_BIT         0x1
 #define XIP_CTRL_ADDR_LEN_8_BIT         0x2
-#define XIP_CTRL_ADDR_LEN_16_BIT        0x3
-#define XIP_CTRL_ADDR_LEN_20_BIT        0x4
-#define XIP_CTRL_ADDR_LEN_24_BIT        0x5
-#define XIP_CTRL_ADDR_LEN_28_BIT        0x6
-#define XIP_CTRL_ADDR_LEN_32_BIT        0x7
-#define XIP_CTRL_ADDR_LEN_36_BIT        0x8
+#define XIP_CTRL_ADDR_LEN_12_BIT        0x3
+#define XIP_CTRL_ADDR_LEN_16_BIT        0x4
+#define XIP_CTRL_ADDR_LEN_20_BIT        0x5
+#define XIP_CTRL_ADDR_LEN_24_BIT        0x6
+#define XIP_CTRL_ADDR_LEN_28_BIT        0x7
+#define XIP_CTRL_ADDR_LEN_32_BIT        0x8
+#define XIP_CTRL_ADDR_LEN_36_BIT        0x9
 
 /* AES_CONTROL fields */
 #define AES_CONTROL_LD_KEY              (1U << 7)

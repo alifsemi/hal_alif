@@ -68,7 +68,7 @@ static uint32_t set_xip_ctrl(struct ospi_xip_config *xip_cfg)
 
 	val = (OCTAL << XIP_CTRL_FRF_OFFSET)
 	| (0x2 << XIP_CTRL_TRANS_TYPE_OFFSET)
-	| (XIP_CTRL_ADDR_LEN_36_BIT << XIP_CTRL_ADDR_L_OFFSET)
+	| (XIP_CTRL_ADDR_LEN_32_BIT << XIP_CTRL_ADDR_L_OFFSET)
 	| (xip_cfg->xip_inst_len << XIP_CTRL_INST_L_OFFSET)
 	| (0x0 << XIP_CTRL_MD_BITS_EN_OFFSET)
 	| (xip_cfg->xip_wait_cycles << XIP_CTRL_WAIT_CYCLES_OFFSET)
