@@ -3,7 +3,10 @@
 Prebuilt static library for VeriSilicon Hantro VC9000E JPEG encoder
 SW (quantization tables, Huffman tables, JPEG header).
 
-## Current Library Version: 1.0.0
+## Current Library Version: 1.3.0
+
+v1.3.0 adds JPEG thumbnail embedding (JFIF RGB24, JFXX JPEG, JFXX palette),
+slice-mode DRI header generation, and NV12 crop offset calculation.
 
 Source repository: `alif-vc9000e-jpeg-lib` (private)
 
@@ -49,5 +52,5 @@ No manual configuration needed — it follows your Zephyr build toolchain.
 
 ```bash
 strings Lib/libjpeg_hantro_sw_gcc.a | grep "alif-vc9000e-jpeg-lib"
-# Output: alif-vc9000e-jpeg-lib v1.0.0
+# Output: alif-vc9000e-jpeg-lib v1.3.0
 ```
