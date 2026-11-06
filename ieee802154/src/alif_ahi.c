@@ -32,6 +32,7 @@ static const struct device *uart_dev = DEVICE_DT_GET(UART_DEVICE_NODE);
 struct msg_buf rx_msg;
 
 static msg_received_callback receive_cb;
+static bool ahi_uart_initialized;
 
 /*AHI Protocol defines*/
 #define AHI_KE_MSG_TYPE 0x10
@@ -83,6 +84,10 @@ int alif_ahi_msg_send(struct msg_buf *p_msg, const uint8_t *p_data, uint16_t dat
 	if (p_msg == NULL) {
 		return -1;
 	}
+	if (!ahi_uart_initialized) {
+		LOG_ERR("AHI UART not initialized");
+		return -1;
+	}
 
 	/* Deassert&assert rts_n, falling edge triggers wake up the RF core */
 	wake_es0(uart_dev);
@@ -117,19 +122,31 @@ int alif_ahi_reset(void)
 	uart_irq_rx_enable(uart_dev);
 	/* Clear receive buffers */
 	rx_msg.msg_len = 0;
+
+	if (ahi_uart_initialized) {
+		return 0;
+	}
+
+	int ret = take_es0_into_use();
+
+	if (ret != 0) {
+		LOG_ERR("Failed to take ES0 into use: %d", ret);
+		return ret;
+	}
+	ahi_uart_initialized = true;
 	return 0;
 }
 
 void alif_ahi_init(msg_received_callback callback)
 {
+	int ret;
+
 	receive_cb = callback;
-}
+	ret = alif_ahi_reset();
 
-static int ahi_uart_initialize(void)
-{
-	LOG_INF("ahi uart initialized");
-	alif_ahi_reset();
-	return 0;
+	if (ret != 0) {
+		LOG_ERR("Failed to reset AHI: %d", ret);
+		receive_cb = NULL;
+		return;
+	}
 }
-
-SYS_INIT(ahi_uart_initialize, POST_KERNEL, 80);
