@@ -63,6 +63,11 @@ static K_SEM_DEFINE(ahi_receive_sem, 0, 1);
 
 static struct msg_buf *resp_msg_ptr;
 struct msg_buf ahi_msg;
+static struct msg_buf resp_msg;
+/* Host time when the armed response was accepted. The radio samples its timestamp
+ * before sending that response, so this is the matching local reference.
+ */
+static uint32_t resp_rx_us;
 
 /* API Callback functions */
 struct alif_mac154_api_cb api_cb;
@@ -77,6 +82,7 @@ void ahi_msg_received_callback(struct msg_buf *p_msg)
 	struct alif_rx_frame_received frame;
 
 	if (alif_ahi_msg_resp_event_recv(resp_msg_ptr, p_msg)) {
+		resp_rx_us = (uint32_t)k_ticks_to_us_floor64(k_uptime_ticks());
 		resp_msg_ptr = NULL;
 		k_sem_give(&ahi_receive_sem);
 		LOG_DBG("Excpected msg received");
@@ -117,14 +123,40 @@ void ahi_msg_received_callback(struct msg_buf *p_msg)
 	}
 }
 
-void alif_hal_msg_wait(struct msg_buf *p_msg_ptr)
+/* Publish the expected response before the send. An early reply can arrive before
+ * alif_ahi_msg_send() returns, and arming the wait afterwards drops it.
+ */
+static void alif_hal_msg_arm(struct msg_buf *p_msg_ptr, struct msg_buf *p_resp)
 {
-	resp_msg_ptr = p_msg_ptr;
-	p_msg_ptr->msg_len = 0;
+	unsigned int key = irq_lock();
 
+	resp_msg_ptr = NULL;
+	k_sem_reset(&ahi_receive_sem);
+	p_resp->msg_len = 0;
+	p_resp->rsp_event = p_msg_ptr->rsp_event;
+	p_resp->rsp_msg = p_msg_ptr->rsp_msg;
+	resp_msg_ptr = p_resp;
+	irq_unlock(key);
+}
+
+static void alif_hal_msg_wait(struct msg_buf *p_msg_ptr)
+{
 	if (k_sem_take(&ahi_receive_sem, K_MSEC(HAL_MSG_TIMEOUT_MS)) != 0) {
-		LOG_ERR("uart read timeout!, %u", p_msg_ptr->rsp_msg);
+		LOG_ERR("ahi read timeout!, %u", p_msg_ptr->rsp_msg);
+		resp_msg_ptr = NULL;
+		p_msg_ptr->msg_len = 0;
 	}
+}
+
+static void alif_hal_msg_send(struct msg_buf *p_msg_ptr)
+{
+	alif_hal_msg_arm(p_msg_ptr, &resp_msg);
+	if (alif_ahi_msg_send(p_msg_ptr, NULL, 0) != 0) {
+		LOG_ERR("Failed to send AHI message");
+		resp_msg_ptr = NULL;
+		return;
+	}
+	alif_hal_msg_wait(&resp_msg);
 }
 
 /*
@@ -140,9 +172,6 @@ void alif_mac154_init(struct alif_mac154_api_cb *p_api)
 	api_cb.rx_frame_recv_cb = p_api->rx_frame_recv_cb;
 	api_cb.rx_status_cb = p_api->rx_status_cb;
 	alif_ahi_init(ahi_msg_received_callback);
-	int ret = take_es0_into_use(); /* temporary direct stuff */
-
-	LOG_INF("boot SE0 ret:%d", ret);
 }
 
 enum alif_mac154_status_code alif_mac154_reset(void)
@@ -154,9 +183,8 @@ enum alif_mac154_status_code alif_mac154_reset(void)
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_reset(&ahi_msg, 0);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -172,10 +200,11 @@ static enum alif_mac154_status_code alif_mac154_ll_version_get(uint32_t *p_hw_ve
 {
 	enum alif_mac154_status_code ret;
 
+	k_mutex_lock(&api_mutex, K_FOREVER);
 	alif_ahi_msg_version_get(&ahi_msg, 0);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_version(&ahi_msg, NULL, p_hw_version, p_sw_version);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_version(&resp_msg, NULL, p_hw_version, p_sw_version);
+	k_mutex_unlock(&api_mutex);
 
 	if (ret != ALIF_MAC154_STATUS_OK) {
 		LOG_WRN("version get failed %x", ret);
@@ -238,18 +267,21 @@ enum alif_mac154_status_code alif_mac154_timestamp_get(uint64_t *p_timestamp)
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_timestamp_get(&ahi_msg, 0);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	/* Read timestamp */
-	req_ts = (uint32_t)k_ticks_to_us_floor64(k_uptime_ticks());
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_timestamp(&ahi_msg, NULL, p_timestamp);
-	/* Read timestamp */
-	resp_ts = (uint32_t)k_ticks_to_us_floor64(k_uptime_ticks());
-
-	if (resp_ts > req_ts) {
+	alif_hal_msg_arm(&ahi_msg, &resp_msg);
+	if (alif_ahi_msg_send(&ahi_msg, NULL, 0) != 0) {
+		LOG_ERR("Failed to send AHI message");
+		resp_msg_ptr = NULL;
+		k_mutex_unlock(&api_mutex);
+		return ALIF_MAC154_STATUS_COMM_FAILURE;
+	}
+	alif_hal_msg_wait(&resp_msg);
+	ret = alif_ahi_msg_timestamp(&resp_msg, NULL, p_timestamp);
+	if (ret == ALIF_MAC154_STATUS_OK) {
+		/* resp_rx_us was taken when the response arrived, including during send */
+		req_ts = resp_rx_us;
+		resp_ts = (uint32_t)k_ticks_to_us_floor64(k_uptime_ticks());
+		/* uint32 subtraction: equal samples add 0, and a wrap yields the elapsed time */
 		*p_timestamp += resp_ts - req_ts;
-	} else {
-		*p_timestamp += (0xffffffff - (req_ts - resp_ts));
 	}
 
 	k_mutex_unlock(&api_mutex);
@@ -273,15 +305,14 @@ enum alif_mac154_status_code alif_mac154_transmit(struct alif_tx_req *p_tx,
 	alif_ahi_msg_tx_start(&ahi_msg, p_tx->msg_id, p_tx->channel, p_tx->cca_requested,
 			      p_tx->acknowledgment_asked, p_tx->timestamp, p_tx->p_payload,
 			      p_tx->length);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
+	alif_hal_msg_send(&ahi_msg);
 
 	if (ll_sw_version >= VERSION(1, 1, 0)) {
-		ret = alif_ahi_msg_tx_start_resp_1_1_0(&ahi_msg, 0, &p_tx_ack->ack_rssi,
+		ret = alif_ahi_msg_tx_start_resp_1_1_0(&resp_msg, 0, &p_tx_ack->ack_rssi,
 						       &p_tx_ack->ack_timestamp, p_tx_ack->ack_msg,
 						       &p_tx_ack->ack_msg_len);
 	} else {
-		ret = alif_ahi_msg_tx_start_resp(&ahi_msg, 0, &p_tx_ack->ack_rssi,
+		ret = alif_ahi_msg_tx_start_resp(&resp_msg, 0, &p_tx_ack->ack_rssi,
 						 &p_tx_ack->ack_timestamp, p_tx_ack->ack_msg,
 						 &p_tx_ack->ack_msg_len);
 	}
@@ -299,9 +330,8 @@ enum alif_mac154_status_code alif_mac154_receive_start(struct alif_rx_enable *p_
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_rx_start(&ahi_msg, 0, p_rx->channel, false, p_rx->frames, p_rx->timestamp);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_rx_start_resp(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_rx_start_resp(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -320,9 +350,8 @@ enum alif_mac154_status_code alif_mac154_receive_stop(void)
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_rx_stop(&ahi_msg, 0);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -345,9 +374,8 @@ alif_mac154_energy_detection(struct alif_energy_detect *p_energy_measure,
 
 	alif_ahi_msg_ed_start(&ahi_msg, 0, p_energy_measure->channel, p_energy_measure->threshold,
 			      p_energy_measure->nb_tics, p_energy_measure->timestamp);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_energy_detect_resp(&ahi_msg, NULL, &p_energy_measure_result->nb_measure,
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_energy_detect_resp(&resp_msg, NULL, &p_energy_measure_result->nb_measure,
 					      &p_energy_measure_result->average,
 					      &p_energy_measure_result->max);
 
@@ -374,9 +402,8 @@ enum alif_mac154_status_code alif_mac154_short_address_set(uint16_t short_addres
 		alif_ahi_msg_short_id_set(&ahi_msg, 0, short_address);
 	}
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -403,9 +430,8 @@ enum alif_mac154_status_code alif_mac154_extended_address_set(uint8_t *p_extende
 		alif_ahi_msg_long_id_set(&ahi_msg, 0, p_extended_address);
 	}
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -429,9 +455,8 @@ enum alif_mac154_status_code alif_mac154_pan_id_set(uint16_t pan_id)
 		alif_ahi_msg_pan_id_set(&ahi_msg, 0, pan_id);
 	}
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -455,9 +480,8 @@ enum alif_mac154_status_code alif_mac154_pendings_short_address_insert(uint16_t 
 		alif_ahi_msg_pending_short_id_insert(&ahi_msg, 0, short_address);
 	}
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -482,9 +506,8 @@ enum alif_mac154_status_code alif_mac154_pendings_short_address_remove(uint16_t 
 		alif_ahi_msg_pending_short_id_remove(&ahi_msg, 0, short_address);
 	}
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -515,9 +538,8 @@ enum alif_mac154_status_code alif_mac154_pendings_long_address_insert(uint8_t *p
 		alif_ahi_msg_pending_long_id_insert(&ahi_msg, 0, p_extended_address);
 	}
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -549,9 +571,8 @@ enum alif_mac154_status_code alif_mac154_pendings_long_address_remove(uint8_t *p
 		alif_ahi_msg_pending_long_id_remove(&ahi_msg, 0, p_extended_address);
 	}
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -571,9 +592,8 @@ enum alif_mac154_status_code alif_mac154_promiscious_mode_set(bool promiscuous_m
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_promiscuous_set(&ahi_msg, 0, promiscuous_mode);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -593,9 +613,8 @@ enum alif_mac154_status_code alif_mac154_tx_power_set(int16_t dbm)
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_max_tx_power_set(&ahi_msg, 0, dbm);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -615,9 +634,8 @@ enum alif_mac154_status_code alif_mac154_cca_mode_set(enum alif_mac154_cca_mode 
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_cca_mode_set(&ahi_msg, 0, mode);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -637,9 +655,8 @@ enum alif_mac154_status_code alif_mac154_ed_threshold_set(int8_t input)
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_ed_threshold_set(&ahi_msg, 0, input);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -660,9 +677,8 @@ enum alif_mac154_status_code alif_mac154_dbg_rf(uint8_t write, uint32_t key, uin
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_dbg_rf(&ahi_msg, 0, write, key, value);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_rf_dbg_resp(&ahi_msg, NULL, p_read);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_rf_dbg_resp(&resp_msg, NULL, p_read);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -682,9 +698,8 @@ enum alif_mac154_status_code alif_mac154_csl_config_set(struct alif_mac154_csl_c
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_csl_period_set(&ahi_msg, 0, p_csl_config->csl_period);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -706,9 +721,8 @@ enum alif_mac154_status_code alif_mac154_rx_slot_set(struct alif_mac154_rx_slot 
 
 	alif_ahi_msg_config_rx_slot(&ahi_msg, 0, p_rx_slot_config->start,
 				    p_rx_slot_config->duration, p_rx_slot_config->channel);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_config_rx_slot_resp(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_config_rx_slot_resp(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 
@@ -726,9 +740,8 @@ enum alif_mac154_status_code alif_mac154_expected_rx_time_set(uint32_t expected_
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_config_expected_rx_time(&ahi_msg, 0, expected_rx_time);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_set_expected_rx_time_resp(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_set_expected_rx_time_resp(&resp_msg, NULL);
 
 	k_mutex_unlock(&api_mutex);
 	if (ret != ALIF_MAC154_STATUS_OK) {
@@ -746,10 +759,11 @@ alif_mac154_key_value_description_set(struct alif_mac154_key_description *key_de
 
 
 	if (IS_ENABLED(CONFIG_IEEE802154_ALIF_TX_ENCRYPT)) {
+		k_mutex_lock(&api_mutex, K_FOREVER);
 		alif_ahi_msg_clear_sec_keys(&ahi_msg, 0);
-		alif_ahi_msg_send(&ahi_msg, NULL, 0);
-		alif_hal_msg_wait(&ahi_msg);
-		ret = alif_ahi_msg_clear_key_desc_resp(&ahi_msg, NULL);
+		alif_hal_msg_send(&ahi_msg);
+		ret = alif_ahi_msg_clear_key_desc_resp(&resp_msg, NULL);
+		k_mutex_unlock(&api_mutex);
 		if (ret != ALIF_MAC154_STATUS_OK) {
 			LOG_WRN("Key descriotion clear failed %x", ret);
 		}
@@ -765,9 +779,8 @@ alif_mac154_key_value_description_set(struct alif_mac154_key_description *key_de
 				key_desc_list->key_id_mode, key_desc_list->frame_counter,
 				key_desc_list->frame_counter_per_key);
 
-			alif_ahi_msg_send(&ahi_msg, NULL, 0);
-			alif_hal_msg_wait(&ahi_msg);
-			ret = alif_ahi_msg_set_key_desc_resp(&ahi_msg, NULL);
+			alif_hal_msg_send(&ahi_msg);
+			ret = alif_ahi_msg_set_key_desc_resp(&resp_msg, NULL);
 			if (ret != ALIF_MAC154_STATUS_OK) {
 				LOG_WRN("Key descriotion set failed %x", ret);
 				break;
@@ -831,9 +844,8 @@ enum alif_mac154_status_code alif_mac154_security_frame_counter_set(uint32_t fra
 
 	alif_ahi_msg_config_frame_counter(&ahi_msg, 0, frame_counter, false);
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_set_frame_counter_resp(&ahi_msg, NULL, false);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_set_frame_counter_resp(&resp_msg, NULL, false);
 
 	k_mutex_unlock(&api_mutex);
 	if (ret != ALIF_MAC154_STATUS_OK) {
@@ -855,9 +867,8 @@ alif_mac154_security_frame_counter_set_if_larger(uint32_t frame_counter)
 
 	alif_ahi_msg_config_frame_counter(&ahi_msg, 0, frame_counter, true);
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_set_frame_counter_resp(&ahi_msg, NULL, true);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_set_frame_counter_resp(&resp_msg, NULL, true);
 
 	k_mutex_unlock(&api_mutex);
 	if (ret != ALIF_MAC154_STATUS_OK) {
@@ -877,9 +888,8 @@ alif_mac154_csl_phase_get(struct alif_mac154_csl_phase *p_csl_phase_resp)
 	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_csl_phase_get(&ahi_msg, 0);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-	ret = alif_ahi_msg_csl_phase_get_resp(&ahi_msg, NULL, &p_csl_phase_resp->timestamp,
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_csl_phase_get_resp(&resp_msg, NULL, &p_csl_phase_resp->timestamp,
 					      &p_csl_phase_resp->csl_phase);
 
 	k_mutex_unlock(&api_mutex);
@@ -895,60 +905,76 @@ static enum alif_mac154_status_code
 alif_mac154_ie_long_id_insert(const uint8_t *p_extended_address,
 			      const struct alif_802154_header_ie *ie_info)
 {
+	enum alif_mac154_status_code ret;
 
 	LOG_HEXDUMP_DBG(p_extended_address, 8, "long_id_insert addr:");
+	k_mutex_lock(&api_mutex, K_FOREVER);
 
 	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, 0, p_extended_address, ie_info);
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
+	alif_hal_msg_send(&ahi_msg);
 
-	return alif_ahi_msg_status(&ahi_msg, NULL);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
+	k_mutex_unlock(&api_mutex);
+	return ret;
 }
 
 static enum alif_mac154_status_code
 alif_mac154_ie_short_id_insert(uint16_t short_address, const struct alif_802154_header_ie *ie_info)
 {
+	enum alif_mac154_status_code ret;
+
 	LOG_DBG("0x%x", short_address);
 
+	k_mutex_lock(&api_mutex, K_FOREVER);
 	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, short_address, NULL, ie_info);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
+	alif_hal_msg_send(&ahi_msg);
 
-	return alif_ahi_msg_status(&ahi_msg, NULL);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
+	k_mutex_unlock(&api_mutex);
+	return ret;
 }
 
 static enum alif_mac154_status_code alif_mac154_ie_long_id_remove(const uint8_t *p_extended_address)
 {
+	enum alif_mac154_status_code ret;
+
 	LOG_HEXDUMP_DBG(p_extended_address, 8, "long_id_remove addr:");
+	k_mutex_lock(&api_mutex, K_FOREVER);
 	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, 0, p_extended_address, NULL);
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-
-	return alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
+	k_mutex_unlock(&api_mutex);
+	return ret;
 }
 
 static enum alif_mac154_status_code alif_mac154_ie_short_id_remove(uint16_t short_address)
 {
+	enum alif_mac154_status_code ret;
+
 	LOG_DBG("0x%x", short_address);
 
+	k_mutex_lock(&api_mutex, K_FOREVER);
 	alif_ahi_msg_ie_header_gen(&ahi_msg, 0, short_address, NULL, NULL);
 
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
-
-	return alif_ahi_msg_status(&ahi_msg, NULL);
+	alif_hal_msg_send(&ahi_msg);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
+	k_mutex_unlock(&api_mutex);
+	return ret;
 }
 
 static enum alif_mac154_status_code alif_mac154_purge_all_ie(void)
 {
+	enum alif_mac154_status_code ret;
 
+	k_mutex_lock(&api_mutex, K_FOREVER);
 	alif_ahi_msg_ie_purge_all(&ahi_msg, 0);
-	alif_ahi_msg_send(&ahi_msg, NULL, 0);
-	alif_hal_msg_wait(&ahi_msg);
+	alif_hal_msg_send(&ahi_msg);
 
-	return alif_ahi_msg_status(&ahi_msg, NULL);
+	ret = alif_ahi_msg_status(&resp_msg, NULL);
+	k_mutex_unlock(&api_mutex);
+	return ret;
 }
 
 enum alif_mac154_status_code
