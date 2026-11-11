@@ -8,6 +8,7 @@
 #include <zephyr/logging/log.h>
 
 #include "ble_api.h"
+#include "co_math.h"
 #include "hci_uart.h"
 #include "rwip.h"
 #include "rwip_config.h"
@@ -17,6 +18,7 @@
 #include "soc_memory_map.h"
 #include "alif_ble.h"
 #include "gapm.h"
+#include "se_service.h"
 
 static k_tid_t ble_tid;
 
@@ -199,6 +201,23 @@ static void gapm_reset_cb(uint32_t metainfo, uint16_t status)
 	k_sem_give(&reset_sem);
 }
 
+/* rwip_init() seeds the host PRNG from the microsecond timer, which reads the same
+ * on every cold boot, so random addresses and keys derived from it would repeat
+ * across devices.
+ */
+static void seed_host_prng(void)
+{
+	uint32_t seed;
+	int err = se_service_get_rnd_num((uint8_t *)&seed, sizeof(seed));
+
+	if (err) {
+		LOG_WRN("SE RNG unavailable (%d), host PRNG seed is not random", err);
+		return;
+	}
+
+	co_random_init(seed);
+}
+
 static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 {
 	int ret = 0;
@@ -231,6 +250,7 @@ static void ble_task(void *dummy1, void *dummy2, void *dummy3)
 		}
 
 		rwip_init(RWIP_INIT_NO_ERROR);
+		seed_host_prng();
 		initialised = INITIALISED_MAGIC;
 	} else {
 		/* Everything is already initialised as we are in warm restart case */
