@@ -385,7 +385,7 @@ void wake_es0(const struct device *uart_dev)
 		/* Wakeup Riscv by low CTS line */
 		if (rts == 1) {
 			uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 0);
-			k_usleep(100);
+			k_busy_wait(50);
 		}
 		uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_RTS, 1);
 		uart_line_ctrl_set(uart_dev, UART_LINE_CTRL_AFCE, 1);
