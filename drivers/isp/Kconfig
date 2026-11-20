@@ -87,6 +87,7 @@ choice ISP_SENSOR_PARAMS
 	default ISP_SENSOR_OV5675 if VIDEO_OV5675
 	default ISP_SENSOR_ARX3A0 if VIDEO_ARX3A0
 	default ISP_SENSOR_MT9M114 if VIDEO_MT9M114
+	default ISP_SENSOR_OV5647 if VIDEO_OV5647
 	help
 	  Select exactly one sensor whose ISP calibration parameters
 	  (isp_calib_param) and AE sensor attributes (sensor_attributes)
@@ -118,6 +119,14 @@ config ISP_SENSOR_MT9M114
 	  Compile MT9M114-specific ISP calibration parameters and sensor
 	  attributes (mt9m114_isp_param_conf.c, mt9m114_sensor_attributes.c)
 	  when the MT9M114 sensor is connected to the ISP pipeline.
+
+config ISP_SENSOR_OV5647
+	bool "OV5647"
+	depends on VIDEO_OV5647
+	help
+	  Compile OV5647-specific ISP calibration parameters and sensor
+	  attributes (ov5647_isp_param_conf.c, ov5647_sensor_attributes.c)
+	  when the ov5647 sensor is connected to the ISP pipeline.
 
 endchoice # ISP_SENSOR_PARAMS
 
