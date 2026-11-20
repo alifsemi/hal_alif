@@ -89,8 +89,92 @@ extern int isp_vsi_stop(struct isp_config_params *init_cfg);
 extern int isp_vsi_enqueue(struct isp_config_params *init_cfg,
 		struct video_buffer *buf);
 extern int isp_vsi_dequeue(struct isp_config_params *init_cfg,
-		struct video_buffer *buf);
+		uint32_t *index);
 extern void VSI_ISP_IrqProcessFrameEnd(ISP_PORT IspPort);
+
+/* Matches VB_MAX_FRAME in the double-buffer ISP library. */
+#define ISP_VB_SLOT_COUNT 4
+
+static struct video_buffer *isp_vb_slots[ISP_VB_SLOT_COUNT];
+/* True while this slot is owned by the driver, not the application. */
+static bool isp_vb_held[ISP_VB_SLOT_COUNT];
+
+static int isp_vb_count(void)
+{
+	return ISP_VB_SLOT_COUNT;
+}
+
+static int isp_vb_claim(struct video_buffer *buf)
+{
+	int free_idx = -1;
+
+	for (int i = 0; i < ISP_VB_SLOT_COUNT; i++) {
+		if (isp_vb_slots[i] == buf) {
+			return i;
+		}
+		if (free_idx < 0 && isp_vb_slots[i] == NULL) {
+			free_idx = i;
+		}
+	}
+
+	return free_idx;
+}
+
+struct video_buffer *isp_vsi_buffer_by_index(uint32_t index)
+{
+	if (index >= ISP_VB_SLOT_COUNT) {
+		return NULL;
+	}
+
+	return isp_vb_slots[index];
+}
+
+bool isp_vsi_has_buffer(void)
+{
+	for (int i = 0; i < ISP_VB_SLOT_COUNT; i++) {
+		if (isp_vb_held[i]) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+int isp_vsi_held_count(void)
+{
+	unsigned int irq_state;
+	int count = 0;
+
+	irq_state = irq_lock();
+	for (int i = 0; i < ISP_VB_SLOT_COUNT; i++) {
+		if (isp_vb_held[i]) {
+			count++;
+		}
+	}
+	irq_unlock(irq_state);
+
+	return count;
+}
+
+struct video_buffer *isp_vsi_reclaim_held(void)
+{
+	unsigned int irq_state;
+	struct video_buffer *buf = NULL;
+
+	irq_state = irq_lock();
+	for (int i = 0; i < ISP_VB_SLOT_COUNT; i++) {
+		if (!isp_vb_held[i]) {
+			continue;
+		}
+
+		isp_vb_held[i] = false;
+		buf = isp_vb_slots[i];
+		break;
+	}
+	irq_unlock(irq_state);
+
+	return buf;
+}
 
 #if defined(CONFIG_ISP_LIB_AE_MODULE)
 static struct sensor_config {
@@ -348,7 +432,12 @@ int isp_vsi_init(struct isp_config_params *init_cfg)
 		return -EINVAL;
 	}
 
+	/* Drop slots from the previous session. */
+	memset(isp_vb_slots, 0, sizeof(isp_vb_slots));
+	memset(isp_vb_held, 0, sizeof(isp_vb_held));
+
 	VsiLogLevelSet(&log_level, &isp_lib_log_print);
+	VsiVbBufCountSet(isp_vb_count);
 
 	port = &(init_cfg->port);
 	channel = &(init_cfg->channel);
@@ -677,6 +766,11 @@ int isp_vsi_uninit(struct isp_config_params *init_cfg)
 	return 0;
 }
 
+void isp_vsi_mi_irq(struct isp_config_params *init_cfg, uint32_t mi_mis)
+{
+	(void)VSI_MPI_ISP_MiIrqProcess(init_cfg->port.isp_idx, mi_mis);
+}
+
 void isp_vsi_bottom_half(const struct device *dev,
 		struct isp_config_params *init_cfg, uint32_t mi_mis)
 {
@@ -692,6 +786,8 @@ void isp_vsi_bottom_half(const struct device *dev,
 
 	isp_port_id.devId = port->isp_idx;
 	isp_port_id.portId = port->port_id;
+
+	ARG_UNUSED(mi_mis);
 
 	VSI_ISP_IrqProcessFrameEnd(isp_port_id);
 
@@ -786,6 +882,7 @@ int isp_vsi_stop(struct isp_config_params *init_cfg)
 	ISP_PORT isp_port_id;
 	ISP_CHN isp_chn_id;
 
+	unsigned int irq_state;
 	int ret = 0;
 
 	if (!init_cfg) {
@@ -811,7 +908,10 @@ int isp_vsi_stop(struct isp_config_params *init_cfg)
 		return isp_err_2_errno(ret);
 	}
 
+	/* StreamOff and the MI interrupt share the buffer lists. */
+	irq_state = irq_lock();
 	ret = VSI_MPI_ISP_DisableChn(isp_chn_id);
+	irq_unlock(irq_state);
 	if (ret) {
 		LOG_ERR("Failed to disable ISP Channel!");
 		return isp_err_2_errno(ret);
@@ -834,7 +934,9 @@ int isp_vsi_enqueue(struct isp_config_params *init_cfg, struct video_buffer *buf
 	ISP_CHN isp_chn_id;
 	VIDEO_BUF_S isp_buf;
 
+	unsigned int irq_state;
 	size_t tmp;
+	int slot;
 	int ret;
 
 	if (!buf || !init_cfg) {
@@ -849,7 +951,13 @@ int isp_vsi_enqueue(struct isp_config_params *init_cfg, struct video_buffer *buf
 	isp_chn_id.portId = port->port_id;
 	isp_chn_id.chnId = channel->channel_idx;
 
-	isp_buf.index = 0;
+	slot = isp_vb_claim(buf);
+	if (slot < 0) {
+		LOG_ERR("No free ISP buffer slot");
+		return -ENOBUFS;
+	}
+
+	isp_buf.index = (vsi_u32_t)slot;
 	isp_buf.imageSize = buf->size;
 	isp_buf.numPlanes =
 		fourcc_to_numplanes(channel->output_fmt.pixelformat);
@@ -878,7 +986,14 @@ int isp_vsi_enqueue(struct isp_config_params *init_cfg, struct video_buffer *buf
 		}
 	}
 
+	/* The MI interrupt edits the same library lists. */
+	irq_state = irq_lock();
 	ret = VSI_MPI_ISP_QBUF(isp_chn_id, &isp_buf);
+	if (!ret) {
+		isp_vb_slots[isp_buf.index] = buf;
+		isp_vb_held[isp_buf.index] = true;
+	}
+	irq_unlock(irq_state);
 	if (ret) {
 		LOG_ERR("Failed to Queue buffer to ISP library. "
 			"Buffer address - 0x%08x", isp_buf.planes[0].dmaPhyAddr);
@@ -888,7 +1003,7 @@ int isp_vsi_enqueue(struct isp_config_params *init_cfg, struct video_buffer *buf
 	return 0;
 }
 
-int isp_vsi_dequeue(struct isp_config_params *init_cfg, struct video_buffer *buf)
+int isp_vsi_dequeue(struct isp_config_params *init_cfg, uint32_t *index)
 {
 	struct channel_parameters *channel;
 	struct port_parameters *port;
@@ -896,9 +1011,10 @@ int isp_vsi_dequeue(struct isp_config_params *init_cfg, struct video_buffer *buf
 	ISP_CHN isp_chn_id;
 	VIDEO_BUF_S isp_buf;
 
+	unsigned int irq_state;
 	int ret;
 
-	if (!buf || !init_cfg) {
+	if (!index || !init_cfg) {
 		LOG_ERR("Invalid parameters!");
 		return -EINVAL;
 	}
@@ -910,14 +1026,53 @@ int isp_vsi_dequeue(struct isp_config_params *init_cfg, struct video_buffer *buf
 	isp_chn_id.portId = port->port_id;
 	isp_chn_id.chnId = channel->channel_idx;
 
+	irq_state = irq_lock();
 	ret = VSI_MPI_ISP_DQBUF(isp_chn_id, &isp_buf, 0);
+	if (!ret && isp_buf.index < ISP_VB_SLOT_COUNT) {
+		isp_vb_held[isp_buf.index] = false;
+	}
+	irq_unlock(irq_state);
+	if (ret == VSI_ERR_NOBUF) {
+		return -ENOBUFS;
+	}
 	if (ret) {
 		LOG_ERR("Failed to De-Queue buffer from ISP library");
 		return isp_err_2_errno(ret);
 	}
 
-	buf->size = isp_buf.imageSize;
-	buf->buffer = (uint8_t *)isp_buf.planes[0].dmaPhyAddr;
+	*index = isp_buf.index;
+
+	return 0;
+}
+
+int isp_vsi_detach_buffers(struct isp_config_params *init_cfg)
+{
+	struct channel_parameters *channel;
+	struct port_parameters *port;
+	ISP_CHN isp_chn_id;
+	unsigned int irq_state;
+	int ret;
+
+	if (!init_cfg) {
+		return -EINVAL;
+	}
+
+	port = &init_cfg->port;
+	channel = &init_cfg->channel;
+	isp_chn_id.devId = port->isp_idx;
+	isp_chn_id.portId = port->port_id;
+	isp_chn_id.chnId = channel->channel_idx;
+
+	/*
+	 * DisableChn runs VSI_VB_StreamOff, which drops queueList and doneList.
+	 * The HAL slot table is what still knows which video_buffer that was.
+	 */
+	irq_state = irq_lock();
+	ret = VSI_MPI_ISP_DisableChn(isp_chn_id);
+	irq_unlock(irq_state);
+	if (ret) {
+		return isp_err_2_errno(ret);
+	}
 
 	return 0;
 }
