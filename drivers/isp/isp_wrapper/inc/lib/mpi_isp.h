@@ -314,6 +314,19 @@ int VSI_MPI_ISP_QBUF(ISP_CHN IspChn, VIDEO_BUF_S *pBuf);
  *****************************************************************************/
 int VSI_MPI_ISP_DQBUF(ISP_CHN IspChn, VIDEO_BUF_S *pBuf, vsi_u32_t timeMs);
 
+/*****************************************************************************/
+/**
+ * @brief   Process the MI interrupt status (frame end): retires the buffer
+ *          the hardware just finished to the done list.
+ *
+ * @param   IspDev              ISP device ID
+ * @param   miMis               MI masked interrupt status
+ *
+ * @retval  VSI_SUCCESS         Operation succeeded
+ *
+ *****************************************************************************/
+int VSI_MPI_ISP_MiIrqProcess(ISP_DEV IspDev, vsi_u32_t miMis);
+
 /* @} mpi_isp */
 
 #ifdef __cplusplus
