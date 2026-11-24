@@ -90,6 +90,9 @@ extern int isp_vsi_enqueue(struct isp_config_params *init_cfg,
 		struct video_buffer *buf);
 extern int isp_vsi_dequeue(struct isp_config_params *init_cfg,
 		struct video_buffer *buf);
+extern int isp_vsi_mi_irq(struct isp_config_params *init_cfg, uint32_t mi_mis);
+extern int isp_vsi_attach(struct isp_config_params *init_cfg,
+		struct video_buffer *buf);
 extern void VSI_ISP_IrqProcessFrameEnd(ISP_PORT IspPort);
 
 #if defined(CONFIG_ISP_LIB_AE_MODULE)
@@ -882,6 +885,58 @@ int isp_vsi_enqueue(struct isp_config_params *init_cfg, struct video_buffer *buf
 	if (ret) {
 		LOG_ERR("Failed to Queue buffer to ISP library. "
 			"Buffer address - 0x%08x", isp_buf.planes[0].dmaPhyAddr);
+		return isp_err_2_errno(ret);
+	}
+
+	return 0;
+}
+
+/*
+ * Frame-end processing in the library: retires the buffer the hardware just
+ * finished writing to the library's done list so isp_vsi_dequeue() returns it.
+ */
+int isp_vsi_mi_irq(struct isp_config_params *init_cfg, uint32_t mi_mis)
+{
+	int ret;
+
+	if (!init_cfg) {
+		LOG_ERR("Invalid parameters!");
+		return -EINVAL;
+	}
+
+	ret = VSI_MPI_ISP_MiIrqProcess(init_cfg->port.isp_idx, mi_mis);
+	if (ret) {
+		LOG_ERR("Failed to process MI frame-end in ISP library");
+		return isp_err_2_errno(ret);
+	}
+
+	return 0;
+}
+
+/*
+ * Hand the next buffer to the hardware through the library: queue it and
+ * re-run the channel enable. The enable path loads the queued buffer into the
+ * MI INIT registers and sets MI_INIT_CFG_UPD, exactly as at stream start.
+ *
+ * The library must hold no other buffer (previous one dequeued).
+ */
+int isp_vsi_attach(struct isp_config_params *init_cfg, struct video_buffer *buf)
+{
+	ISP_CHN isp_chn_id;
+	int ret;
+
+	ret = isp_vsi_enqueue(init_cfg, buf);
+	if (ret) {
+		return ret;
+	}
+
+	isp_chn_id.devId = init_cfg->port.isp_idx;
+	isp_chn_id.portId = init_cfg->port.port_id;
+	isp_chn_id.chnId = init_cfg->channel.channel_idx;
+
+	ret = VSI_MPI_ISP_EnableChn(isp_chn_id);
+	if (ret) {
+		LOG_ERR("Failed to re-enable ISP Channel with new buffer!");
 		return isp_err_2_errno(ret);
 	}
 
